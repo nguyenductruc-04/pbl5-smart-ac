@@ -1,0 +1,26 @@
+# Secrets - NEVER commit
+.env
+firmware/room_node/config.h
+passwd
+*.pem
+*.key
+
+# Runtime data
+*.db
+*.sqlite
+*.log
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Build / OS / IDE
+build/
+.pio/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
