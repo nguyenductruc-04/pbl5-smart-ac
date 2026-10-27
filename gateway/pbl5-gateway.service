@@ -1,0 +1,19 @@
+# Chay gateway tu dong khi Pi khoi dong
+# Sua User va duong dan neu ban dat project o cho khac, roi:
+#   sudo cp pbl5-gateway.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now pbl5-gateway
+[Unit]
+Description=PBL5 Gateway
+After=network-online.target mosquitto.service
+Wants=network-online.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/pbl5-smart-ac/gateway
+ExecStart=/home/pi/pbl5-smart-ac/gateway/.venv/bin/python gateway.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,14 @@
+# PBL5 - phan quyen topic MQTT
+# Copy vao: /etc/mosquitto/acl
+#
+# Moi Room Node dang nhap bang username = ROOM_ID (vi du room01).
+# %u duoc thay bang username -> node chi duoc ghi/doc topic cua chinh phong minh.
+pattern write home/%u/telemetry
+pattern write home/%u/status
+pattern write home/%u/command_result
+pattern write home/%u/ir_event
+pattern read  home/%u/command
+
+# Gateway duoc toan quyen tren cay home/#
+user gateway
+topic readwrite home/#
