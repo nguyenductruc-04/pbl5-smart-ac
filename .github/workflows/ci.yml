@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  gateway:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r gateway/requirements.txt pytest ruff
+      - run: ruff check .
+      - run: pytest -q
+
+  firmware:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: arduino/setup-arduino-cli@v2
+      - name: Install ESP32 core and libraries
+        run: |
+          arduino-cli config init
+          arduino-cli config add board_manager.additional_urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32
+          arduino-cli lib install "PubSubClient" "ArduinoJson" "Adafruit SHT4x Library"
+      - name: Compile (ESP32-S3)
+        run: |
+          cp firmware/room_node/config.example.h firmware/room_node/config.h
+          arduino-cli compile --fqbn esp32:esp32:esp32s3 firmware/room_node
