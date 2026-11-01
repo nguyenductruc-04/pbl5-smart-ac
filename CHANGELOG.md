@@ -6,8 +6,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versio
 ### Planned
 - Milestone 2: Daikin IR decode + transmit (IRremoteESP8266)
 
-## [Unreleased]
+## [0.1.0] - 2026-11-02
 ### Added
+- Validated end-to-end on hardware: ESP32-S3 ⇄ Wi-Fi/MQTT ⇄ Raspberry Pi 5 (avg X ms command round trip).
 - ESP32-S3 Room Node firmware: Wi-Fi/MQTT with Last Will, SHT4x reading (simulated data fallback), plausibility filter, command handler (no IR yet).
 - Raspberry Pi gateway: MQTT subscriber, telemetry validation, SQLite storage, command round-trip timing.
 - Mosquitto config with per-room ACL (`%u` pattern) and password auth.

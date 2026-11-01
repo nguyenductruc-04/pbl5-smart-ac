@@ -1,6 +1,6 @@
 # Smart AC Controller — IoT + ML for Daikin air conditioners
 
-[![CI](https://github.com/<nguyenductruc-04>/pbl5-smart-ac/actions/workflows/ci.yml/badge.svg)](https://github.com/<YOUR_USERNAME>/pbl5-smart-ac/actions)
+[![CI](https://github.com/<nguyenductruc-04>/pbl5-smart-ac/actions/workflows/ci.yml/badge.svg)](https://github.com/<nguyenductruc-04>/pbl5-smart-ac/actions)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Status](https://img.shields.io/badge/status-Milestone%201%20of%206-orange)
 
