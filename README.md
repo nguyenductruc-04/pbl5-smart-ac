@@ -27,14 +27,17 @@ Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 | Milestone | Scope | Status |
 |---|---|---|
-| 1 | ESP32 ⇄ MQTT ⇄ Pi, SQLite storage, auth + ACL | Gateway **tested** on a real Mosquitto broker with a simulated node; firmware written, CI compiles it, not yet validated on hardware |
+| 1 | ESP32 ⇄ MQTT ⇄ Pi, SQLite storage, auth + ACL | ✅ Done — validated on ESP32-S3 + Raspberry Pi 5 over Wi-Fi |
 | 2 | Daikin IR decode + transmit | Planned |
 | 3 | Real sensors: SHT41 (I²C), LD2410 (UART) | Planned |
 | 4 | Safety Layer + REST API (FastAPI) | Planned |
 | 5 | Dashboard / app | Planned |
 | 6 | Data collection + comfort model (scikit-learn) | Planned |
 
-Measured in Milestone 1 (simulated node, same machine — not a Wi-Fi benchmark): command → result round trip **9–43 ms**; invalid telemetry is rejected and logged; cross-room publish and wrong-password connections are blocked by the broker.
+Measured on real hardware (ESP32-S3 ⇄ Wi-Fi ⇄ Raspberry Pi 5, N = 20 commands):
+command → result round trip 21|427.0|35.0|1909.0. Simulated sensor data (SHT41 not yet fitted).
+
+![Serial monitor](docs/images/serial-monitor.png)
 
 ## Repository layout
 
