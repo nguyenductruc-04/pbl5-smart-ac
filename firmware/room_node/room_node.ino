@@ -41,6 +41,7 @@ void connectWiFi() {
   if (WiFi.status() == WL_CONNECTED) return;
   Serial.printf("[WiFi] Dang ket noi '%s' ...\n", WIFI_SSID);
   WiFi.mode(WIFI_STA);
+  WiFi.setSleep(false);   // tat modem sleep: giam do tre nhan lenh; node cam nguon nen chap nhan ton dien hon
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   unsigned long start = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - start < 15000) {
