@@ -10,7 +10,11 @@
 
 // --- MQTT broker (Raspberry Pi) ---
 // Dung dia chi IP cua Pi (vi du 192.168.1.50). Nen dat IP tinh / DHCP reservation tren router.
-#define MQTT_HOST      "192.168.1.50"
+//#define MQTT_HOST      "192.168.1.50"
+// Ten mDNS cua Raspberry Pi (hostname, KHONG kem ".local"). ESP32 tu tim IP moi lan ket noi.
+#define MQTT_HOSTNAME      "gateway"
+// IP du phong khi mang chan mDNS (vd. mot so hotspot dien thoai). De "" neu khong dung.
+#define MQTT_HOST_FALLBACK "192.168.2.114"
 #define MQTT_PORT      1883
 
 // --- Dinh danh phong ---

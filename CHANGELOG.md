@@ -6,6 +6,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versio
 ### Planned
 - Milestone 2: Daikin IR decode + transmit (IRremoteESP8266)
 
+## [0.2.0] - 2026-11-04
+### Added
+- Room node discovers the gateway via mDNS (`gateway.local`) on every MQTT (re)connect, with a fallback address; node advertises itself as `<room>.local`.
+- ADR 0001: node Wi-Fi provisioning via the gateway.
+
+### Changed
+- `config.h`: `MQTT_HOST` replaced by `MQTT_HOSTNAME` + `MQTT_HOST_FALLBACK`.
+
 ## [0.1.1] - 2026-11-03
 ### Changed
 - Room node disables Wi-Fi modem sleep (`WiFi.setSleep(false)`): command round-trip max latency 1909 ms → 54 ms (median 28 ms, p95 38 ms, N = 20). Trade-off: higher idle power on mains-powered nodes.
@@ -18,6 +26,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versio
 - Mosquitto config with per-room ACL (`%u` pattern) and password auth.
 - Unit tests (pytest), lint (ruff), CI (GitHub Actions) including firmware compile check.
 
-[Unreleased]: https://github.com/nguyenductruc-04/pbl5-smart-ac/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/nguyenductruc-04/pbl5-smart-ac/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/nguyenductruc-04/pbl5-smart-ac/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/nguyenductruc-04/pbl5-smart-ac/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/nguyenductruc-04/pbl5-smart-ac/releases/tag/v0.1.0

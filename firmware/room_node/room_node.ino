@@ -13,6 +13,7 @@
 //    - Adafruit SHT4x Library (cai kem cac thu vien phu thuoc)
 // =====================================================================
 #include <WiFi.h>
+#include <ESPmDNS.h>
 #include <Wire.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
@@ -35,6 +36,8 @@ unsigned long lastMqttTry    = 0;
 float         lastValidTemp  = NAN;
 int           rejectStreak   = 0;
 uint32_t      seq            = 0;
+IPAddress     brokerIp;
+bool          mdnsStarted    = false;
 
 // ------------------------------------------------------------------
 void connectWiFi() {
@@ -52,15 +55,44 @@ void connectWiFi() {
   if (WiFi.status() == WL_CONNECTED) {
     Serial.printf("[WiFi] OK, IP = %s, RSSI = %d dBm\n",
                   WiFi.localIP().toString().c_str(), WiFi.RSSI());
+    if (!mdnsStarted) {
+      // ESP32 cung tu quang ba ten rieng: room01.local (Pi co the ping duoc)
+      mdnsStarted = MDNS.begin(ROOM_ID);
+      Serial.printf("[mDNS] %s\n", mdnsStarted ? "OK, ten = " ROOM_ID ".local" : "Khoi dong that bai");
+    }
   } else {
     Serial.println("[WiFi] That bai, se thu lai.");
   }
 }
 
 // ------------------------------------------------------------------
+// Tim IP cua broker: uu tien mDNS (gateway.local), neu that bai thi dung IP du phong.
+// Goi lai moi lan ket noi MQTT, nen Pi doi IP van tim lai duoc.
+bool resolveBroker() {
+  char host[] = MQTT_HOSTNAME;
+  IPAddress ip = MDNS.queryHost(host, 2000);   // cho toi da 2 giay
+  if (ip != IPAddress(0, 0, 0, 0)) {
+    brokerIp = ip;
+    Serial.printf("[mDNS] %s.local -> %s\n", MQTT_HOSTNAME, ip.toString().c_str());
+    return true;
+  }
+  if (strlen(MQTT_HOST_FALLBACK) > 0 && brokerIp.fromString(MQTT_HOST_FALLBACK)) {
+    Serial.printf("[mDNS] Khong tim thay %s.local, dung IP du phong %s\n",
+                  MQTT_HOSTNAME, MQTT_HOST_FALLBACK);
+    return true;
+  }
+  Serial.printf("[mDNS] Khong tim thay %s.local va khong co IP du phong\n", MQTT_HOSTNAME);
+  return false;
+}
+
+// ------------------------------------------------------------------
 bool connectMqtt() {
+    if (!resolveBroker()) return false;
+  mqtt.setServer(brokerIp, MQTT_PORT);
+
   String clientId = String("node-") + ROOM_ID;
-  Serial.printf("[MQTT] Ket noi %s:%d voi user '%s' ...\n", MQTT_HOST, MQTT_PORT, MQTT_USER);
+  Serial.printf("[MQTT] Ket noi %s:%d voi user '%s' ...\n",
+                brokerIp.toString().c_str(), MQTT_PORT, MQTT_USER);
   // Last Will: neu node mat ket noi bat thuong, broker tu publish "offline"
   bool ok = mqtt.connect(clientId.c_str(), MQTT_USER, MQTT_PASS,
                          T_STATUS.c_str(), 1, true, "offline");
@@ -188,7 +220,6 @@ void setup() {
   }
 
   connectWiFi();
-  mqtt.setServer(MQTT_HOST, MQTT_PORT);
   mqtt.setBufferSize(512);
   mqtt.setKeepAlive(30);
   mqtt.setCallback(onMessage);
