@@ -34,8 +34,18 @@ Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 | 5 | Dashboard / app | Planned |
 | 6 | Data collection + comfort model (scikit-learn) | Planned |
 
-Measured on real hardware (ESP32-S3 ⇄ Wi-Fi ⇄ Raspberry Pi 5, N = 20 commands):
-command → result round trip 21|427.0|35.0|1909.0. Simulated sensor data (SHT41 not yet fitted).
+### Measured results
+
+Command → result round trip on real hardware (ESP32-S3 ⇄ 2.4 GHz Wi-Fi ⇄ Mosquitto on Raspberry Pi 5).
+Sensor data is still simulated (SHT41 not yet fitted).
+
+| Version | Change | N | Median | p95 | Mean | Min | Max |
+|---|---|---|---|---|---|---|---|
+| v0.1.0 | baseline | 21 | — | — | 427 ms | 35 ms | 1909 ms |
+| v0.1.1 | Wi-Fi modem sleep disabled (`WiFi.setSleep(false)`) | 20 | **28 ms** | **38 ms** | — | 20 ms | **54 ms** |
+
+The v0.1.0 tail latency came from ESP32 Wi-Fi modem sleep (on by default), which delays incoming MQTT messages.
+Disabling it cut worst-case latency ~35×. Trade-off: higher idle power, acceptable for mains-powered room nodes.
 
 ![Serial monitor](docs/images/serial-monitor.png)
 
