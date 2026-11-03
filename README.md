@@ -20,6 +20,7 @@ A room-level smart air-conditioning system: **ESP32-S3 room nodes** sense temper
 | MQTT with per-room ACL | Each node can only touch `home/<its own room>/…` |
 | Safety Layer between AI and AC | Hysteresis, minimum off-time and rate limits protect the compressor, whatever the AI proposes |
 | AI as *suggestion* (Manual / Suggest / Auto) | Avoids annoying the user; trust is earned progressively |
+| mDNS discovery (`gateway.local`) instead of a hard-coded IP | Gateway IP can change (DHCP, network switch) without re-flashing nodes |
 
 Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 

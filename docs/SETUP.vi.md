@@ -105,7 +105,8 @@ Kết quả đúng: `gateway.py` in ra các dòng `temp=... hum=...`, còn `send
 2. Vào *Library Manager*, cài: **PubSubClient** (Nick O'Leary), **ArduinoJson** (Benoit Blanchon, bản 7.x), **Adafruit SHT4x Library** (đồng ý cài kèm thư viện phụ thuộc).
 3. Mở `firmware/room_node/room_node.ino`, copy `config.example.h` thành `config.h` rồi sửa:
    - `WIFI_SSID`, `WIFI_PASS`: Wi-Fi **2.4 GHz** (ESP32 không bắt được 5 GHz).
-   - `MQTT_HOST`: IP của Pi.
+   - `MQTT_HOSTNAME`: hostname của Pi (mặc định `gateway`). ESP32 tự tìm IP qua mDNS, không cần ghi IP.
+   - `MQTT_HOST_FALLBACK`: IP dự phòng khi mạng chặn mDNS (mặc định `10.42.0.1`, địa chỉ của Pi khi phát Wi-Fi dự phòng).
    - `MQTT_PASS`: mật khẩu của user `room01`.
 4. Chọn board **ESP32S3 Dev Module** và cổng COM. Nếu cắm vào cổng có chữ **USB** (không phải **UART/COM**) trên DevKit thì bật *Tools → USB CDC On Boot: Enabled* để xem được Serial.
 5. Upload, mở Serial Monitor tốc độ **115200**.
