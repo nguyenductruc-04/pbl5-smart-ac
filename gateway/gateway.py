@@ -55,6 +55,19 @@ CREATE TABLE IF NOT EXISTS rejected (
     reason TEXT,
     raw    TEXT
 );
+
+CREATE TABLE IF NOT EXISTS ir_events (
+    id       INTEGER PRIMARY KEY AUTOINCREMENT,
+    room     TEXT NOT NULL,
+    ts       REAL NOT NULL,
+    protocol TEXT,
+    power    TEXT,
+    mode     TEXT,
+    temp     INTEGER,
+    fan      TEXT,
+    raw      TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_ir_events_room_ts ON ir_events(room, ts);
 """
 
 
@@ -97,6 +110,7 @@ class Gateway:
             ("home/+/telemetry", 0),
             ("home/+/status", 1),
             ("home/+/command_result", 1),
+            ("home/+/ir_event", 1),
         ])
 
     def on_disconnect(self, client, userdata, flags, reason_code, properties):
@@ -117,6 +131,8 @@ class Gateway:
                 self.handle_status(room, now, text)
             elif kind == "command_result":
                 self.handle_result(room, now, text)
+            elif kind == "ir_event":
+                self.handle_ir_event(room, now, text)
         except Exception:
             log.exception("Loi xu ly ban tin %s", msg.topic)
 
@@ -163,6 +179,24 @@ class Gateway:
         )
         self.db.commit()
         log.info("[%s] ket qua lenh %s: %s", room, cmd_id, "OK" if data.get("ok") else "LOI")
+
+    def handle_ir_event(self, room, now, text):
+        """Nguoi dung bam remote goc (node nghe len). Day la thay doi uu tien cao nhat."""
+        try:
+            data = json.loads(text)
+        except json.JSONDecodeError:
+            self._reject(room, now, "ir_event json loi", text)
+            return
+        temp = data.get("temp")
+        self.db.execute(
+            "INSERT INTO ir_events(room, ts, protocol, power, mode, temp, fan, raw)"
+            " VALUES (?,?,?,?,?,?,?,?)",
+            (room, now, data.get("protocol"), data.get("power"), data.get("mode"),
+             temp if isinstance(temp, int) else None, data.get("fan"), text),
+        )
+        self.db.commit()
+        log.info("[%s] REMOTE %s: power=%s mode=%s temp=%s fan=%s", room, data.get("protocol"),
+                 data.get("power"), data.get("mode"), temp, data.get("fan"))
 
     def _reject(self, room, now, reason, raw):
         self.db.execute("INSERT INTO rejected(room, ts, reason, raw) VALUES (?,?,?,?)",

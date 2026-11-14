@@ -32,3 +32,8 @@ for cmd_id, room, ts_sent, ts_res, ok in rows:
 
 n_rej = db.execute("SELECT COUNT(*) FROM rejected").fetchone()[0]
 print(f"\nSo ban tin bi loai bo: {n_rej}")
+
+print("\n== 5 lan bam remote goc gan nhat (ir_event) ==")
+rows = db.execute("SELECT ts, room, protocol, power, mode, temp, fan FROM ir_events ORDER BY id DESC LIMIT 5")
+for ts, room, proto, power, mode, temp, fan in rows:
+    print(f"  {fmt(ts)} {room:8} {proto} power={power} mode={mode} temp={temp} fan={fan}")
