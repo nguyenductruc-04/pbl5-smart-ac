@@ -1,16 +1,19 @@
 // =====================================================================
-//  PBL5 - Room Node (ESP32-S3) - Milestone 1
-//  - Ket noi Wi-Fi, tu ket noi lai khi mat mang
-//  - Ket noi MQTT co Last Will (home/<room>/status = offline, retained)
+//  PBL5 - Room Node (ESP32-S3) - Milestone 2
+//  - Ket noi Wi-Fi (tat modem sleep), tu ket noi lai khi mat mang
+//  - Tim broker qua mDNS (gateway.local), co IP du phong
+//  - MQTT co Last Will (home/<room>/status = offline, retained)
 //  - Doc SHT41 neu co; neu chua lap cam bien thi gui du lieu GIA LAP (sim=true)
-//  - Kiem tra du lieu hop le truoc khi gui
-//  - Nhan lenh tai home/<room>/command, tra ket qua tai home/<room>/command_result
-//    (Milestone 1 chua phat IR, chi in lenh ra Serial)
+//  - Nhan lenh tai home/<room>/command -> PHAT IR toi dieu hoa,
+//    tra ket qua tai home/<room>/command_result
+//  - Nghe len remote goc -> gui home/<room>/ir_event
 //
-//  Thu vien can cai (Arduino Library Manager):
+//  Thu vien (Arduino Library Manager):
 //    - PubSubClient (Nick O'Leary)
 //    - ArduinoJson (Benoit Blanchon) phien ban 7.x
 //    - Adafruit SHT4x Library (cai kem cac thu vien phu thuoc)
+//    - IRremoteESP8266 (2.9.0)
+//  Board core: esp32 by Espressif 2.0.17 (ban 3.x chua tuong thich IRremoteESP8266)
 // =====================================================================
 #include <WiFi.h>
 #include <ESPmDNS.h>
@@ -18,6 +21,10 @@
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 #include <Adafruit_SHT4x.h>
+#include <IRremoteESP8266.h>
+#include <IRrecv.h>
+#include <IRutils.h>
+#include <IRac.h>
 #include "config.h"
 
 // ----------------------- Topic -----------------------
@@ -25,10 +32,18 @@ const String T_TELEMETRY = String("home/") + ROOM_ID + "/telemetry";
 const String T_COMMAND   = String("home/") + ROOM_ID + "/command";
 const String T_RESULT    = String("home/") + ROOM_ID + "/command_result";
 const String T_STATUS    = String("home/") + ROOM_ID + "/status";
+const String T_IR_EVENT  = String("home/") + ROOM_ID + "/ir_event";
 
 WiFiClient    net;
 PubSubClient  mqtt(net);
 Adafruit_SHT4x sht4;
+
+// IR
+IRac            irac(IR_TX_PIN);
+IRrecv          irrecv(IR_RX_PIN, 1024, 50, true);  // buffer 1024, timeout 50 ms (khung A/C dai)
+decode_results  irResults;
+stdAc::state_t  acState;          // trang thai DU KIEN cua dieu hoa (IR mot chieu, khong xac nhan duoc)
+unsigned long   lastIrTx = 0;
 
 bool          shtOk          = false;
 unsigned long lastTelemetry  = 0;
@@ -44,7 +59,7 @@ void connectWiFi() {
   if (WiFi.status() == WL_CONNECTED) return;
   Serial.printf("[WiFi] Dang ket noi '%s' ...\n", WIFI_SSID);
   WiFi.mode(WIFI_STA);
-  WiFi.setSleep(false);   // tat modem sleep: giam do tre nhan lenh; node cam nguon nen chap nhan ton dien hon
+  WiFi.setSleep(false);   // tat modem sleep: giam do tre nhan lenh (v0.1.1)
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   unsigned long start = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - start < 15000) {
@@ -56,7 +71,6 @@ void connectWiFi() {
     Serial.printf("[WiFi] OK, IP = %s, RSSI = %d dBm\n",
                   WiFi.localIP().toString().c_str(), WiFi.RSSI());
     if (!mdnsStarted) {
-      // ESP32 cung tu quang ba ten rieng: room01.local (Pi co the ping duoc)
       mdnsStarted = MDNS.begin(ROOM_ID);
       Serial.printf("[mDNS] %s\n", mdnsStarted ? "OK, ten = " ROOM_ID ".local" : "Khoi dong that bai");
     }
@@ -67,10 +81,9 @@ void connectWiFi() {
 
 // ------------------------------------------------------------------
 // Tim IP cua broker: uu tien mDNS (gateway.local), neu that bai thi dung IP du phong.
-// Goi lai moi lan ket noi MQTT, nen Pi doi IP van tim lai duoc.
 bool resolveBroker() {
   char host[] = MQTT_HOSTNAME;
-  IPAddress ip = MDNS.queryHost(host, 2000);   // cho toi da 2 giay
+  IPAddress ip = MDNS.queryHost(host, 2000);
   if (ip != IPAddress(0, 0, 0, 0)) {
     brokerIp = ip;
     Serial.printf("[mDNS] %s.local -> %s\n", MQTT_HOSTNAME, ip.toString().c_str());
@@ -87,7 +100,7 @@ bool resolveBroker() {
 
 // ------------------------------------------------------------------
 bool connectMqtt() {
-    if (!resolveBroker()) return false;
+  if (!resolveBroker()) return false;
   mqtt.setServer(brokerIp, MQTT_PORT);
 
   String clientId = String("node-") + ROOM_ID;
@@ -168,6 +181,96 @@ void publishTelemetry() {
   Serial.printf("[TX] %s %s\n", buf, ok ? "" : "(GUI LOI)");
 }
 
+// ======================= IR helpers ===============================
+// Chuoi trong lenh MQTT <-> kieu chung cua IRac
+bool parseMode(const char *s, stdAc::opmode_t &out) {
+  if      (!strcmp(s, "cool")) out = stdAc::opmode_t::kCool;
+  else if (!strcmp(s, "dry"))  out = stdAc::opmode_t::kDry;
+  else if (!strcmp(s, "fan"))  out = stdAc::opmode_t::kFan;
+  else if (!strcmp(s, "heat")) out = stdAc::opmode_t::kHeat;
+  else if (!strcmp(s, "auto")) out = stdAc::opmode_t::kAuto;
+  else return false;
+  return true;
+}
+
+bool parseFan(const char *s, stdAc::fanspeed_t &out) {
+  if      (!strcmp(s, "auto")) out = stdAc::fanspeed_t::kAuto;
+  else if (!strcmp(s, "low"))  out = stdAc::fanspeed_t::kLow;
+  else if (!strcmp(s, "mid"))  out = stdAc::fanspeed_t::kMedium;
+  else if (!strcmp(s, "high")) out = stdAc::fanspeed_t::kHigh;
+  else return false;
+  return true;
+}
+
+const char *modeToStr(stdAc::opmode_t m) {
+  switch (m) {
+    case stdAc::opmode_t::kCool: return "cool";
+    case stdAc::opmode_t::kDry:  return "dry";
+    case stdAc::opmode_t::kFan:  return "fan";
+    case stdAc::opmode_t::kHeat: return "heat";
+    case stdAc::opmode_t::kAuto: return "auto";
+    default:                     return "off";
+  }
+}
+
+const char *fanToStr(stdAc::fanspeed_t f) {
+  switch (f) {
+    case stdAc::fanspeed_t::kAuto:       return "auto";
+    case stdAc::fanspeed_t::kMin:
+    case stdAc::fanspeed_t::kLow:        return "low";
+    case stdAc::fanspeed_t::kMedium:
+    case stdAc::fanspeed_t::kMediumHigh: return "mid";
+    default:                             return "high";
+  }
+}
+
+// Phat TOAN BO trang thai acState. Tat bo thu trong luc phat de:
+//  (1) ngat cua bo thu khong lam meo song mang 38 kHz tao bang phan mem
+//  (2) node khong "nghe thay" chinh minh roi tuong nguoi dung bam remote
+bool sendIr() {
+  irrecv.disableIRIn();
+  bool ok = irac.sendAc(acState, nullptr);
+  irrecv.enableIRIn();
+  lastIrTx = millis();
+  return ok;
+}
+
+// Nghe len remote goc. Goi lien tuc trong loop().
+void handleIrReceive() {
+  if (!irrecv.decode(&irResults)) return;
+
+  // Cua so bo qua: tin hieu doi lai cua chinh node ngay sau khi phat
+  if (millis() - lastIrTx < IR_BLANKING_MS) {
+    irrecv.resume();
+    return;
+  }
+
+  stdAc::state_t rx;
+  if (IRAcUtils::decodeToState(&irResults, &rx)) {
+    // Remote dieu hoa: nguoi dung vua bam -> uu tien cao nhat, dong bo trang thai du kien
+    if (rx.protocol == acState.protocol) acState = rx;
+
+    JsonDocument ev;
+    ev["protocol"] = typeToString(irResults.decode_type);
+    ev["power"]    = rx.power ? "on" : "off";
+    ev["mode"]     = modeToStr(rx.mode);
+    ev["temp"]     = (int)rx.degrees;
+    ev["fan"]      = fanToStr(rx.fanspeed);
+    ev["source"]   = "remote";
+    ev["uptime_s"] = millis() / 1000;
+
+    char buf[200];
+    size_t n = serializeJson(ev, buf, sizeof(buf));
+    bool sent = mqtt.connected() &&
+                mqtt.publish(T_IR_EVENT.c_str(), (const uint8_t*)buf, n, false);
+    Serial.printf("[IR RX] %s %s\n", buf, sent ? "" : "(chua gui duoc)");
+  } else {
+    // Khong phai remote dieu hoa (TV, quat...) -> bo qua
+    Serial.printf("[IR RX] Bo qua: %s\n", typeToString(irResults.decode_type).c_str());
+  }
+  irrecv.resume();
+}
+
 // ------------------------------------------------------------------
 // Nhan lenh tu Gateway
 void onMessage(char* topic, byte* payload, unsigned int len) {
@@ -183,19 +286,41 @@ void onMessage(char* topic, byte* payload, unsigned int len) {
   } else {
     char id[48];
     strlcpy(id, cmd["cmd_id"] | "", sizeof(id));
-    const char* power = cmd["power"] | "?";
-    const char* mode  = cmd["mode"]  | "?";
-    int         temp  = cmd["temp"]  | -1;
-    const char* fan   = cmd["fan"]   | "?";
+    res["cmd_id"] = id;
 
-    Serial.printf("[RX] cmd_id=%s power=%s mode=%s temp=%d fan=%s\n",
-                  id, power, mode, temp, fan);
+    // Ap dung len BAN SAO, chi ghi vao acState khi toan bo lenh hop le
+    stdAc::state_t next = acState;
+    const char *error = nullptr;
 
-    // TODO Milestone 2: dung IRremoteESP8266 (IRDaikinESP / bien the phu hop) de phat IR
-    res["cmd_id"]  = id;
-    res["ok"]      = true;
-    res["ir_sent"] = false;
-    res["note"]    = "milestone1: chua phat IR";
+    if (cmd["power"].is<const char*>()) {
+      const char *p = cmd["power"];
+      if      (!strcmp(p, "on"))  next.power = true;
+      else if (!strcmp(p, "off")) next.power = false;
+      else error = "bad_power";
+    }
+    if (!error && cmd["mode"].is<const char*>() && !parseMode(cmd["mode"], next.mode)) error = "bad_mode";
+    if (!error && cmd["fan"].is<const char*>()  && !parseFan(cmd["fan"], next.fanspeed)) error = "bad_fan";
+    if (!error && cmd["temp"].is<int>()) {
+      int t = cmd["temp"];
+      if (t < IR_TEMP_MIN || t > IR_TEMP_MAX) error = "temp_out_of_range";
+      else next.degrees = t;
+    }
+
+    if (error) {
+      res["ok"]      = false;
+      res["ir_sent"] = false;
+      res["error"]   = error;
+      Serial.printf("[RX] cmd_id=%s TU CHOI: %s\n", id, error);
+    } else {
+      acState = next;
+      bool sent = sendIr();
+      res["ok"]      = sent;
+      res["ir_sent"] = sent;
+      if (!sent) res["error"] = "protocol_not_supported";
+      Serial.printf("[RX] cmd_id=%s power=%s mode=%s temp=%d fan=%s -> IR %s\n", id,
+                    acState.power ? "on" : "off", modeToStr(acState.mode),
+                    (int)acState.degrees, fanToStr(acState.fanspeed), sent ? "DA PHAT" : "LOI");
+    }
   }
 
   char buf[200];
@@ -219,6 +344,18 @@ void setup() {
     Serial.println("[SENSOR] Khong thay SHT4x -> dung du lieu GIA LAP");
   }
 
+  // Trang thai du kien ban dau: TAT, cool 26 do, quat auto
+  IRac::initState(&acState);
+  acState.protocol = decode_type_t::IR_PROTOCOL;
+  acState.model    = IR_MODEL;
+  acState.power    = false;
+  acState.mode     = stdAc::opmode_t::kCool;
+  acState.degrees  = 26;
+  acState.fanspeed = stdAc::fanspeed_t::kAuto;
+  irrecv.enableIRIn();
+  Serial.printf("[IR] Giao thuc %s, TX GPIO %d, RX GPIO %d\n",
+                typeToString(acState.protocol).c_str(), IR_TX_PIN, IR_RX_PIN);
+
   connectWiFi();
   mqtt.setBufferSize(512);
   mqtt.setKeepAlive(30);
@@ -226,6 +363,8 @@ void setup() {
 }
 
 void loop() {
+  handleIrReceive();   // nghe remote ca khi mat mang (van dong bo trang thai du kien)
+
   if (WiFi.status() != WL_CONNECTED) {
     connectWiFi();
     return;
