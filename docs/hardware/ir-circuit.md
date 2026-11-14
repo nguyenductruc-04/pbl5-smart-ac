@@ -17,7 +17,7 @@ Status: validated on the bench with an IR loopback test. **Not yet tested on a r
              |         GND |----------------------------+--------- E
              +-------------+   100 µF (+ to 3V3) next to the LED
 ```
-
+![IR circuit on breadboard](ir-circuit.jpg)
 | Part | Value | Notes |
 |---|---|---|
 | IR receiver | TSOP38238 | Chosen over VS1838B by measurement (section 4) |
