@@ -26,8 +26,8 @@ def main():
     p.add_argument("--timeout", type=float, default=5.0)
     args = p.parse_args()
 
-    if not 16 <= args.temp <= 32:
-        sys.exit("Nhiet do phai trong khoang 16-32")
+    if not 16 <= args.temp <= 30:
+        sys.exit("Nhiet do phai trong khoang 16-30")
 
     cmd = {
         "cmd_id": "c-" + uuid.uuid4().hex[:8],
