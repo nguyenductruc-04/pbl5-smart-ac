@@ -5,6 +5,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versio
 ## [Unreleased]
 ### Planned
 - Milestone 2: Daikin IR decode + transmit (IRremoteESP8266)
+### Added
+- Gateway Wi-Fi watchdog (`gateway/netwatch.py`, systemd `pbl5-netwatch`): starts backup AP `SmartAC-Backup` (10.42.0.1)
+  after 2 min without home Wi-Fi, retries home networks every 5 min.
+
+### Fixed
+- Watchdog activates saved home connections explicitly; NetworkManager may block autoconnect after a user
+  disconnect or repeated failures, which would leave the Pi stuck in AP mode.
 
 ## [0.3.0] - 2026-11-14
 ### Added

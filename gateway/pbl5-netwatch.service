@@ -1,0 +1,19 @@
+# Watchdog Wi-Fi: bat AP du phong SmartAC-Backup khi Pi mat Wi-Fi nha
+# Chay bang root vi can quyen bat/tat ket noi NetworkManager.
+# Sua duong dan neu project o cho khac, roi:
+#   sudo cp pbl5-netwatch.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now pbl5-netwatch
+#   journalctl -u pbl5-netwatch -f
+[Unit]
+Description=PBL5 Wi-Fi watchdog (backup AP)
+After=NetworkManager.service
+Wants=NetworkManager.service
+
+[Service]
+ExecStart=/usr/bin/python3 /home/truc0404/pbl5-smart-ac/gateway/netwatch.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

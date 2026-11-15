@@ -124,6 +124,74 @@ Serial Monitor đúng sẽ hiện:
 
 Sau đó chạy `python send_command.py --room room01 --temp 25` trên Pi. Serial Monitor sẽ in dòng `[RX] cmd_id=...`.
 
+## Bước 6 – Wi-Fi dự phòng `SmartAC-Backup` (v0.4.0)
+
+Khi Pi mất Wi-Fi nhà quá 2 phút, Pi tự phát mạng `SmartAC-Backup` (Pi có IP cố định **10.42.0.1**).
+Cứ 5 phút, Pi tắt mạng này khoảng 45 giây để thử kết nối lại Wi-Fi nhà.
+
+> Khi thử nghiệm phần này, **cắm sẵn màn hình và bàn phím vào Pi**. Cấu hình mạng sai có thể làm bạn mất SSH.
+
+### 6.1 Kiểm tra gói cần thiết
+
+```bash
+dpkg -l dnsmasq-base | tail -1      # dòng cuối bắt đầu bằng "ii" là đã cài
+sudo apt install -y dnsmasq-base    # nếu chưa có (NetworkManager cần gói này để cấp IP cho thiết bị)
+```
+
+### 6.2 Tạo cấu hình AP (chỉ làm một lần)
+
+Đặt mật khẩu riêng (ít nhất 8 ký tự), **không ghi vào repo**:
+
+```bash
+sudo nmcli connection add type wifi ifname wlan0 con-name SmartAC-Backup autoconnect no \
+  ssid SmartAC-Backup 802-11-wireless.mode ap 802-11-wireless.band bg \
+  ipv4.method shared wifi-sec.key-mgmt wpa-psk wifi-sec.psk "MAT_KHAU_AP"
+```
+
+- `autoconnect no`: chỉ watchdog mới được bật AP.
+- `band bg`: 2.4 GHz, ESP32 mới thấy được.
+- `ipv4.method shared`: Pi làm router, tự cấp IP 10.42.0.x cho thiết bị kết nối vào.
+
+### 6.3 Thử bật/tắt AP bằng tay (màn hình + bàn phím)
+
+```bash
+sudo nmcli connection up SmartAC-Backup     # Pi rời Wi-Fi nhà, phát SmartAC-Backup
+hostname -I                                 # phải có 10.42.0.1
+sudo nmcli connection down SmartAC-Backup   # tắt AP, NetworkManager tự nối lại Wi-Fi nhà
+```
+
+Trong lúc AP bật: điện thoại/laptop thấy và kết nối được `SmartAC-Backup`; từ laptop `ssh truc0404@10.42.0.1` vào được Pi.
+
+### 6.4 Chạy watchdog như dịch vụ
+
+```bash
+cd ~/pbl5-smart-ac/gateway
+sudo cp pbl5-netwatch.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now pbl5-netwatch
+journalctl -u pbl5-netwatch -f
+```
+
+### 6.5 Kiểm tra tự động chuyển mạng
+
+Làm trên **màn hình + bàn phím của Pi** (Pi sẽ rời mạng). Theo dõi log ở một console (`journalctl -u pbl5-netwatch -f`),
+gõ lệnh ở console khác (**Alt+F2**, quay lại bằng **Alt+F1**). Thay `Mai` bằng tên kết nối Wi-Fi nhà
+(`nmcli -f NAME,TYPE,AUTOCONNECT connection show`); tắt các mạng đã lưu khác (ví dụ hotspot điện thoại) trong lúc test.
+
+Không tắt được router thật thì giả lập mất mạng bằng cách tạm cấm Pi tự kết nối vào Wi-Fi nhà:
+
+| Bài | Lệnh | Kết quả đúng trong log |
+|---|---|---|
+| 1. Mất mạng lâu | `sudo nmcli connection modify Mai connection.autoconnect no` rồi `sudo nmcli connection down Mai` | Sau ~2 phút: `Mat Wi-Fi nha -> bat AP du phong` |
+| 2. Vẫn mất mạng | (giữ nguyên) | Mỗi ~5 phút: `Tat AP de thu ket noi lai Wi-Fi nha` → `Khong ket noi duoc Wi-Fi nha nao` → AP bật lại |
+| 3. Có mạng trở lại | `sudo nmcli connection modify Mai connection.autoconnect yes` | Ở lần thử kế tiếp: `Thu ket noi 'Mai'` → `Da ve Wi-Fi nha 'Mai'`, AP biến mất |
+| 4. Mất mạng ngắn | `sudo nmcli connection down Mai; sleep 60; sudo nmcli connection up Mai` | Không có dòng `bat AP` |
+
+Test xong kiểm tra `nmcli -f NAME,AUTOCONNECT connection show`: `Mai` phải là **yes**.
+
+Khi Pi đang ở chế độ AP thì không có Internet (Tailscale không dùng được); vào Pi bằng cách kết nối laptop vào `SmartAC-Backup`
+rồi `ssh truc0404@10.42.0.1`.
+
 ## Xử lý lỗi thường gặp
 
 | Hiện tượng | Nguyên nhân hay gặp |
