@@ -6,6 +6,21 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versio
 ### Planned
 - Milestone 2: Daikin IR decode + transmit (IRremoteESP8266)
 
+## [0.3.0] - 2026-11-14
+### Added
+- Room node sends real IR on MQTT commands via IRremoteESP8266 `IRac`; A/C protocol selectable in `config.h` (`IR_PROTOCOL`, default `DAIKIN`).
+- Node-side command validation (power/mode/fan values, 16–30 °C); invalid commands rejected with an error code.
+- Remote eavesdropping: decoded A/C remote frames published to `home/<room>/ir_event`; gateway stores them in `ir_events`.
+- Self-interference handling: receiver disabled while sending + 300 ms blanking window.
+- IR loopback test tool (`firmware/tools/ir_loopback`) and IR hardware documentation (`docs/hardware/ir-circuit.md`).
+
+### Changed
+- ESP32 Arduino core pinned to 2.0.17 (IRremoteESP8266 incompatible with core 3.x).
+- CLI temperature limit aligned with the node (16–30 °C).
+- Command round trip now includes IR airtime: median 468 ms, p95 481 ms (N = 20).
+
+### Known limitations
+- Not yet tested on a real Daikin unit or remote; IR LED driven at ~40 mA from 3V3, range unverified.
 ## [0.2.0] - 2026-11-04
 ### Added
 - Room node discovers the gateway via mDNS (`gateway.local`) on every MQTT (re)connect, with a fallback address; node advertises itself as `<room>.local`.
@@ -26,7 +41,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versio
 - Mosquitto config with per-room ACL (`%u` pattern) and password auth.
 - Unit tests (pytest), lint (ruff), CI (GitHub Actions) including firmware compile check.
 
-[Unreleased]: https://github.com/nguyenductruc-04/pbl5-smart-ac/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/nguyenductruc-04/pbl5-smart-ac/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/nguyenductruc-04/pbl5-smart-ac/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/nguyenductruc-04/pbl5-smart-ac/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/nguyenductruc-04/pbl5-smart-ac/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/nguyenductruc-04/pbl5-smart-ac/releases/tag/v0.1.0
