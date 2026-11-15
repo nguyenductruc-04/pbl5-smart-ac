@@ -7,7 +7,9 @@ pattern write home/%u/telemetry
 pattern write home/%u/status
 pattern write home/%u/command_result
 pattern write home/%u/ir_event
+pattern write home/%u/config_result
 pattern read  home/%u/command
+pattern read  home/%u/config
 
 # Gateway duoc toan quyen tren cay home/#
 user gateway
