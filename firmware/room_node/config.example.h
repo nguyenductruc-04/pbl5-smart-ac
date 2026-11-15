@@ -15,6 +15,7 @@
 #define BACKUP_PASS    "YOUR_BACKUP_AP_PASSWORD"
 #define WIFI_CONNECT_TIMEOUT_MS 15000UL    // cho moi mang toi da bao lau
 #define WIFI_HOME_RETRY_MS      300000UL   // dang o mang du phong, bao lau thu Wi-Fi nha mot lan
+#define WIFI_BROKER_LOST_MS     120000UL   // co Wi-Fi nha nhung mat broker bao lau thi thu mang du phong
 
 // --- MQTT broker (Raspberry Pi) ---
 // Ten mDNS cua Raspberry Pi (hostname, KHONG kem ".local"). ESP32 tu tim IP moi lan ket noi.

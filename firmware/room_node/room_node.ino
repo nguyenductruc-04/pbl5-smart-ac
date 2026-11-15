@@ -64,6 +64,7 @@ Preferences   prefs;
 String        homeSsid, homePass, lastCfgId;   // doc tu NVS
 bool          onBackup       = false;           // dang o mang du phong SmartAC-Backup?
 unsigned long lastHomeTry    = 0;
+unsigned long brokerLostSince = 0;              // co Wi-Fi nha nhung khong toi duoc broker tu luc nao
 // Cau hinh Wi-Fi moi nhan tu Pi: xu ly trong loop(), KHONG xu ly trong callback MQTT
 bool          cfgPending     = false;
 String        cfgId, cfgSsid, cfgPass;
@@ -142,6 +143,23 @@ void maybeReturnHome() {
     onBackup = false;
   } else {
     tryWifi(BACKUP_SSID, BACKUP_PASS, WIFI_CONNECT_TIMEOUT_MS);   // that bai thi loop() tu xu ly
+  }
+}
+
+// Co Wi-Fi nha nhung khong toi duoc broker qua lau (vd. Pi mat Wi-Fi nha va da bat AP du phong,
+// trong khi router van song) -> "di theo Pi": thu sang mang du phong
+void maybeFollowGateway() {
+  if (onBackup || strlen(BACKUP_SSID) == 0) { brokerLostSince = 0; return; }
+  if (brokerLostSince == 0) { brokerLostSince = millis(); return; }
+  if (millis() - brokerLostSince < WIFI_BROKER_LOST_MS) return;
+  brokerLostSince = 0;
+  Serial.println("[WiFi] Khong toi duoc broker tren Wi-Fi nha -> thu mang du phong");
+  if (tryWifi(BACKUP_SSID, BACKUP_PASS, WIFI_CONNECT_TIMEOUT_MS)) {
+    onBackup = true;
+    lastHomeTry = millis();
+    Serial.println("[WiFi] Dang dung MANG DU PHONG");
+  } else {
+    tryWifi(homeSsid.c_str(), homePass.c_str(), WIFI_CONNECT_TIMEOUT_MS);
   }
 }
 
@@ -542,10 +560,12 @@ void loop() {
   if (!mqtt.connected()) {
     if (millis() - lastMqttTry > 5000) {
       lastMqttTry = millis();
-      connectMqtt();
+      if (connectMqtt()) brokerLostSince = 0;
+      else               maybeFollowGateway();
     }
     return;
   }
+  brokerLostSince = 0;
 
   mqtt.loop();
 
