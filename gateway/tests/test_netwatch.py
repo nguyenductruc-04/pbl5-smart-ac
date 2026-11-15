@@ -60,3 +60,24 @@ def test_parse_state():
 
 def test_parse_state_connection_name_with_colon_like_text():
     assert parse_state("wlan0:connected:netplan-wlan0-Xiaomi 13T\n") == HOME
+
+
+def test_home_connections_filters_and_sorts():
+    out = (
+        "lo:loopback:no:0\n"
+        "SmartAC-Backup:802-11-wireless:no:0\n"
+        "Mai:802-11-wireless:yes:20\n"
+        "xiaomi:802-11-wireless:yes:10\n"
+        "old-hotspot:802-11-wireless:no:0\n"
+        "netplan-wlan0-Xiaomi 13T:802-11-wireless:yes:0\n"
+        "Wired:802-3-ethernet:yes:0\n"
+    )
+    assert nw.home_connections(out) == ["Mai", "xiaomi", "netplan-wlan0-Xiaomi 13T"]
+
+
+def test_home_connections_name_with_escaped_colon():
+    assert nw.home_connections("Cafe\\:Wifi:802-11-wireless:yes:0\n") == ["Cafe:Wifi"]
+
+
+def test_home_connections_never_returns_ap():
+    assert nw.home_connections("SmartAC-Backup:802-11-wireless:yes:99\n") == []

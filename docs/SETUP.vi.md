@@ -174,15 +174,23 @@ journalctl -u pbl5-netwatch -f
 
 ### 6.5 Kiểm tra tự động chuyển mạng
 
-| Bài | Làm gì | Kết quả đúng (xem `journalctl -u pbl5-netwatch -f`) |
+Làm trên **màn hình + bàn phím của Pi** (Pi sẽ rời mạng). Theo dõi log ở một console (`journalctl -u pbl5-netwatch -f`),
+gõ lệnh ở console khác (**Alt+F2**, quay lại bằng **Alt+F1**). Thay `Mai` bằng tên kết nối Wi-Fi nhà
+(`nmcli -f NAME,TYPE,AUTOCONNECT connection show`); tắt các mạng đã lưu khác (ví dụ hotspot điện thoại) trong lúc test.
+
+Không tắt được router thật thì giả lập mất mạng bằng cách tạm cấm Pi tự kết nối vào Wi-Fi nhà:
+
+| Bài | Lệnh | Kết quả đúng trong log |
 |---|---|---|
-| 1 | Tắt Wi-Fi nhà (hoặc hotspot) | Sau ~2 phút: `Mat Wi-Fi nha -> bat AP du phong`; thấy mạng `SmartAC-Backup` |
-| 2 | Giữ Wi-Fi nhà tắt | Mỗi ~5 phút: `Tat AP 45s...`, rồi AP bật lại |
-| 3 | Bật lại Wi-Fi nhà | Ở lần thử kế tiếp, Pi về Wi-Fi nhà và ở lại; AP biến mất |
-| 4 | Mất mạng ngắn < 2 phút | Không bật AP |
+| 1. Mất mạng lâu | `sudo nmcli connection modify Mai connection.autoconnect no` rồi `sudo nmcli connection down Mai` | Sau ~2 phút: `Mat Wi-Fi nha -> bat AP du phong` |
+| 2. Vẫn mất mạng | (giữ nguyên) | Mỗi ~5 phút: `Tat AP de thu ket noi lai Wi-Fi nha` → `Khong ket noi duoc Wi-Fi nha nao` → AP bật lại |
+| 3. Có mạng trở lại | `sudo nmcli connection modify Mai connection.autoconnect yes` | Ở lần thử kế tiếp: `Thu ket noi 'Mai'` → `Da ve Wi-Fi nha 'Mai'`, AP biến mất |
+| 4. Mất mạng ngắn | `sudo nmcli connection down Mai; sleep 60; sudo nmcli connection up Mai` | Không có dòng `bat AP` |
 
-Khi Pi đang ở chế độ AP thì không có Internet (Tailscale không dùng được); vào Pi bằng cách kết nối laptop vào `SmartAC-Backup`.
+Test xong kiểm tra `nmcli -f NAME,AUTOCONNECT connection show`: `Mai` phải là **yes**.
 
+Khi Pi đang ở chế độ AP thì không có Internet (Tailscale không dùng được); vào Pi bằng cách kết nối laptop vào `SmartAC-Backup`
+rồi `ssh truc0404@10.42.0.1`.
 
 ## Xử lý lỗi thường gặp
 

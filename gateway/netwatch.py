@@ -2,8 +2,10 @@
 Wi-Fi watchdog cho Raspberry Pi (xem docs/adr/0001-node-wifi-provisioning.md).
 
 - Pi mat Wi-Fi nha lien tuc OFFLINE_BEFORE_AP_S giay -> bat AP du phong (SmartAC-Backup, 10.42.0.1).
-- Dang o che do AP: cu RETRY_HOME_EVERY_S giay tat AP trong RETRY_WINDOW_S giay de NetworkManager
-  tu ket noi lai cac mang Wi-Fi nha da luu. Ket noi duoc thi o lai, khong thi bat lai AP.
+- Dang o che do AP: cu RETRY_HOME_EVERY_S giay tat AP va CHU DONG bat lan luot cac mang Wi-Fi nha
+  da luu (autoconnect=yes, uu tien cao truoc). Ket noi duoc thi o lai, khong thi bat lai AP.
+  Khong cho NetworkManager tu ket noi, vi NM co the da chan tu ket noi (that bai nhieu lan,
+  hoac nguoi dung vua "connection down") -> Pi se ket o che do AP mai mai.
 
 Logic quyet dinh nam trong ham thuan `decide()` (khong goi he thong) de unit test duoc.
 Chay nhu dich vu systemd: xem gateway/pbl5-netwatch.service
@@ -18,7 +20,8 @@ WIFI_DEVICE = "wlan0"
 CHECK_INTERVAL_S = 15
 OFFLINE_BEFORE_AP_S = 120   # mat mang bao lau thi bat AP
 RETRY_HOME_EVERY_S = 300    # dang o AP, bao lau thu quay ve Wi-Fi nha mot lan
-RETRY_WINDOW_S = 45         # thoi gian cho NetworkManager tu ket noi Wi-Fi nha
+RETRY_WINDOW_S = 45         # thoi gian toi da cho mot lan thu quay ve Wi-Fi nha
+CONNECT_WAIT_S = 20         # cho moi mang Wi-Fi nha toi da bao lau
 
 log = logging.getLogger("netwatch")
 
@@ -82,6 +85,29 @@ def parse_state(nmcli_output: str, device: str = WIFI_DEVICE, ap_name: str = AP_
     return OFFLINE
 
 
+def home_connections(nmcli_output: str, ap_name: str = AP_CONNECTION) -> list[str]:
+    """Doc `nmcli -t -f NAME,TYPE,AUTOCONNECT,AUTOCONNECT-PRIORITY connection show`.
+
+    Tra ve cac mang Wi-Fi nha (autoconnect=yes, khong phai AP), uu tien cao truoc.
+    """
+    found = []
+    for line in nmcli_output.splitlines():
+        # NAME co the chua ':' -> nmcli escape thanh '\:'; tach tu ben phai
+        parts = line.rsplit(":", 3)
+        if len(parts) != 4:
+            continue
+        name, ctype, auto, prio = parts
+        name = name.replace("\\:", ":")
+        if ctype != "802-11-wireless" or auto != "yes" or name == ap_name:
+            continue
+        try:
+            priority = int(prio)
+        except ValueError:
+            priority = 0
+        found.append((priority, name))
+    return [name for _, name in sorted(found, key=lambda x: -x[0])]
+
+
 def nmcli(*args: str) -> str:
     res = subprocess.run(["nmcli", *args], capture_output=True, text=True, timeout=30)
     if res.returncode != 0:
@@ -104,8 +130,18 @@ def main() -> None:
             log.warning("Mat Wi-Fi nha -> bat AP du phong %s", AP_CONNECTION)
             nmcli("connection", "up", AP_CONNECTION)
         elif action == STOP_AP:
-            log.info("Tat AP %ds de thu ket noi lai Wi-Fi nha", RETRY_WINDOW_S)
+            log.info("Tat AP de thu ket noi lai Wi-Fi nha")
             nmcli("connection", "down", AP_CONNECTION)
+            homes = home_connections(
+                nmcli("-t", "-f", "NAME,TYPE,AUTOCONNECT,AUTOCONNECT-PRIORITY", "connection", "show"))
+            for name in homes:
+                log.info("Thu ket noi '%s'", name)
+                nmcli("--wait", str(CONNECT_WAIT_S), "connection", "up", name)
+                if parse_state(nmcli("-t", "-f", "DEVICE,STATE,CONNECTION", "device")) == HOME:
+                    log.info("Da ve Wi-Fi nha '%s'", name)
+                    break
+            else:
+                log.info("Khong ket noi duoc Wi-Fi nha nao (%d mang da luu)", len(homes))
         time.sleep(CHECK_INTERVAL_S)
 
 
