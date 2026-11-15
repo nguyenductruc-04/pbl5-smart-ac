@@ -29,7 +29,7 @@ Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 | Milestone | Scope | Status |
 |---|---|---|
 | 1 | ESP32 ⇄ MQTT ⇄ Pi, SQLite storage, auth + ACL | ✅ Done — validated on ESP32-S3 + Raspberry Pi 5 over Wi-Fi |
-| 2 | Daikin IR decode + transmit | Planned |
+| 2 | Daikin IR decode + transmit | ✅ Done — send/receive validated by IR loopback (17/20, TSOP38238); **pending test on a real Daikin unit** |
 | 3 | Real sensors: SHT41 (I²C), LD2410 (UART) | Planned |
 | 4 | Safety Layer + REST API (FastAPI) | Planned |
 | 5 | Dashboard / app | Planned |
@@ -44,9 +44,16 @@ Sensor data is still simulated (SHT41 not yet fitted).
 |---|---|---|---|---|---|---|---|
 | v0.1.0 | baseline | 21 | — | — | 427 ms | 35 ms | 1909 ms |
 | v0.1.1 | Wi-Fi modem sleep disabled (`WiFi.setSleep(false)`) | 20 | **28 ms** | **38 ms** | — | 20 ms | **54 ms** |
+| v0.3.0 | Real IR sent before reply (includes Daikin frame airtime) | 20 | **468 ms** | **481 ms** | — | 464 ms | 486 ms |
 
 The v0.1.0 tail latency came from ESP32 Wi-Fi modem sleep (on by default), which delays incoming MQTT messages.
 Disabling it cut worst-case latency ~35×. Trade-off: higher idle power, acceptable for mains-powered room nodes.
+
+From v0.3.0 the node replies only after the IR frame has been sent, so round trip ≈ MQTT (median 28 ms, v0.1.1)
++ Daikin 280-bit IR frame airtime (~440 ms). The narrow spread (464–486 ms) shows the added time is a constant
+set by the protocol, not network delay.
+
+IR circuit, component calculations and loopback test results: [docs/hardware/ir-circuit.md](docs/hardware/ir-circuit.md).
 
 ![Serial monitor](docs/images/serial-monitor.png)
 
@@ -83,6 +90,7 @@ Broker setup (password file + ACL) and ESP32 flashing: see the step-by-step guid
 | `home/{room}/command` | gateway → node | `{"cmd_id","power","mode","temp","fan","source","ts"}` |
 | `home/{room}/command_result` | node → gateway | `{"cmd_id","ok","ir_sent","note"}` |
 | `home/{room}/status` | node → gateway | `online` / `offline` (retained, Last Will) |
+| `home/{room}/ir_event` | node → gateway | `{"protocol","power","mode","temp","fan","source","uptime_s"}` — user pressed the original remote |
 
 ## Development
 

@@ -103,6 +103,8 @@ Kết quả đúng: `gateway.py` in ra các dòng `temp=... hum=...`, còn `send
 
 1. Cài **Arduino IDE 2**. Vào *Boards Manager*, cài **esp32 by Espressif Systems**.Cài **esp32 by Espressif bản 2.0.17. Bản 3.x chưa tương thích với IRremoteESP8266.**
 2. Vào *Library Manager*, cài: **PubSubClient** (Nick O'Leary), **ArduinoJson** (Benoit Blanchon, bản 7.x), **Adafruit SHT4x Library** (đồng ý cài kèm thư viện phụ thuộc).
+   - Mạch IR (LED phát GPIO 4, mắt thu TSOP38238 GPIO 5): xem `docs/hardware/ir-circuit.md`.
+   - Trong `config.h`, thêm khối `// --- IR ---` từ `config.example.h`.
 3. Mở `firmware/room_node/room_node.ino`, copy `config.example.h` thành `config.h` rồi sửa:
    - `WIFI_SSID`, `WIFI_PASS`: Wi-Fi **2.4 GHz** (ESP32 không bắt được 5 GHz).
    - `MQTT_HOSTNAME`: hostname của Pi (mặc định `gateway`). ESP32 tự tìm IP qua mDNS, không cần ghi IP.

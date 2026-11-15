@@ -76,3 +76,17 @@ def test_schema_is_idempotent(tmp_path):
     gw.open_db(p).close()
     conn = gw.open_db(p)
     assert isinstance(conn, sqlite3.Connection)
+
+
+def test_ir_event_is_stored(gateway):
+    payload = {"protocol": "DAIKIN", "power": "on", "mode": "cool", "temp": 25, "fan": "auto"}
+    gateway.handle_ir_event("room01", 7.0, json.dumps(payload))
+    assert rows(gateway, "SELECT room, protocol, power, mode, temp, fan FROM ir_events") == [
+        ("room01", "DAIKIN", "on", "cool", 25, "auto")
+    ]
+
+
+def test_ir_event_bad_json_is_rejected(gateway):
+    gateway.handle_ir_event("room01", 8.0, "{oops")
+    assert rows(gateway, "SELECT COUNT(*) FROM ir_events") == [(0,)]
+    assert rows(gateway, "SELECT reason FROM rejected") == [("ir_event json loi",)]

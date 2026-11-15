@@ -9,12 +9,10 @@
 #define WIFI_PASS      "YOUR_WIFI_PASSWORD"
 
 // --- MQTT broker (Raspberry Pi) ---
-// Dung dia chi IP cua Pi (vi du 192.168.1.50). Nen dat IP tinh / DHCP reservation tren router.
-//#define MQTT_HOST      "192.168.1.50"
 // Ten mDNS cua Raspberry Pi (hostname, KHONG kem ".local"). ESP32 tu tim IP moi lan ket noi.
 #define MQTT_HOSTNAME      "gateway"
 // IP du phong khi mang chan mDNS (vd. mot so hotspot dien thoai). De "" neu khong dung.
-#define MQTT_HOST_FALLBACK "192.168.2.114"
+#define MQTT_HOST_FALLBACK "10.42.0.1"
 #define MQTT_PORT      1883
 
 // --- Dinh danh phong ---
@@ -29,3 +27,14 @@
 // --- Chan I2C cho cam bien SHT41 (doi neu ban noi chan khac) ---
 #define I2C_SDA_PIN    8
 #define I2C_SCL_PIN    9
+
+// --- IR (xem docs/hardware/ir-circuit.md) ---
+#define IR_TX_PIN      4          // LED IR qua transistor 2N2222A
+#define IR_RX_PIN      5          // TSOP38238 OUT
+// Giao thuc dieu hoa (ten trong IRremoteESP8266: DAIKIN, DAIKIN2, DAIKIN216, DAIKIN64...).
+// Khi co may that: bam remote goc, xem truong "protocol" trong ir_event roi sua dong nay.
+#define IR_PROTOCOL    DAIKIN
+#define IR_MODEL       -1         // -1 = mac dinh cua giao thuc
+#define IR_TEMP_MIN    16         // gioi han nhiet do chap nhan tu lenh MQTT (do C)
+#define IR_TEMP_MAX    30
+#define IR_BLANKING_MS 300UL      // bo qua tin hieu IR thu duoc ngay sau khi tu phat
