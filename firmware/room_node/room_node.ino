@@ -30,6 +30,8 @@
 #include <IRac.h>
 #include "config.h"
 
+#define FW_VERSION "0.4.0-dev.4"
+
 // ----------------------- Topic -----------------------
 const String T_TELEMETRY = String("home/") + ROOM_ID + "/telemetry";
 const String T_COMMAND   = String("home/") + ROOM_ID + "/command";
@@ -64,6 +66,7 @@ Preferences   prefs;
 String        homeSsid, homePass, lastCfgId;   // doc tu NVS
 bool          onBackup       = false;           // dang o mang du phong SmartAC-Backup?
 unsigned long lastHomeTry    = 0;
+volatile uint8_t lastDiscReason = 0;           // ly do mat ket noi Wi-Fi (driver bao)
 unsigned long brokerLostSince = 0;              // co Wi-Fi nha nhung khong toi duoc broker tu luc nao
 // Cau hinh Wi-Fi moi nhan tu Pi: xu ly trong loop(), KHONG xu ly trong callback MQTT
 bool          cfgPending     = false;
@@ -100,15 +103,40 @@ void startMdnsOnce() {
   Serial.printf("[mDNS] %s\n", mdnsStarted ? "OK, ten = " ROOM_ID ".local" : "Khoi dong that bai");
 }
 
+// Ly do thuong gap (esp_wifi_types.h): 15/204 = sai mat khau (handshake), 201 = khong thay mang,
+// 202 = xac thuc that bai, 2 = auth het han
+void onWifiDisconnected(arduino_event_id_t event, arduino_event_info_t info) {
+  lastDiscReason = info.wifi_sta_disconnected.reason;
+}
+
+// Quet xem mang co dang phat khong (chi goi khi ket noi that bai, mat ~2-3 s)
+void reportScan(const char *ssid) {
+  int n = WiFi.scanNetworks();
+  for (int i = 0; i < n; i++) {
+    if (WiFi.SSID(i) == ssid) {
+      Serial.printf("[WiFi]   '%s' CO phat: kenh %d, RSSI %d dBm, bao mat %d\n",
+                    ssid, WiFi.channel(i), WiFi.RSSI(i), (int)WiFi.encryptionType(i));
+      WiFi.scanDelete();
+      return;
+    }
+  }
+  Serial.printf("[WiFi]   KHONG thay '%s' (quet duoc %d mang)\n", ssid, n);
+  WiFi.scanDelete();
+}
+
 bool tryWifi(const char *ssid, const char *pass, uint32_t timeoutMs) {
   Serial.printf("[WiFi] Thu ket noi '%s' ...\n", ssid);
   WiFi.disconnect();
-  delay(100);
+  // Cho ngat han mang cu (ngat ket noi la bat dong bo) truoc khi sang mang moi
+  unsigned long t0 = millis();
+  while (WiFi.status() == WL_CONNECTED && millis() - t0 < 2000) delay(50);
+  lastDiscReason = 0;
   WiFi.begin(ssid, pass);
   unsigned long start = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - start < timeoutMs) delay(250);
   if (WiFi.status() != WL_CONNECTED) {
-    Serial.printf("[WiFi] That bai '%s'\n", ssid);
+    Serial.printf("[WiFi] That bai '%s' (status %d, ly do %u)\n", ssid, (int)WiFi.status(), lastDiscReason);
+    reportScan(ssid);
     return false;
   }
   Serial.printf("[WiFi] OK '%s', IP = %s, RSSI = %d dBm\n", ssid,
@@ -120,6 +148,7 @@ bool tryWifi(const char *ssid, const char *pass, uint32_t timeoutMs) {
 void connectWiFi() {
   if (WiFi.status() == WL_CONNECTED) return;
   WiFi.mode(WIFI_STA);
+  WiFi.setAutoReconnect(false);   // tu quan ly viec chon mang; tranh driver tu noi lai mang cu
   WiFi.setSleep(false);   // tat modem sleep: giam do tre nhan lenh (v0.1.1)
   if (tryWifi(homeSsid.c_str(), homePass.c_str(), WIFI_CONNECT_TIMEOUT_MS)) {
     onBackup = false;
@@ -150,8 +179,11 @@ void maybeReturnHome() {
 // trong khi router van song) -> "di theo Pi": thu sang mang du phong
 void maybeFollowGateway() {
   if (onBackup || strlen(BACKUP_SSID) == 0) { brokerLostSince = 0; return; }
-  if (brokerLostSince == 0) { brokerLostSince = millis(); return; }
-  if (millis() - brokerLostSince < WIFI_BROKER_LOST_MS) return;
+  if (brokerLostSince == 0) brokerLostSince = millis();
+  unsigned long lost = millis() - brokerLostSince;
+  Serial.printf("[WiFi] Mat broker %lus / %lus (sau do thu mang du phong)\n",
+                lost / 1000, (unsigned long)(WIFI_BROKER_LOST_MS / 1000));
+  if (lost < WIFI_BROKER_LOST_MS) return;
   brokerLostSince = 0;
   Serial.println("[WiFi] Khong toi duoc broker tren Wi-Fi nha -> thu mang du phong");
   if (tryWifi(BACKUP_SSID, BACKUP_PASS, WIFI_CONNECT_TIMEOUT_MS)) {
@@ -514,7 +546,7 @@ void checkFactoryReset() {
 void setup() {
   Serial.begin(115200);
   delay(1500);  // cho Serial USB san sang
-  Serial.println("\n=== PBL5 Room Node - " ROOM_ID " ===");
+  Serial.println("\n=== PBL5 Room Node " FW_VERSION " - " ROOM_ID " ===");
 
   Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
   shtOk = sht4.begin(&Wire);
@@ -542,6 +574,7 @@ void setup() {
   loadWifiConfig();
   Serial.printf("[WiFi] Wi-Fi nha: '%s', du phong: '%s'\n", homeSsid.c_str(), BACKUP_SSID);
 
+  WiFi.onEvent(onWifiDisconnected, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
   connectWiFi();
   mqtt.setBufferSize(512);
   mqtt.setKeepAlive(30);
