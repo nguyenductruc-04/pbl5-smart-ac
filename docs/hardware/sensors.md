@@ -41,6 +41,9 @@ Hiện có (từ M2): LED IR qua 2N2222A ở GPIO 4, TSOP38238 ở GPIO 5.
 - **SHT3x cách ESP32, LD2420 và mạch nguồn ít nhất 5–10 cm** (nối bằng dây). ESP32 khi bật Wi-Fi và LD2420 (khoảng 0,17 W) đều tỏa nhiệt, đặt sát sẽ làm nhiệt độ đo cao hơn thực tế.
 - **SHT3x không đặt ngay luồng gió điều hòa thổi ra**, không đặt chỗ nắng chiếu. Gió lạnh trực tiếp cho nhiệt độ gió thổi, không phải nhiệt độ phòng.
 - **LD2420 hướng về chỗ người hay ngồi hoặc nằm.** Tránh hướng thẳng vào cánh đảo gió của điều hòa, quạt hay rèm bị gió thổi: vật chuyển động có thể gây báo có người sai. Tầm phát hiện người di chuyển khoảng 8 m, cử động nhỏ khoảng 6 m (lắp tường, theo hướng dẫn của Hi-Link).
+- **Không đặt kim loại trước ăng-ten LD2420.** Vỏ hộp (nếu có) phải bằng nhựa hoặc vật liệu cho sóng 24 GHz đi qua. Vật phản xạ mạnh ngay trước ăng-ten làm cảm biến luôn báo có người (đã gặp khi thử úp tấm nhôm lên cảm biến).
+- **Gắn LD2420 cố định**, không để rung hay xê dịch. Phía sau cảm biến không có vật chuyển động (radar có búp sóng phía sau); có thể dùng tấm kim loại **đặt phía sau** để chặn búp sóng này.
+- Để thử trạng thái "không có người": rời khỏi phòng và đóng cửa khoảng 1 phút. Không che cảm biến bằng kim loại.
 - Node vẫn phải nhìn thấy mắt nhận IR của điều hòa (M2).
 
 ## Giới hạn đã biết
