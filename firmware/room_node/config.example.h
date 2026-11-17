@@ -4,9 +4,18 @@
 // =====================================================================
 #pragma once
 
-// --- Wi-Fi (chi ho tro bang tan 2.4 GHz) ---
+// --- Wi-Fi nha (chi ho tro bang tan 2.4 GHz) ---
+// Chi dung o lan khoi dong DAU TIEN. Sau do node dung Wi-Fi luu trong NVS (Pi co the gui Wi-Fi moi
+// qua MQTT). Muon quay lai gia tri nay: giu nut BOOT ~2 s ngay sau khi node khoi dong.
 #define WIFI_SSID      "YOUR_WIFI_SSID"
 #define WIFI_PASS      "YOUR_WIFI_PASSWORD"
+
+// --- Wi-Fi du phong do Pi phat khi mat Wi-Fi nha (xem docs/SETUP.vi.md, Buoc 6) ---
+#define BACKUP_SSID    "SmartAC-Backup"
+#define BACKUP_PASS    "YOUR_BACKUP_AP_PASSWORD"
+#define WIFI_CONNECT_TIMEOUT_MS 15000UL    // cho moi mang toi da bao lau
+#define WIFI_HOME_RETRY_MS      300000UL   // dang o mang du phong, bao lau thu Wi-Fi nha mot lan
+#define WIFI_BROKER_LOST_MS     120000UL   // co Wi-Fi nha nhung mat broker bao lau thi thu mang du phong
 
 // --- MQTT broker (Raspberry Pi) ---
 // Ten mDNS cua Raspberry Pi (hostname, KHONG kem ".local"). ESP32 tu tim IP moi lan ket noi.

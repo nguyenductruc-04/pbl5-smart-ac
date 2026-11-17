@@ -1,6 +1,8 @@
 // =====================================================================
-//  PBL5 - Room Node (ESP32-S3) - Milestone 2
-//  - Ket noi Wi-Fi (tat modem sleep), tu ket noi lai khi mat mang
+//  PBL5 - Room Node (ESP32-S3) - v0.4.0
+//  - Wi-Fi nha luu trong NVS; mat Wi-Fi nha -> chuyen sang mang du phong SmartAC-Backup (do Pi phat),
+//    dinh ky thu quay ve Wi-Fi nha. Nhan Wi-Fi nha moi tu Pi qua home/<room>/config
+//  - Tat modem sleep, tu ket noi lai khi mat mang
 //  - Tim broker qua mDNS (gateway.local), co IP du phong
 //  - MQTT co Last Will (home/<room>/status = offline, retained)
 //  - Doc SHT41 neu co; neu chua lap cam bien thi gui du lieu GIA LAP (sim=true)
@@ -16,6 +18,7 @@
 //  Board core: esp32 by Espressif 2.0.17 (ban 3.x chua tuong thich IRremoteESP8266)
 // =====================================================================
 #include <WiFi.h>
+#include <Preferences.h>
 #include <ESPmDNS.h>
 #include <Wire.h>
 #include <PubSubClient.h>
@@ -27,12 +30,16 @@
 #include <IRac.h>
 #include "config.h"
 
+#define FW_VERSION "0.4.0"
+
 // ----------------------- Topic -----------------------
 const String T_TELEMETRY = String("home/") + ROOM_ID + "/telemetry";
 const String T_COMMAND   = String("home/") + ROOM_ID + "/command";
 const String T_RESULT    = String("home/") + ROOM_ID + "/command_result";
 const String T_STATUS    = String("home/") + ROOM_ID + "/status";
 const String T_IR_EVENT  = String("home/") + ROOM_ID + "/ir_event";
+const String T_CONFIG    = String("home/") + ROOM_ID + "/config";
+const String T_CFG_RES   = String("home/") + ROOM_ID + "/config_result";
 
 WiFiClient    net;
 PubSubClient  mqtt(net);
@@ -54,29 +61,186 @@ uint32_t      seq            = 0;
 IPAddress     brokerIp;
 bool          mdnsStarted    = false;
 
+// Wi-Fi (xem docs/adr/0001-node-wifi-provisioning.md)
+Preferences   prefs;
+String        homeSsid, homePass, lastCfgId;   // doc tu NVS
+bool          onBackup       = false;           // dang o mang du phong SmartAC-Backup?
+unsigned long lastHomeTry    = 0;
+volatile uint8_t lastDiscReason = 0;           // ly do mat ket noi Wi-Fi (driver bao)
+unsigned long brokerLostSince = 0;              // co Wi-Fi nha nhung khong toi duoc broker tu luc nao
+// Cau hinh Wi-Fi moi nhan tu Pi: xu ly trong loop(), KHONG xu ly trong callback MQTT
+bool          cfgPending     = false;
+String        cfgId, cfgSsid, cfgPass;
+String        pendingCfgResult;                 // gui khi MQTT ket noi lai
+
 // ------------------------------------------------------------------
+// NVS: Wi-Fi nha. Lan dau (NVS trong) lay tu config.h
+void loadWifiConfig() {
+  prefs.begin("pbl5", true);
+  homeSsid  = prefs.getString("home_ssid", WIFI_SSID);
+  homePass  = prefs.getString("home_pass", WIFI_PASS);
+  lastCfgId = prefs.getString("last_cfg", "");
+  prefs.end();
+}
+
+void saveWifiConfig() {
+  prefs.begin("pbl5", false);
+  prefs.putString("home_ssid", homeSsid);
+  prefs.putString("home_pass", homePass);
+  prefs.putString("last_cfg", lastCfgId);
+  prefs.end();
+}
+
+// Chi xoa Wi-Fi; GIU last_cfg de cau hinh cu con retained tren broker khong bi ap dung lai sau khi reset
+void clearWifiConfig() {
+  prefs.begin("pbl5", false);
+  prefs.remove("home_ssid");
+  prefs.remove("home_pass");
+  prefs.end();
+}
+
+void startMdnsOnce() {
+  if (mdnsStarted) return;
+  mdnsStarted = MDNS.begin(ROOM_ID);
+  Serial.printf("[mDNS] %s\n", mdnsStarted ? "OK, ten = " ROOM_ID ".local" : "Khoi dong that bai");
+}
+
+// Ly do thuong gap (esp_wifi_types.h): 15/204 = sai mat khau (handshake), 201 = khong thay mang,
+// 202 = xac thuc that bai, 2 = auth het han
+void onWifiDisconnected(arduino_event_id_t event, arduino_event_info_t info) {
+  lastDiscReason = info.wifi_sta_disconnected.reason;
+}
+
+// Quet xem mang co dang phat khong (chi goi khi ket noi that bai, mat ~2-3 s)
+void reportScan(const char *ssid) {
+  int n = WiFi.scanNetworks();
+  for (int i = 0; i < n; i++) {
+    if (WiFi.SSID(i) == ssid) {
+      Serial.printf("[WiFi]   '%s' CO phat: kenh %d, RSSI %d dBm, bao mat %d\n",
+                    ssid, WiFi.channel(i), WiFi.RSSI(i), (int)WiFi.encryptionType(i));
+      WiFi.scanDelete();
+      return;
+    }
+  }
+  Serial.printf("[WiFi]   KHONG thay '%s' (quet duoc %d mang)\n", ssid, n);
+  WiFi.scanDelete();
+}
+
+bool tryWifi(const char *ssid, const char *pass, uint32_t timeoutMs) {
+  Serial.printf("[WiFi] Thu ket noi '%s' ...\n", ssid);
+  WiFi.disconnect();
+  // Cho ngat han mang cu (ngat ket noi la bat dong bo) truoc khi sang mang moi
+  unsigned long t0 = millis();
+  while (WiFi.status() == WL_CONNECTED && millis() - t0 < 2000) delay(50);
+  lastDiscReason = 0;
+  WiFi.begin(ssid, pass);
+  unsigned long start = millis(), lastBegin = millis();
+  int retries = 0;
+  while (WiFi.status() != WL_CONNECTED && millis() - start < timeoutMs) {
+    delay(250);
+    // Lan dau sau khi bat nguon ESP32 hay that bai som (vd. ly do 2 = auth het han).
+    // Driver da tat tu ket noi lai, nen tu goi lai toi da 2 lan trong thoi gian cho.
+    wl_status_t st = WiFi.status();
+    if ((st == WL_DISCONNECTED || st == WL_CONNECT_FAILED) && lastDiscReason != 0 &&
+        retries < 2 && millis() - lastBegin > 2000) {
+      retries++;
+      Serial.printf("[WiFi]   that bai som (ly do %u) -> thu lai lan %d\n", lastDiscReason, retries);
+      lastDiscReason = 0;
+      WiFi.disconnect();
+      delay(100);
+      WiFi.begin(ssid, pass);
+      lastBegin = millis();
+    }
+  }
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.printf("[WiFi] That bai '%s' (status %d, ly do %u)\n", ssid, (int)WiFi.status(), lastDiscReason);
+    reportScan(ssid);
+    return false;
+  }
+  Serial.printf("[WiFi] OK '%s', IP = %s, RSSI = %d dBm\n", ssid,
+                WiFi.localIP().toString().c_str(), WiFi.RSSI());
+  return true;
+}
+
+// Uu tien Wi-Fi nha, khong duoc thi sang mang du phong cua Pi
 void connectWiFi() {
   if (WiFi.status() == WL_CONNECTED) return;
-  Serial.printf("[WiFi] Dang ket noi '%s' ...\n", WIFI_SSID);
   WiFi.mode(WIFI_STA);
+  WiFi.setAutoReconnect(false);   // tu quan ly viec chon mang; tranh driver tu noi lai mang cu
   WiFi.setSleep(false);   // tat modem sleep: giam do tre nhan lenh (v0.1.1)
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
-  unsigned long start = millis();
-  while (WiFi.status() != WL_CONNECTED && millis() - start < 15000) {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println();
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.printf("[WiFi] OK, IP = %s, RSSI = %d dBm\n",
-                  WiFi.localIP().toString().c_str(), WiFi.RSSI());
-    if (!mdnsStarted) {
-      mdnsStarted = MDNS.begin(ROOM_ID);
-      Serial.printf("[mDNS] %s\n", mdnsStarted ? "OK, ten = " ROOM_ID ".local" : "Khoi dong that bai");
-    }
+  if (tryWifi(homeSsid.c_str(), homePass.c_str(), WIFI_CONNECT_TIMEOUT_MS)) {
+    onBackup = false;
+  } else if (strlen(BACKUP_SSID) > 0 && tryWifi(BACKUP_SSID, BACKUP_PASS, WIFI_CONNECT_TIMEOUT_MS)) {
+    onBackup = true;
+    lastHomeTry = millis();
+    Serial.println("[WiFi] Dang dung MANG DU PHONG");
   } else {
-    Serial.println("[WiFi] That bai, se thu lai.");
+    return;   // loop() se goi lai
   }
+  startMdnsOnce();
+}
+
+// Dang o mang du phong: dinh ky thu quay ve Wi-Fi nha
+void maybeReturnHome() {
+  if (!onBackup || millis() - lastHomeTry < WIFI_HOME_RETRY_MS) return;
+  lastHomeTry = millis();
+  Serial.println("[WiFi] Thu quay ve Wi-Fi nha");
+  mqtt.disconnect();
+  if (tryWifi(homeSsid.c_str(), homePass.c_str(), WIFI_CONNECT_TIMEOUT_MS)) {
+    onBackup = false;
+  } else {
+    tryWifi(BACKUP_SSID, BACKUP_PASS, WIFI_CONNECT_TIMEOUT_MS);   // that bai thi loop() tu xu ly
+  }
+}
+
+// Co Wi-Fi nha nhung khong toi duoc broker qua lau (vd. Pi mat Wi-Fi nha va da bat AP du phong,
+// trong khi router van song) -> "di theo Pi": thu sang mang du phong
+void maybeFollowGateway() {
+  if (onBackup || strlen(BACKUP_SSID) == 0) { brokerLostSince = 0; return; }
+  if (brokerLostSince == 0) brokerLostSince = millis();
+  unsigned long lost = millis() - brokerLostSince;
+  Serial.printf("[WiFi] Mat broker %lus / %lus (sau do thu mang du phong)\n",
+                lost / 1000, (unsigned long)(WIFI_BROKER_LOST_MS / 1000));
+  if (lost < WIFI_BROKER_LOST_MS) return;
+  brokerLostSince = 0;
+  Serial.println("[WiFi] Khong toi duoc broker tren Wi-Fi nha -> thu mang du phong");
+  if (tryWifi(BACKUP_SSID, BACKUP_PASS, WIFI_CONNECT_TIMEOUT_MS)) {
+    onBackup = true;
+    lastHomeTry = millis();
+    Serial.println("[WiFi] Dang dung MANG DU PHONG");
+  } else {
+    tryWifi(homeSsid.c_str(), homePass.c_str(), WIFI_CONNECT_TIMEOUT_MS);
+  }
+}
+
+// Ap dung Wi-Fi nha moi: THU TRUOC, thanh cong moi luu; that bai thi quay lai mang cu
+void applyPendingConfig() {
+  cfgPending = false;
+  Serial.printf("[CFG] cfg_id=%s: thu Wi-Fi moi '%s'\n", cfgId.c_str(), cfgSsid.c_str());
+  mqtt.disconnect();
+
+  JsonDocument res;
+  res["cfg_id"] = cfgId;
+  res["ssid"]   = cfgSsid;            // KHONG bao gio gui lai mat khau
+  if (tryWifi(cfgSsid.c_str(), cfgPass.c_str(), WIFI_CONNECT_TIMEOUT_MS)) {
+    homeSsid = cfgSsid;
+    homePass = cfgPass;
+    onBackup = false;
+    res["ok"] = true;
+    Serial.println("[CFG] Thanh cong -> da luu Wi-Fi nha moi");
+  } else {
+    res["ok"]    = false;
+    res["error"] = "connect_failed";
+    Serial.println("[CFG] That bai -> giu Wi-Fi cu");
+    WiFi.disconnect();
+    connectWiFi();
+  }
+  lastCfgId = cfgId;                   // luu ca khi that bai: khong thu lai cung mot cau hinh
+  saveWifiConfig();
+  cfgPass = "";
+
+  pendingCfgResult = "";
+  serializeJson(res, pendingCfgResult);   // gui khi MQTT ket noi lai (co the o mang khac)
 }
 
 // ------------------------------------------------------------------
@@ -116,7 +280,13 @@ bool connectMqtt() {
   }
   mqtt.publish(T_STATUS.c_str(), "online", true);
   mqtt.subscribe(T_COMMAND.c_str(), 1);
-  Serial.printf("[MQTT] OK, da subscribe %s\n", T_COMMAND.c_str());
+  mqtt.subscribe(T_CONFIG.c_str(), 1);
+  Serial.printf("[MQTT] OK, da subscribe %s va %s\n", T_COMMAND.c_str(), T_CONFIG.c_str());
+  if (pendingCfgResult.length()) {
+    mqtt.publish(T_CFG_RES.c_str(), pendingCfgResult.c_str());
+    Serial.printf("[CFG] Gui ket qua: %s\n", pendingCfgResult.c_str());
+    pendingCfgResult = "";
+  }
   return true;
 }
 
@@ -272,8 +442,8 @@ void handleIrReceive() {
 }
 
 // ------------------------------------------------------------------
-// Nhan lenh tu Gateway
-void onMessage(char* topic, byte* payload, unsigned int len) {
+// Nhan lenh dieu khien tu Gateway
+void handleCommand(byte* payload, unsigned int len) {
   JsonDocument cmd;
   // Ep kieu const char* de ArduinoJson COPY chuoi (bo dem payload se bi ghi de khi publish)
   DeserializationError err = deserializeJson(cmd, (const char*)payload, len);
@@ -329,10 +499,72 @@ void onMessage(char* topic, byte* payload, unsigned int len) {
 }
 
 // ------------------------------------------------------------------
+// Nhan cau hinh Wi-Fi tu Pi: {"cfg_id":"...","wifi":{"ssid":"...","pass":"..."}}
+void handleConfig(byte* payload, unsigned int len) {
+  if (len == 0) return;                       // Pi vua xoa ban tin retained
+  JsonDocument doc;
+  if (deserializeJson(doc, (const char*)payload, len)) {
+    Serial.println("[CFG] JSON loi -> bo qua");
+    return;
+  }
+  String id   = doc["cfg_id"] | "";
+  String ssid = doc["wifi"]["ssid"] | "";
+  String pass = doc["wifi"]["pass"] | "";
+  if (id.length() && id == lastCfgId) {
+    Serial.printf("[CFG] cfg_id=%s da xu ly truoc do -> bo qua\n", id.c_str());
+    return;
+  }
+
+  const char *error = nullptr;
+  if (id.length() == 0)                                    error = "missing_cfg_id";
+  else if (ssid.length() < 1 || ssid.length() > 32)        error = "bad_ssid";
+  else if (pass.length() != 0 && (pass.length() < 8 || pass.length() > 63)) error = "bad_password_length";
+
+  if (error) {
+    JsonDocument res;
+    res["cfg_id"] = id;
+    res["ok"]     = false;
+    res["error"]  = error;
+    char buf[160];
+    size_t n = serializeJson(res, buf, sizeof(buf));
+    mqtt.publish(T_CFG_RES.c_str(), (const uint8_t*)buf, n, false);
+    Serial.printf("[CFG] Tu choi cfg_id=%s: %s\n", id.c_str(), error);
+    return;
+  }
+  cfgId = id; cfgSsid = ssid; cfgPass = pass;
+  cfgPending = true;                          // loop() se xu ly sau khi mqtt.loop() tra ve
+}
+
+void onMessage(char* topic, byte* payload, unsigned int len) {
+  if (T_CONFIG == topic) handleConfig(payload, len);
+  else                   handleCommand(payload, len);
+}
+
+// Giu nut BOOT (GPIO 0) khoang 1.5 s trong 3 s dau sau khi khoi dong -> xoa Wi-Fi da luu
+void checkFactoryReset() {
+  pinMode(0, INPUT_PULLUP);
+  Serial.println("[CFG] Giu nut BOOT ngay bay gio (3 s) de xoa Wi-Fi da luu...");
+  unsigned long t0 = millis(), held = 0;
+  while (millis() - t0 < 3000) {
+    if (digitalRead(0) == LOW) {
+      if (!held) held = millis();
+      if (millis() - held > 1500) {
+        clearWifiConfig();
+        Serial.println("[CFG] DA XOA Wi-Fi luu trong NVS -> dung lai gia tri trong config.h");
+        return;
+      }
+    } else {
+      held = 0;
+    }
+    delay(20);
+  }
+}
+
+// ------------------------------------------------------------------
 void setup() {
   Serial.begin(115200);
   delay(1500);  // cho Serial USB san sang
-  Serial.println("\n=== PBL5 Room Node - " ROOM_ID " ===");
+  Serial.println("\n=== PBL5 Room Node " FW_VERSION " - " ROOM_ID " ===");
 
   Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
   shtOk = sht4.begin(&Wire);
@@ -356,6 +588,11 @@ void setup() {
   Serial.printf("[IR] Giao thuc %s, TX GPIO %d, RX GPIO %d\n",
                 typeToString(acState.protocol).c_str(), IR_TX_PIN, IR_RX_PIN);
 
+  checkFactoryReset();
+  loadWifiConfig();
+  Serial.printf("[WiFi] Wi-Fi nha: '%s', du phong: '%s'\n", homeSsid.c_str(), BACKUP_SSID);
+
+  WiFi.onEvent(onWifiDisconnected, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
   connectWiFi();
   mqtt.setBufferSize(512);
   mqtt.setKeepAlive(30);
@@ -369,16 +606,24 @@ void loop() {
     connectWiFi();
     return;
   }
+  maybeReturnHome();   // dang o mang du phong -> dinh ky thu Wi-Fi nha
 
   if (!mqtt.connected()) {
     if (millis() - lastMqttTry > 5000) {
       lastMqttTry = millis();
-      connectMqtt();
+      if (connectMqtt()) brokerLostSince = 0;
+      else               maybeFollowGateway();
     }
     return;
   }
+  brokerLostSince = 0;
 
   mqtt.loop();
+
+  if (cfgPending) {
+    applyPendingConfig();
+    return;
+  }
 
   if (lastTelemetry == 0 || millis() - lastTelemetry >= TELEMETRY_INTERVAL_MS) {
     lastTelemetry = millis();

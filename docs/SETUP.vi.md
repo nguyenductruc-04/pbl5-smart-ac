@@ -145,12 +145,17 @@ sudo apt install -y dnsmasq-base    # nếu chưa có (NetworkManager cần gói
 ```bash
 sudo nmcli connection add type wifi ifname wlan0 con-name SmartAC-Backup autoconnect no \
   ssid SmartAC-Backup 802-11-wireless.mode ap 802-11-wireless.band bg \
-  ipv4.method shared wifi-sec.key-mgmt wpa-psk wifi-sec.psk "MAT_KHAU_AP"
+  ipv4.method shared wifi-sec.key-mgmt wpa-psk wifi-sec.proto rsn \
+  wifi-sec.pairwise ccmp wifi-sec.group ccmp wifi-sec.psk "MAT_KHAU_AP"
 ```
 
 - `autoconnect no`: chỉ watchdog mới được bật AP.
 - `band bg`: 2.4 GHz, ESP32 mới thấy được.
 - `ipv4.method shared`: Pi làm router, tự cấp IP 10.42.0.x cho thiết bị kết nối vào.
+- `proto rsn` + `ccmp`: bắt buộc WPA2/AES. Thiếu hai tùy chọn này AP có thể phát WPA1 và ESP32 (core 2.0.x, mặc định yêu cầu ≥ WPA2) sẽ không kết nối (lý do 201).
+
+
+
 
 ### 6.3 Thử bật/tắt AP bằng tay (màn hình + bàn phím)
 
@@ -191,6 +196,48 @@ Test xong kiểm tra `nmcli -f NAME,AUTOCONNECT connection show`: `Mai` phải l
 
 Khi Pi đang ở chế độ AP thì không có Internet (Tailscale không dùng được); vào Pi bằng cách kết nối laptop vào `SmartAC-Backup`
 rồi `ssh truc0404@10.42.0.1`.
+
+### 6.6 Node tự chuyển sang mạng dự phòng và nhận Wi-Fi từ Pi
+
+**Cập nhật quyền MQTT** (node được đọc `config`, ghi `config_result` của chính phòng mình):
+
+```bash
+cd ~/pbl5-smart-ac/gateway
+sudo cp mosquitto/acl /etc/mosquitto/acl
+sudo chown mosquitto:mosquitto /etc/mosquitto/acl && sudo chmod 0700 /etc/mosquitto/acl
+sudo systemctl restart mosquitto
+```
+
+**`config.h` của node:** thêm `BACKUP_SSID`, `BACKUP_PASS` (đúng mật khẩu AP đặt ở mục 6.2), `WIFI_CONNECT_TIMEOUT_MS`,
+`WIFI_HOME_RETRY_MS`, `WIFI_BROKER_LOST_MS` từ `config.example.h`; đặt `MQTT_HOST_FALLBACK "10.42.0.1"`.
+
+- `WIFI_SSID`/`WIFI_PASS` chỉ dùng ở **lần khởi động đầu tiên**; sau đó node dùng Wi-Fi lưu trong bộ nhớ (NVS).
+- Muốn node quay lại giá trị trong `config.h`: nhấn **RESET**, rồi giữ nút **BOOT** khoảng 2 giây trong 3 giây đầu
+  (Serial Monitor in `DA XOA Wi-Fi luu trong NVS`). Không giữ BOOT *trong lúc* nhấn RESET (sẽ vào chế độ nạp code).
+
+**Gửi Wi-Fi nhà mới xuống node** (mật khẩu được hỏi, không hiện trên màn hình):
+
+```bash
+python push_wifi.py --room room01 --ssid "TEN_WIFI"
+python push_wifi.py --room room01 --clear     # xóa cấu hình đang chờ trên broker nếu node chưa phản hồi
+```
+
+Node **thử kết nối trước**: được thì lưu và báo `OK`; sai mật khẩu thì giữ Wi-Fi cũ và báo `connect_failed`.
+Cấu hình được gửi dạng *retained* nên node đang offline sẽ nhận khi kết nối lại; nhận được kết quả thì script xóa
+ngay bản tin khỏi broker. Mật khẩu đi qua MQTT không mã hóa trong mạng nội bộ (hướng phát triển: MQTT over TLS).
+Nếu script báo *Chua nhan ket qua* (vd. node đã sang mạng mà Pi chưa ở đó), sau khi xong việc hãy chạy `--clear` để mật khẩu không nằm lại trên broker.
+
+**Kiểm tra** (Serial Monitor + log `journalctl -u pbl5-netwatch -f`; giả lập mất Wi-Fi nhà như mục 6.5):
+
+| Bài | Làm gì | Kết quả đúng |
+|---|---|---|
+| 1 | Pi và node đang ở Wi-Fi nhà; giả lập mất Wi-Fi nhà trên Pi (6.5 bài 1) | Pi bật AP; ~2 phút sau node: `Khong toi duoc broker tren Wi-Fi nha -> thu mang du phong` → `OK 'SmartAC-Backup'` → `Dang dung MANG DU PHONG` → `[MQTT] OK` (broker `10.42.0.1` hoặc `gateway.local`) |
+| 2 | Khôi phục Wi-Fi nhà trên Pi (6.5 bài 3) | Pi về Wi-Fi nhà; AP tắt nên node mất mạng → tự về Wi-Fi nhà, MQTT kết nối lại |
+| 3 | `push_wifi.py` với **sai mật khẩu** | `THAT BAI: connect_failed`; node vẫn ở mạng cũ |
+| 4 | `push_wifi.py` với một Wi-Fi 2.4 GHz **khác** mà Pi cũng đang vào được (vd. hotspot) | `OK`; node chuyển mạng; khởi động lại node vẫn dùng mạng mới |
+| 5 | Khởi động lại node, giữ BOOT ~2 s | `DA XOA Wi-Fi luu trong NVS`, node dùng lại Wi-Fi trong `config.h` |
+
+
 
 ## Xử lý lỗi thường gặp
 

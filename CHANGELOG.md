@@ -13,6 +13,25 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versio
 - Watchdog activates saved home connections explicitly; NetworkManager may block autoconnect after a user
   disconnect or repeated failures, which would leave the Pi stuck in AP mode.
 
+## [0.4.0] - 2026-11-17
+### Added
+- Pi Wi-Fi watchdog (`gateway/netwatch.py`, service `pbl5-netwatch`): starts the backup access point `SmartAC-Backup` (10.42.0.1) after 120 s without home Wi-Fi and retries home Wi-Fi every 5 min.
+- Room node stores home Wi-Fi in NVS, moves to the backup AP when home Wi-Fi or the broker has been unreachable for 120 s, and tries to return home every 5 min.
+- Wi-Fi provisioning over MQTT (`gateway/push_wifi.py`, topics `config` / `config_result`): the node tests new credentials before saving them; the password is never echoed back; the retained message is cleared once a result arrives.
+- BOOT-button reset of the stored Wi-Fi.
+- ADR 0001 (node Wi-Fi provisioning).
+
+### Fixed (found during hardware testing)
+- Watchdog: home Wi-Fi did not come back after the AP was stopped; saved connections are now activated explicitly.
+- Node stayed on home Wi-Fi when the router was up but the Pi was gone; it now follows the broker.
+- Backup AP came up as WPA1 and ESP32 core 2.0.x refused it (reason 201); the AP is now WPA2/CCMP only.
+- First connection after boot could fail with auto-reconnect disabled; up to two early retries.
+- BOOT reset erased the last applied config id, so a stale retained config was applied again.
+
+### Known limitations
+- Wi-Fi credentials travel unencrypted over MQTT inside the local network (MQTT over TLS is a future step).
+- 2.4 GHz networks only.
+
 ## [0.3.0] - 2026-11-14
 ### Added
 - Room node sends real IR on MQTT commands via IRremoteESP8266 `IRac`; A/C protocol selectable in `config.h` (`IR_PROTOCOL`, default `DAIKIN`).
