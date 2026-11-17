@@ -34,7 +34,7 @@ Hiện có (từ M2): LED IR qua 2N2222A ở GPIO 4, TSOP38238 ở GPIO 5.
 
 **Không gửi dữ liệu giả lập khi đã lắp cảm biến thật.** `CLIMATE_SIM_FALLBACK 0`: nếu SHT3x hỏng hoặc tuột dây, node ngừng gửi telemetry và cứ 30 giây thử khởi động lại cảm biến. Nhờ đó dữ liệu huấn luyện AI không bị lẫn số giả.
 
-**Gửi ngay khi có người vào hoặc ra.** Ngoài chu kỳ 30 giây, node gửi telemetry ngay khi trạng thái hiện diện đổi (đã lọc nhiễu 200 ms, tối đa một lần mỗi giây), để dữ liệu có thời điểm vào/ra chính xác.
+**Gửi ngay khi có người vào hoặc ra.** Ngoài chu kỳ 30 giây, node gửi telemetry ngay khi trạng thái hiện diện đổi (đã lọc nhiễu 300 ms, tối đa một lần mỗi giây), để dữ liệu có thời điểm vào/ra chính xác.
 
 ## Đặt cảm biến
 

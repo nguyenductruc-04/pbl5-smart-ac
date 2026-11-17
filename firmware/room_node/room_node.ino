@@ -34,7 +34,7 @@
 #define SENSOR_SHT4X 4
 #include "config.h"
 
-#define FW_VERSION "0.5.0-dev.1"
+#define FW_VERSION "0.5.0-dev.2"
 
 // config.h cu (truoc v0.5.0) chua co cac muc duoi day -> dung mac dinh va bao tren Serial luc khoi dong
 // (Arduino IDE mac dinh tat canh bao bien dich nen #warning khong hien)
@@ -94,9 +94,14 @@ unsigned long lastClimateTry = 0;      // lan cuoi thu khoi dong lai cam bien
 // Cam bien hien dien LD2420 (xem docs/hardware/sensors.md)
 bool          presenceRaw    = false;  // muc logic vua doc
 unsigned long presenceRawAt  = 0;      // muc logic doi lan cuoi luc nao
-bool          presence       = false;  // da loc nhieu (on dinh >= 200 ms)
+bool          presence       = false;  // da loc nhieu (on dinh >= 300 ms)
 bool          presenceAlive  = false;  // cam bien con song (chan TX con len muc cao)
-unsigned long lastTxHigh     = 0;
+unsigned long aliveSince     = 0;      // song lai tu luc nao
+bool          presenceKnown  = false;  // da qua thoi gian cho LD2420 on dinh sau khi song lai
+bool          txSeenHigh     = false;  // da tung thay chan TX o muc cao
+uint16_t      txLowCount     = 0;      // so lan doc lien tiep chan TX o muc thap
+unsigned long txLowSince     = 0;
+bool          presenceWarned = false;
 bool          presenceDirty  = false;  // trang thai doi, can gui telemetry som
 unsigned long lastPresencePub = 0;
 unsigned long lastTelemetry  = 0;
@@ -407,26 +412,54 @@ void pollPresence() {
 #if PRESENCE_OUT_PIN >= 0
   unsigned long now = millis();
 #if PRESENCE_TX_PIN >= 0
-  if (digitalRead(PRESENCE_TX_PIN) == HIGH) lastTxHigh = now ? now : 1;
-  bool alive = lastTxHigh != 0 && now - lastTxHigh < 3000;
+  // UART dang song chi o muc thap vai chuc micro giay moi bit. Mat nguon / tuot day: thap LIEN TUC.
+  // Can ca so lan doc lien tiep LAN thoi gian, de mot lan doc trung bit 0 (vd. ngay sau khi loop bi
+  // chan vi ket noi Wi-Fi) khong bi tinh la mat cam bien.
+  if (digitalRead(PRESENCE_TX_PIN) == HIGH) {
+    txSeenHigh = true;
+    txLowCount = 0;
+  } else {
+    if (txLowCount == 0) txLowSince = now;
+    if (txLowCount < 65535) txLowCount++;
+  }
+  bool alive = txSeenHigh && !(txLowCount >= 10 && now - txLowSince >= 100);
 #else
   bool alive = true;
 #endif
+  if (alive != presenceAlive) {
+    presenceAlive = alive;
+    aliveSince = now;
+    presenceKnown = false;
+    presenceDirty = true;
+    Serial.println(alive ? "[PRESENCE] LD2420 hoat dong, cho 3 s de on dinh"
+                         : "[PRESENCE] Mat tin hieu LD2420 (kiem tra day, nguon 3V3) -> presence = null");
+  }
+  if (!alive) {
+    if (!presenceWarned && now > 5000) {
+      presenceWarned = true;
+      Serial.println("[PRESENCE] Khong thay tin hieu LD2420 -> presence = null");
+    }
+    return;   // mat cam bien: KHONG cap nhat presence, tranh bao nham "khong co nguoi"
+  }
+
   bool raw = digitalRead(PRESENCE_OUT_PIN) == HIGH;
   if (raw != presenceRaw) {
     presenceRaw = raw;
     presenceRawAt = now;
   }
-  if (now - presenceRawAt >= 200 && presence != presenceRaw) {
+  // LD2420 vua co nguon lai: chan OUT o muc thap ~1 s truoc khi phat hien -> cho 3 s roi moi bao
+  if (!presenceKnown) {
+    if (now - aliveSince < 3000) return;
+    presenceKnown = true;
     presence = presenceRaw;
     presenceDirty = true;
     Serial.printf("[PRESENCE] %s\n", presence ? "CO NGUOI" : "khong co nguoi");
+    return;
   }
-  if (alive != presenceAlive) {
-    presenceAlive = alive;
+  if (now - presenceRawAt >= 300 && presence != presenceRaw) {
+    presence = presenceRaw;
     presenceDirty = true;
-    Serial.println(alive ? "[PRESENCE] LD2420 hoat dong"
-                         : "[PRESENCE] Mat tin hieu LD2420 (kiem tra day, nguon 3V3) -> presence = null");
+    Serial.printf("[PRESENCE] %s\n", presence ? "CO NGUOI" : "khong co nguoi");
   }
 #endif
 }
@@ -464,7 +497,7 @@ void publishTelemetry() {
   doc["seq"]      = ++seq;
   doc["temp"]     = round(t * 100) / 100.0;
   doc["hum"]      = round(h * 10) / 10.0;
-  if (PRESENCE_OUT_PIN >= 0 && presenceAlive) doc["presence"] = presence;
+  if (PRESENCE_OUT_PIN >= 0 && presenceAlive && presenceKnown) doc["presence"] = presence;
   else                                         doc["presence"] = nullptr;   // khong co / mat cam bien
   doc["sim"]      = sim;
   doc["rssi"]     = WiFi.RSSI();
