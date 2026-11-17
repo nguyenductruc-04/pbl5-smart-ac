@@ -30,7 +30,7 @@
 #include <IRac.h>
 #include "config.h"
 
-#define FW_VERSION "0.4.0-dev.6"
+#define FW_VERSION "0.4.0"
 
 // ----------------------- Topic -----------------------
 const String T_TELEMETRY = String("home/") + ROOM_ID + "/telemetry";

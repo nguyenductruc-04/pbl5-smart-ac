@@ -30,10 +30,11 @@ Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 |---|---|---|
 | 1 | ESP32 ⇄ MQTT ⇄ Pi, SQLite storage, auth + ACL | ✅ Done — validated on ESP32-S3 + Raspberry Pi 5 over Wi-Fi |
 | 2 | Daikin IR decode + transmit | ✅ Done — send/receive validated by IR loopback (17/20, TSOP38238); **pending test on a real Daikin unit** |
-| 3 | Real sensors: SHT41 (I²C), LD2410 (UART) | Planned |
-| 4 | Safety Layer + REST API (FastAPI) | Planned |
-| 5 | Dashboard / app | Planned |
-| 6 | Data collection + comfort model (scikit-learn) | Planned |
+| 3 | Backup network | Pi backup AP, node follows the gateway, Wi-Fi provisioning over MQTT | Done (v0.4.0), tested on hardware |
+| 4 | Real sensors: SHT41 (I²C), LD2410 (UART) | Planned |
+| 5 | Safety Layer + REST API (FastAPI) | Planned |
+| 6 | Dashboard / app | Planned |
+| 7 | Data collection + comfort model (scikit-learn) | Planned |
 
 ### Measured results
 
@@ -91,6 +92,8 @@ Broker setup (password file + ACL) and ESP32 flashing: see the step-by-step guid
 | `home/{room}/command_result` | node → gateway | `{"cmd_id","ok","ir_sent","note"}` |
 | `home/{room}/status` | node → gateway | `online` / `offline` (retained, Last Will) |
 | `home/{room}/ir_event` | node → gateway | `{"protocol","power","mode","temp","fan","source","uptime_s"}` — user pressed the original remote |
+| `home/{room}/config` | gateway → node | `{"cfg_id","wifi":{"ssid","pass"}}` (retained until answered) |
+| `home/{room}/config_result` | node → gateway | `{"cfg_id","ok","error"}` |
 
 ## Development
 
