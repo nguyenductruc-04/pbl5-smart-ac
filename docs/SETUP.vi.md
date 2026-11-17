@@ -235,8 +235,7 @@ Nếu script báo *Chua nhan ket qua* (vd. node đã sang mạng mà Pi chưa �
 | 2 | Khôi phục Wi-Fi nhà trên Pi (6.5 bài 3) | Pi về Wi-Fi nhà; AP tắt nên node mất mạng → tự về Wi-Fi nhà, MQTT kết nối lại |
 | 3 | `push_wifi.py` với **sai mật khẩu** | `THAT BAI: connect_failed`; node vẫn ở mạng cũ |
 | 4 | `push_wifi.py` với một Wi-Fi 2.4 GHz **khác** mà Pi cũng đang vào được (vd. hotspot) | `OK`; node chuyển mạng; khởi động lại node vẫn dùng mạng mới |
-| 5 | Khởi động lại node, giữ BOOT ~2 s | `DA XOA Wi-Fi luu trong NVS`, node dùng lại Wi-Fi trong `config.h` |
-
+| 5 | Nhấn RESET, rồi giữ BOOT ~2 s trong 3 giây đầu | `DA XOA Wi-Fi luu trong NVS`, node về Wi-Fi trong `config.h` và ở yên đó; nếu broker còn cấu hình cũ thì in `da xu ly truoc do -> bo qua` |
 
 
 ## Xử lý lỗi thường gặp
