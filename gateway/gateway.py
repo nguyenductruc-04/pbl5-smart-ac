@@ -155,7 +155,8 @@ class Gateway:
              int(bool(data.get("sim"))), data.get("rssi"), data.get("seq"), text),
         )
         self.db.commit()
-        log.info("[%s] temp=%.2f hum=%.1f%s", room, data["temp"], data["hum"],
+        presence_txt = {None: "?", 0: "khong", 1: "CO"}[None if presence is None else int(bool(presence))]
+        log.info("[%s] temp=%.2f hum=%.1f nguoi=%s%s", room, data["temp"], data["hum"], presence_txt,
                  " (gia lap)" if data.get("sim") else "")
 
     def handle_status(self, room, now, text):

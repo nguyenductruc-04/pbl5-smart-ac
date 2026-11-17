@@ -16,9 +16,18 @@ for room, status, ts in db.execute("SELECT room, status, ts FROM node_status ORD
     print(f"  {room:8} {status:8} luc {fmt(ts)}")
 
 print("\n== 10 telemetry gan nhat ==")
-rows = db.execute("SELECT room, ts, temp, hum, simulated, rssi FROM telemetry ORDER BY id DESC LIMIT 10")
-for room, ts, t, h, sim, rssi in rows:
-    print(f"  {fmt(ts)} {room:8} {t:6.2f} C  {h:5.1f} %  rssi={rssi} {'(gia lap)' if sim else ''}")
+PRESENCE = {None: "-", 0: "khong", 1: "CO"}
+rows = db.execute("SELECT room, ts, temp, hum, presence, simulated, rssi FROM telemetry ORDER BY id DESC LIMIT 10")
+for room, ts, t, h, presence, sim, rssi in rows:
+    print(f"  {fmt(ts)} {room:8} {t:6.2f} C  {h:5.1f} %  nguoi={PRESENCE[presence]:5} rssi={rssi}"
+          f" {'(gia lap)' if sim else ''}")
+
+print("\n== Du lieu that da thu (khong tinh gia lap) ==")
+for room, n, first, last, n_presence in db.execute(
+    "SELECT room, COUNT(*), MIN(ts), MAX(ts), COUNT(presence) FROM telemetry WHERE simulated = 0 GROUP BY room"
+):
+    days = (last - first) / 86400
+    print(f"  {room:8} {n} ban ghi trong {days:.1f} ngay, {n_presence} ban ghi co du lieu hien dien")
 
 print("\n== 5 lenh gan nhat ==")
 rows = db.execute(

@@ -237,6 +237,69 @@ Nếu script báo *Chua nhan ket qua* (vd. node đã sang mạng mà Pi chưa �
 | 4 | `push_wifi.py` với một Wi-Fi 2.4 GHz **khác** mà Pi cũng đang vào được (vd. hotspot) | `OK`; node chuyển mạng; khởi động lại node vẫn dùng mạng mới |
 | 5 | Nhấn RESET, rồi giữ BOOT ~2 s trong 3 giây đầu | `DA XOA Wi-Fi luu trong NVS`, node về Wi-Fi trong `config.h` và ở yên đó; nếu broker còn cấu hình cũ thì in `da xu ly truoc do -> bo qua` |
 
+## Bước 7: Cảm biến nhiệt độ, độ ẩm và hiện diện
+
+Sơ đồ nối dây, lý do thiết kế và cách đặt cảm biến: [hardware/sensors.md](hardware/sensors.md).
+
+### 7.1 Nối dây
+
+**Rút USB trước khi nối.** Mọi cảm biến lấy nguồn từ chân 3V3 của ESP32. Không dùng nguồn ngoài và **không cấp 5 V cho LD2420**.
+
+| Từ | Tới ESP32-S3 |
+|---|---|
+| SHT3x VIN, GND, SDA, SCL | 3V3, GND, GPIO 8, GPIO 9 |
+| LD2420 3V3, GND, OT1, OT2 | 3V3, GND, GPIO 6, GPIO 7 (chân RX để trống) |
+
+Trước khi cắm USB, dùng đồng hồ đo thông mạch giữa 3V3 và GND: không được kêu.
+
+### 7.2 Kiểm tra bằng `sensor_check`
+
+1. Arduino IDE: cài thêm thư viện **Adafruit SHT31 Library** (chọn Install all khi được hỏi).
+2. Mở `firmware/tools/sensor_check/sensor_check.ino` và nạp vào ESP32.
+3. Mở Serial Monitor (115200). Trong 10 giây đầu, **đi lại trước LD2420** ở khoảng cách 1–2 m.
+
+| Phần | Kết quả đúng | Nếu sai |
+|---|---|---|
+| 1. I²C | `Thay thiet bi o 0x44`, ba dòng `Doc thu` có nhiệt độ hợp lý | Không thấy: kiểm tra dây, thử đảo SDA và SCL |
+| 2. LD2420 | `=> TX (UART) la GPIO 6, OUT (co nguoi) la GPIO 7` (hoặc ngược lại) | `luon o muc thap`: kiểm tra nguồn 3V3 của LD2420 |
+| 3. UART | `DOC DUOC` ở 115200 hoặc 256000 | Không giải mã được cũng không sao |
+| 4. Theo dõi | Đi ra khỏi phòng thì sau một lúc in `khong co nguoi`, quay lại thì in `CO NGUOI` | |
+
+Ghi lại: chân OUT/TX, tốc độ baud, và **thời gian giữ "có người"** (số giây trong ngoặc của dòng `khong co nguoi`) vào bảng "Kết quả đo" của `docs/hardware/sensors.md`.
+
+### 7.3 Cập nhật `config.h` và nạp firmware chính
+
+Chép phần **Cảm biến** từ `config.example.h` sang `config.h` (thay hai dòng `I2C_SDA_PIN`, `I2C_SCL_PIN` cũ). Đặt `PRESENCE_OUT_PIN` và `PRESENCE_TX_PIN` đúng như `sensor_check` báo. Nạp `firmware/room_node`.
+
+Serial Monitor phải in:
+```
+[SENSOR] Tim thay SHT3x (dia chi 0x44)
+[PRESENCE] LD2420 OUT GPIO 7, TX GPIO 6
+[PRESENCE] LD2420 hoat dong
+```
+Nếu thấy dòng `[CFG] config.h CU`, nghĩa là `config.h` chưa có các mục mới.
+
+### 7.4 Kiểm thử trên Pi
+
+Trên Pi: `journalctl -u pbl5-gateway -f` (hoặc chạy `python gateway.py` nếu chưa cài dịch vụ).
+
+| # | Thao tác | Kết quả đúng |
+|---|---|---|
+| 1 | Để yên 1 phút | Telemetry mỗi 30 s: nhiệt độ thật, `nguoi=CO` hoặc `nguoi=khong`, không có chữ `(gia lap)` |
+| 2 | Hà hơi hoặc áp ngón tay vào SHT3x khoảng 10 giây | Nhiệt độ và độ ẩm tăng, rồi giảm dần |
+| 3 | Rời khỏi tầm cảm biến, chờ hết thời gian giữ | Có một bản tin **ngay lúc** chuyển sang `nguoi=khong`, không đợi đủ 30 s |
+| 4 | Quay lại | Có bản tin ngay với `nguoi=CO` |
+| 5 | Rút dây 3V3 của LD2420 | Serial: `Mat tin hieu LD2420`; Pi: `nguoi=?` (không phải `khong`) |
+| 6 | Cắm lại | `LD2420 hoat dong`, có lại `CO`/`khong` |
+| 7 | Rút dây SDA của SHT3x | Serial: `loi 3 lan lien tiep`; ngừng gửi telemetry (không có số giả) |
+| 8 | Cắm lại, chờ tối đa 30 s | `Da tim lai cam bien SHT3x`, telemetry gửi lại |
+| 9 | `python show_data.py` | Có cột `nguoi`, và mục "Du lieu that da thu" |
+
+### 7.5 Bắt đầu thu dữ liệu cho AI
+
+- Đặt node ở vị trí cố định (xem phần "Đặt cảm biến" trong `hardware/sensors.md`) và cấp nguồn liên tục bằng một sạc USB, không dùng laptop.
+- Đảm bảo `pbl5-gateway` chạy như dịch vụ (Bước 5) để Pi ghi dữ liệu cả khi bạn không mở SSH.
+- Ghi ngày bắt đầu thu dữ liệu vào báo cáo. `python show_data.py` cho biết đã thu được bao nhiêu ngày dữ liệu thật.
 
 ## Xử lý lỗi thường gặp
 

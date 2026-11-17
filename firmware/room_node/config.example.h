@@ -33,9 +33,23 @@
 // --- Chu ky gui telemetry ---
 #define TELEMETRY_INTERVAL_MS  30000UL   // 30 giay
 
-// --- Chan I2C cho cam bien SHT41 (doi neu ban noi chan khac) ---
-#define I2C_SDA_PIN    8
-#define I2C_SCL_PIN    9
+// --- Cam bien nhiet do / do am (I2C), xem docs/hardware/sensors.md ---
+// SENSOR_SHT3X: SHT30 / SHT31 / SHT35 (module GY-SHT3x-D)   SENSOR_SHT4X: SHT40 / SHT41 / SHT45
+#define CLIMATE_SENSOR   SENSOR_SHT3X
+#define CLIMATE_I2C_ADDR 0x44     // SHT3x: 0x44 khi chan ADDR de trong hoac noi GND, 0x45 khi noi VCC
+#define I2C_SDA_PIN      8
+#define I2C_SCL_PIN      9
+// 1 = khong thay cam bien thi gui du lieu GIA LAP (sim=true), chi de thu duong truyen.
+// 0 = khong gui gi. Dung 0 khi thu du lieu that cho AI de khong lan du lieu gia.
+#define CLIMATE_SIM_FALLBACK 0
+
+// --- Cam bien hien dien HLK-LD2420 (CHI cap 3.3 V) ---
+// Noi OT1 -> GPIO 6, OT2 -> GPIO 7. Chan nao la OUT (co nguoi) tuy phien ban firmware cua LD2420:
+//   firmware >= 1.5.3: OT2 = OUT, OT1 = TX  ->  OUT 7, TX 6 (mac dinh duoi day)
+//   firmware <  1.5.3: OT1 = OUT, OT2 = TX  ->  OUT 6, TX 7
+// Chay firmware/tools/sensor_check de biet chac. Dat PRESENCE_OUT_PIN -1 neu chua lap cam bien.
+#define PRESENCE_OUT_PIN 7
+#define PRESENCE_TX_PIN  6        // chi doc muc logic de biet cam bien con song; -1 = khong kiem tra
 
 // --- IR (xem docs/hardware/ir-circuit.md) ---
 #define IR_TX_PIN      4          // LED IR qua transistor 2N2222A

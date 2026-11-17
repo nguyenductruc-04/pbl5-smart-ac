@@ -1,11 +1,12 @@
 // =====================================================================
-//  PBL5 - Room Node (ESP32-S3) - v0.4.0
+//  PBL5 - Room Node (ESP32-S3) - v0.5.0
 //  - Wi-Fi nha luu trong NVS; mat Wi-Fi nha -> chuyen sang mang du phong SmartAC-Backup (do Pi phat),
 //    dinh ky thu quay ve Wi-Fi nha. Nhan Wi-Fi nha moi tu Pi qua home/<room>/config
 //  - Tat modem sleep, tu ket noi lai khi mat mang
 //  - Tim broker qua mDNS (gateway.local), co IP du phong
 //  - MQTT co Last Will (home/<room>/status = offline, retained)
-//  - Doc SHT41 neu co; neu chua lap cam bien thi gui du lieu GIA LAP (sim=true)
+//  - Doc nhiet do / do am tu SHT3x (SHT30/31/35) hoac SHT4x qua I2C
+//  - Doc cam bien hien dien LD2420 qua chan OUT; doi trang thai thi gui telemetry ngay
 //  - Nhan lenh tai home/<room>/command -> PHAT IR toi dieu hoa,
 //    tra ket qua tai home/<room>/command_result
 //  - Nghe len remote goc -> gui home/<room>/ir_event
@@ -13,7 +14,7 @@
 //  Thu vien (Arduino Library Manager):
 //    - PubSubClient (Nick O'Leary)
 //    - ArduinoJson (Benoit Blanchon) phien ban 7.x
-//    - Adafruit SHT4x Library (cai kem cac thu vien phu thuoc)
+//    - Adafruit SHT31 Library va Adafruit SHT4x Library (cai kem cac thu vien phu thuoc)
 //    - IRremoteESP8266 (2.9.0)
 //  Board core: esp32 by Espressif 2.0.17 (ban 3.x chua tuong thich IRremoteESP8266)
 // =====================================================================
@@ -23,14 +24,49 @@
 #include <Wire.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
-#include <Adafruit_SHT4x.h>
 #include <IRremoteESP8266.h>
 #include <IRrecv.h>
 #include <IRutils.h>
 #include <IRac.h>
+
+// Gia tri cho CLIMATE_SENSOR trong config.h
+#define SENSOR_SHT3X 3
+#define SENSOR_SHT4X 4
 #include "config.h"
 
-#define FW_VERSION "0.4.0"
+#define FW_VERSION "0.5.0-dev.2"
+
+// config.h cu (truoc v0.5.0) chua co cac muc duoi day -> dung mac dinh va bao tren Serial luc khoi dong
+// (Arduino IDE mac dinh tat canh bao bien dich nen #warning khong hien)
+#ifndef CLIMATE_SENSOR
+#define CONFIG_OUTDATED 1
+#define CLIMATE_SENSOR SENSOR_SHT3X
+#endif
+#ifndef CLIMATE_I2C_ADDR
+#define CLIMATE_I2C_ADDR 0x44
+#endif
+#ifndef CLIMATE_SIM_FALLBACK
+#define CLIMATE_SIM_FALLBACK 0
+#endif
+#ifndef PRESENCE_OUT_PIN
+#define CONFIG_OUTDATED 1
+#define PRESENCE_OUT_PIN -1
+#endif
+#ifndef PRESENCE_TX_PIN
+#define PRESENCE_TX_PIN -1
+#endif
+
+#if CLIMATE_SENSOR == SENSOR_SHT3X
+#include <Adafruit_SHT31.h>
+Adafruit_SHT31 sht;
+#define CLIMATE_NAME "SHT3x"
+#elif CLIMATE_SENSOR == SENSOR_SHT4X
+#include <Adafruit_SHT4x.h>
+Adafruit_SHT4x sht;
+#define CLIMATE_NAME "SHT4x"
+#else
+#error "CLIMATE_SENSOR phai la SENSOR_SHT3X hoac SENSOR_SHT4X"
+#endif
 
 // ----------------------- Topic -----------------------
 const String T_TELEMETRY = String("home/") + ROOM_ID + "/telemetry";
@@ -43,7 +79,6 @@ const String T_CFG_RES   = String("home/") + ROOM_ID + "/config_result";
 
 WiFiClient    net;
 PubSubClient  mqtt(net);
-Adafruit_SHT4x sht4;
 
 // IR
 IRac            irac(IR_TX_PIN);
@@ -52,7 +87,23 @@ decode_results  irResults;
 stdAc::state_t  acState;          // trang thai DU KIEN cua dieu hoa (IR mot chieu, khong xac nhan duoc)
 unsigned long   lastIrTx = 0;
 
-bool          shtOk          = false;
+// Cam bien nhiet do / do am
+bool          climateOk      = false;
+uint8_t       climateFails   = 0;      // so lan doc loi lien tiep
+unsigned long lastClimateTry = 0;      // lan cuoi thu khoi dong lai cam bien
+// Cam bien hien dien LD2420 (xem docs/hardware/sensors.md)
+bool          presenceRaw    = false;  // muc logic vua doc
+unsigned long presenceRawAt  = 0;      // muc logic doi lan cuoi luc nao
+bool          presence       = false;  // da loc nhieu (on dinh >= 300 ms)
+bool          presenceAlive  = false;  // cam bien con song (chan TX con len muc cao)
+unsigned long aliveSince     = 0;      // song lai tu luc nao
+bool          presenceKnown  = false;  // da qua thoi gian cho LD2420 on dinh sau khi song lai
+bool          txSeenHigh     = false;  // da tung thay chan TX o muc cao
+uint16_t      txLowCount     = 0;      // so lan doc lien tiep chan TX o muc thap
+unsigned long txLowSince     = 0;
+bool          presenceWarned = false;
+bool          presenceDirty  = false;  // trang thai doi, can gui telemetry som
+unsigned long lastPresencePub = 0;
 unsigned long lastTelemetry  = 0;
 unsigned long lastMqttTry    = 0;
 float         lastValidTemp  = NAN;
@@ -291,21 +342,126 @@ bool connectMqtt() {
 }
 
 // ------------------------------------------------------------------
-// Doc nhiet do / do am. Tra ve false neu doc loi.
-bool readClimate(float &t, float &h, bool &simulated) {
-  if (shtOk) {
-    sensors_event_t hum, temp;
-    if (!sht4.getEvent(&hum, &temp)) return false;
-    t = temp.temperature;
-    h = hum.relative_humidity;
-    simulated = false;
-  } else {
-    // Du lieu gia lap de test duong truyen khi chua lap cam bien
-    t = 28.0 + 1.5 * sin(millis() / 600000.0) + random(-10, 11) / 100.0;
-    h = 65.0 + random(-50, 51) / 10.0;
-    simulated = true;
-  }
+// Khoi dong cam bien nhiet do / do am. Tra ve false neu khong thay.
+bool beginClimate() {
+#if CLIMATE_SENSOR == SENSOR_SHT3X
+  if (!sht.begin(CLIMATE_I2C_ADDR)) return false;
+  sht.heater(false);                         // bo gia nhiet lam sai so do
+#else
+  if (!sht.begin(&Wire)) return false;
+  sht.setPrecision(SHT4X_HIGH_PRECISION);
+  sht.setHeater(SHT4X_NO_HEATER);
+#endif
   return true;
+}
+
+bool readSensor(float &t, float &h) {
+#if CLIMATE_SENSOR == SENSOR_SHT3X
+  return sht.readBoth(&t, &h);               // false neu loi I2C hoac sai CRC
+#else
+  sensors_event_t hum, temp;
+  if (!sht.getEvent(&hum, &temp)) return false;
+  t = temp.temperature;
+  h = hum.relative_humidity;
+  return true;
+#endif
+}
+
+// Cam bien mat (long day, mat nguon) -> thu khoi dong lai moi 30 s
+void maybeRetryClimate() {
+  if (climateOk || millis() - lastClimateTry < 30000) return;
+  lastClimateTry = millis();
+  climateOk = beginClimate();
+  if (climateOk) {
+    climateFails = 0;
+    Serial.println("[SENSOR] Da tim lai cam bien " CLIMATE_NAME);
+  }
+}
+
+// Doc nhiet do / do am. Tra ve false neu khong co so do de gui.
+bool readClimate(float &t, float &h, bool &simulated) {
+  simulated = false;
+  if (climateOk) {
+    if (readSensor(t, h)) {
+      climateFails = 0;
+      return true;
+    }
+    if (++climateFails >= 3) {
+      climateOk = false;
+      lastClimateTry = millis();
+      Serial.println("[SENSOR] " CLIMATE_NAME " loi 3 lan lien tiep -> coi nhu mat cam bien, se thu lai");
+    }
+    return false;
+  }
+#if CLIMATE_SIM_FALLBACK
+  // Du lieu gia lap de test duong truyen khi chua lap cam bien (sim=true, gateway luu rieng)
+  t = 28.0 + 1.5 * sin(millis() / 600000.0) + random(-10, 11) / 100.0;
+  h = 65.0 + random(-50, 51) / 10.0;
+  simulated = true;
+  return true;
+#else
+  return false;   // KHONG gui du lieu gia: tranh lan vao du lieu that dung de huan luyen AI
+#endif
+}
+
+// ------------------------------------------------------------------
+// LD2420: chan OUT muc cao = co nguoi. Goi lien tuc trong loop(), ke ca khi mat mang.
+// Chan TX cua LD2420 (UART, nghi o muc cao) chi duoc doc muc logic de biet cam bien con song:
+// khong noi / mat nguon thi chan nay bi keo xuong thap -> bao presence = null thay vi "khong co nguoi".
+void pollPresence() {
+#if PRESENCE_OUT_PIN >= 0
+  unsigned long now = millis();
+#if PRESENCE_TX_PIN >= 0
+  // UART dang song chi o muc thap vai chuc micro giay moi bit. Mat nguon / tuot day: thap LIEN TUC.
+  // Can ca so lan doc lien tiep LAN thoi gian, de mot lan doc trung bit 0 (vd. ngay sau khi loop bi
+  // chan vi ket noi Wi-Fi) khong bi tinh la mat cam bien.
+  if (digitalRead(PRESENCE_TX_PIN) == HIGH) {
+    txSeenHigh = true;
+    txLowCount = 0;
+  } else {
+    if (txLowCount == 0) txLowSince = now;
+    if (txLowCount < 65535) txLowCount++;
+  }
+  bool alive = txSeenHigh && !(txLowCount >= 10 && now - txLowSince >= 100);
+#else
+  bool alive = true;
+#endif
+  if (alive != presenceAlive) {
+    presenceAlive = alive;
+    aliveSince = now;
+    presenceKnown = false;
+    presenceDirty = true;
+    Serial.println(alive ? "[PRESENCE] LD2420 hoat dong, cho 3 s de on dinh"
+                         : "[PRESENCE] Mat tin hieu LD2420 (kiem tra day, nguon 3V3) -> presence = null");
+  }
+  if (!alive) {
+    if (!presenceWarned && !txSeenHigh && now > 5000) {
+      presenceWarned = true;
+      Serial.println("[PRESENCE] Khong thay tin hieu LD2420 -> presence = null");
+    }
+    return;   // mat cam bien: KHONG cap nhat presence, tranh bao nham "khong co nguoi"
+  }
+
+  bool raw = digitalRead(PRESENCE_OUT_PIN) == HIGH;
+  if (raw != presenceRaw) {
+    presenceRaw = raw;
+    presenceRawAt = now;
+  }
+  // LD2420 vua co nguon lai: chan OUT o muc thap ~1 s truoc khi phat hien -> cho 3 s roi moi bao
+  if (!presenceKnown) {
+    if (now - aliveSince < 3000) return;
+    presenceKnown = true;
+    presence = presenceRaw;
+    presenceDirty = true;
+    Serial.printf("[PRESENCE] %s\n", presence ? "CO NGUOI" : "khong co nguoi");
+    return;
+  }
+  if (now - presenceRawAt >= 300 && presence != presenceRaw) {
+    presence = presenceRaw;
+    presenceDirty = true;
+    Serial.printf("[PRESENCE] %s\n", presence ? "CO NGUOI" : "khong co nguoi");
+  }
+#endif
 }
 
 // Kiem tra du lieu hop le: trong mien vat ly va khong nhay dot bien
@@ -326,8 +482,9 @@ bool isValid(float t, float h) {
 void publishTelemetry() {
   float t, h;
   bool sim;
+  presenceDirty = false;
   if (!readClimate(t, h, sim)) {
-    Serial.println("[SENSOR] Doc cam bien loi");
+    Serial.println("[SENSOR] Khong co so do nhiet do / do am -> bo qua lan gui nay");
     return;
   }
   if (!isValid(t, h)) {
@@ -340,7 +497,8 @@ void publishTelemetry() {
   doc["seq"]      = ++seq;
   doc["temp"]     = round(t * 100) / 100.0;
   doc["hum"]      = round(h * 10) / 10.0;
-  doc["presence"] = nullptr;          // se dung LD2410 o milestone 3
+  if (PRESENCE_OUT_PIN >= 0 && presenceAlive && presenceKnown) doc["presence"] = presence;
+  else                                         doc["presence"] = nullptr;   // khong co / mat cam bien
   doc["sim"]      = sim;
   doc["rssi"]     = WiFi.RSSI();
   doc["uptime_s"] = millis() / 1000;
@@ -565,16 +723,31 @@ void setup() {
   Serial.begin(115200);
   delay(1500);  // cho Serial USB san sang
   Serial.println("\n=== PBL5 Room Node " FW_VERSION " - " ROOM_ID " ===");
+#ifdef CONFIG_OUTDATED
+  Serial.println("[CFG] config.h CU: thieu muc cam bien (CLIMATE_SENSOR, PRESENCE_OUT_PIN...) -> dang dung mac dinh."
+                 " Chep cac muc moi tu config.example.h");
+#endif
 
   Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
-  shtOk = sht4.begin(&Wire);
-  if (shtOk) {
-    sht4.setPrecision(SHT4X_HIGH_PRECISION);
-    sht4.setHeater(SHT4X_NO_HEATER);
-    Serial.println("[SENSOR] Tim thay SHT4x");
+  climateOk = beginClimate();
+  lastClimateTry = millis();
+  if (climateOk) {
+    Serial.printf("[SENSOR] Tim thay %s (dia chi 0x%02X)\n", CLIMATE_NAME, CLIMATE_I2C_ADDR);
   } else {
-    Serial.println("[SENSOR] Khong thay SHT4x -> dung du lieu GIA LAP");
+    Serial.printf("[SENSOR] KHONG thay %s tren SDA=%d SCL=%d -> %s\n", CLIMATE_NAME, I2C_SDA_PIN, I2C_SCL_PIN,
+                  CLIMATE_SIM_FALLBACK ? "dung du lieu GIA LAP" : "khong gui telemetry, se thu lai moi 30 s");
   }
+
+#if PRESENCE_OUT_PIN >= 0
+  // Keo xuong: khong noi cam bien thi doc duoc muc thap (va chan TX bao "mat tin hieu")
+  pinMode(PRESENCE_OUT_PIN, INPUT_PULLDOWN);
+#if PRESENCE_TX_PIN >= 0
+  pinMode(PRESENCE_TX_PIN, INPUT_PULLDOWN);
+#endif
+  Serial.printf("[PRESENCE] LD2420 OUT GPIO %d, TX GPIO %d\n", PRESENCE_OUT_PIN, PRESENCE_TX_PIN);
+#else
+  Serial.println("[PRESENCE] Tat (PRESENCE_OUT_PIN = -1)");
+#endif
 
   // Trang thai du kien ban dau: TAT, cool 26 do, quat auto
   IRac::initState(&acState);
@@ -601,6 +774,8 @@ void setup() {
 
 void loop() {
   handleIrReceive();   // nghe remote ca khi mat mang (van dong bo trang thai du kien)
+  pollPresence();
+  maybeRetryClimate();
 
   if (WiFi.status() != WL_CONNECTED) {
     connectWiFi();
@@ -625,8 +800,11 @@ void loop() {
     return;
   }
 
-  if (lastTelemetry == 0 || millis() - lastTelemetry >= TELEMETRY_INTERVAL_MS) {
+  // Gui dinh ky, hoac gui ngay khi co nguoi vao / ra (toi da 1 lan moi giay)
+  bool presenceEvent = presenceDirty && millis() - lastPresencePub >= 1000;
+  if (lastTelemetry == 0 || millis() - lastTelemetry >= TELEMETRY_INTERVAL_MS || presenceEvent) {
     lastTelemetry = millis();
+    if (presenceEvent) lastPresencePub = millis();
     publishTelemetry();
   }
 }

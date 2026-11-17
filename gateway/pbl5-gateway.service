@@ -1,18 +1,19 @@
-# Chay gateway tu dong khi Pi khoi dong
+# Chay gateway (thu du lieu MQTT -> SQLite) tu dong khi Pi khoi dong.
 # Sua User va duong dan neu ban dat project o cho khac, roi:
 #   sudo cp pbl5-gateway.service /etc/systemd/system/
 #   sudo systemctl daemon-reload
 #   sudo systemctl enable --now pbl5-gateway
+#   journalctl -u pbl5-gateway -f
 [Unit]
-Description=PBL5 Gateway
+Description=PBL5 Gateway (MQTT ingest to SQLite)
 After=network-online.target mosquitto.service
 Wants=network-online.target
 
 [Service]
-User=pi
-WorkingDirectory=/home/pi/pbl5-smart-ac/gateway
-ExecStart=/home/pi/pbl5-smart-ac/gateway/.venv/bin/python gateway.py
-Restart=on-failure
+User=truc0404
+WorkingDirectory=/home/truc0404/pbl5-smart-ac/gateway
+ExecStart=/home/truc0404/pbl5-smart-ac/gateway/.venv/bin/python gateway.py
+Restart=always
 RestartSec=5
 
 [Install]

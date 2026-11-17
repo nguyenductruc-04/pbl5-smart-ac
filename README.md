@@ -16,7 +16,7 @@ A room-level smart air-conditioning system: **ESP32-S3 room nodes** sense temper
 |---|---|
 | IR control instead of tapping the AC's internal bus | Works with any Daikin remote-controlled unit, no warranty-voiding hardware changes |
 | IR **receiver** next to the transmitter ("remote eavesdropping") | IR is one-way; overhearing the physical remote keeps the system's state estimate honest |
-| mmWave presence (HLK-LD2410) rather than PIR | Detects stationary people (sleeping, reading), where PIR drops out |
+| mmWave presence (HLK-LD2420) rather than PIR | Detects stationary people (sleeping, reading), where PIR drops out |
 | MQTT with per-room ACL | Each node can only touch `home/<its own room>/…` |
 | Safety Layer between AI and AC | Hysteresis, minimum off-time and rate limits protect the compressor, whatever the AI proposes |
 | AI as *suggestion* (Manual / Suggest / Auto) | Avoids annoying the user; trust is earned progressively |
@@ -31,7 +31,7 @@ Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 | 1 | ESP32 ⇄ MQTT ⇄ Pi, SQLite storage, auth + ACL | ✅ Done — validated on ESP32-S3 + Raspberry Pi 5 over Wi-Fi |
 | 2 | Daikin IR decode + transmit | ✅ Done — send/receive validated by IR loopback (17/20, TSOP38238); **pending test on a real Daikin unit** |
 | 3 | Backup network | Pi backup AP, node follows the gateway, Wi-Fi provisioning over MQTT | Done (v0.4.0), tested on hardware |
-| 4 | Real sensors: SHT41 (I²C), LD2410 (UART) | Planned |
+| 4 | Real sensors: SHT3x (I²C), LD2420 presence | Done (v0.5.0), tested on hardware; data collection started 17-11 |
 | 5 | Safety Layer + REST API (FastAPI) | Planned |
 | 6 | Dashboard / app | Planned |
 | 7 | Data collection + comfort model (scikit-learn) | Planned |
@@ -39,7 +39,7 @@ Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 ### Measured results
 
 Command → result round trip on real hardware (ESP32-S3 ⇄ 2.4 GHz Wi-Fi ⇄ Mosquitto on Raspberry Pi 5).
-Sensor data is still simulated (SHT41 not yet fitted).
+Sensor data is still simulated (SHT3x (SHT30/SHT31) not yet fitted).
 
 | Version | Change | N | Median | p95 | Mean | Min | Max |
 |---|---|---|---|---|---|---|---|
@@ -87,7 +87,7 @@ Broker setup (password file + ACL) and ESP32 flashing: see the step-by-step guid
 
 | Topic | Direction | Payload |
 |---|---|---|
-| `home/{room}/telemetry` | node → gateway | `{"seq","temp","hum","presence","sim","rssi","uptime_s"}` |
+| `home/{room}/telemetry` | node → gateway | `{"seq","temp","hum","presence","sim","rssi","uptime_s"}` —  `presence` là `true` / `false` / `null` (null = không có hoặc mất cảm biến). | 
 | `home/{room}/command` | gateway → node | `{"cmd_id","power","mode","temp","fan","source","ts"}` |
 | `home/{room}/command_result` | node → gateway | `{"cmd_id","ok","ir_sent","note"}` |
 | `home/{room}/status` | node → gateway | `online` / `offline` (retained, Last Will) |
