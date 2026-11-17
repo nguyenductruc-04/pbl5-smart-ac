@@ -435,7 +435,7 @@ void pollPresence() {
                          : "[PRESENCE] Mat tin hieu LD2420 (kiem tra day, nguon 3V3) -> presence = null");
   }
   if (!alive) {
-    if (!presenceWarned && now > 5000) {
+    if (!presenceWarned && !txSeenHigh && now > 5000) {
       presenceWarned = true;
       Serial.println("[PRESENCE] Khong thay tin hieu LD2420 -> presence = null");
     }
