@@ -30,7 +30,7 @@
 #include <IRac.h>
 #include "config.h"
 
-#define FW_VERSION "0.4.0-dev.4"
+#define FW_VERSION "0.4.0-dev.6"
 
 // ----------------------- Topic -----------------------
 const String T_TELEMETRY = String("home/") + ROOM_ID + "/telemetry";
@@ -91,9 +91,11 @@ void saveWifiConfig() {
   prefs.end();
 }
 
+// Chi xoa Wi-Fi; GIU last_cfg de cau hinh cu con retained tren broker khong bi ap dung lai sau khi reset
 void clearWifiConfig() {
   prefs.begin("pbl5", false);
-  prefs.clear();
+  prefs.remove("home_ssid");
+  prefs.remove("home_pass");
   prefs.end();
 }
 
@@ -132,8 +134,24 @@ bool tryWifi(const char *ssid, const char *pass, uint32_t timeoutMs) {
   while (WiFi.status() == WL_CONNECTED && millis() - t0 < 2000) delay(50);
   lastDiscReason = 0;
   WiFi.begin(ssid, pass);
-  unsigned long start = millis();
-  while (WiFi.status() != WL_CONNECTED && millis() - start < timeoutMs) delay(250);
+  unsigned long start = millis(), lastBegin = millis();
+  int retries = 0;
+  while (WiFi.status() != WL_CONNECTED && millis() - start < timeoutMs) {
+    delay(250);
+    // Lan dau sau khi bat nguon ESP32 hay that bai som (vd. ly do 2 = auth het han).
+    // Driver da tat tu ket noi lai, nen tu goi lai toi da 2 lan trong thoi gian cho.
+    wl_status_t st = WiFi.status();
+    if ((st == WL_DISCONNECTED || st == WL_CONNECT_FAILED) && lastDiscReason != 0 &&
+        retries < 2 && millis() - lastBegin > 2000) {
+      retries++;
+      Serial.printf("[WiFi]   that bai som (ly do %u) -> thu lai lan %d\n", lastDiscReason, retries);
+      lastDiscReason = 0;
+      WiFi.disconnect();
+      delay(100);
+      WiFi.begin(ssid, pass);
+      lastBegin = millis();
+    }
+  }
   if (WiFi.status() != WL_CONNECTED) {
     Serial.printf("[WiFi] That bai '%s' (status %d, ly do %u)\n", ssid, (int)WiFi.status(), lastDiscReason);
     reportScan(ssid);
