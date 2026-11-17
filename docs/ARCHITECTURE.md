@@ -3,8 +3,8 @@
 ```mermaid
 flowchart LR
   subgraph Room["Room Node (ESP32-S3)"]
-    S1[SHT41 temp/humidity] --> E[ESP32-S3]
-    S2[LD2410 mmWave presence] --> E
+    S1[SHT3X temp/humidity] --> E[ESP32-S3]
+    S2[LD2420 mmWave presence] --> E
     RX[IR receiver<br/>overhears remote] --> E
     E --> TX[IR LED + driver]
   end

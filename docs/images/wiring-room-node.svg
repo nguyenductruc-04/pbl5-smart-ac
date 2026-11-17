@@ -1,0 +1,192 @@
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1500 1060' width='1500' height='1060' xmlns:c2pa="http://c2pa.org/manifest">
+<rect width='1500' height='1060' fill='white'/>
+<text x='70' y='50' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='26' fill='#1B1F23' text-anchor='start' font-weight='600'>Sơ đồ nối dây Room Node (firmware v0.5.0)</text>
+<text x='70' y='78' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='15' fill='#5B6670' text-anchor='start' font-weight='400'>Mọi linh kiện lấy nguồn 3V3 từ ESP32-S3. Không dùng nguồn ngoài, không cấp 5 V cho LD2420.</text>
+<rect x='70' y='170' width='260' height='700' rx='14' fill='#F4F6F8' stroke='#AAB4BC' stroke-width='2'/>
+<text x='200.0' y='205' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='22' fill='#1B1F23' text-anchor='middle' font-weight='600'>ESP32-S3</text>
+<text x='200.0' y='868' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='13' fill='#5B6670' text-anchor='middle' font-weight='400'>DevKit (core 2.0.17)</text>
+<rect x='318' y='223' width='14' height='14' rx='2' fill='white' stroke='#1B1F23' stroke-width='1.6'/>
+<text x='310' y='235' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='15' fill='#1B1F23' text-anchor='end' font-weight='600'>3V3</text>
+<rect x='318' y='293' width='14' height='14' rx='2' fill='white' stroke='#1B1F23' stroke-width='1.6'/>
+<text x='310' y='305' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='15' fill='#1B1F23' text-anchor='end' font-weight='600'>GPIO 8</text>
+<rect x='318' y='338' width='14' height='14' rx='2' fill='white' stroke='#1B1F23' stroke-width='1.6'/>
+<text x='310' y='350' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='15' fill='#1B1F23' text-anchor='end' font-weight='600'>GPIO 9</text>
+<rect x='318' y='443' width='14' height='14' rx='2' fill='white' stroke='#1B1F23' stroke-width='1.6'/>
+<text x='310' y='455' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='15' fill='#1B1F23' text-anchor='end' font-weight='600'>GPIO 6</text>
+<rect x='318' y='513' width='14' height='14' rx='2' fill='white' stroke='#1B1F23' stroke-width='1.6'/>
+<text x='310' y='525' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='15' fill='#1B1F23' text-anchor='end' font-weight='600'>GPIO 7</text>
+<rect x='318' y='633' width='14' height='14' rx='2' fill='white' stroke='#1B1F23' stroke-width='1.6'/>
+<text x='310' y='645' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='15' fill='#1B1F23' text-anchor='end' font-weight='600'>GPIO 5</text>
+<rect x='318' y='713' width='14' height='14' rx='2' fill='white' stroke='#1B1F23' stroke-width='1.6'/>
+<text x='310' y='725' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='15' fill='#1B1F23' text-anchor='end' font-weight='600'>GPIO 4</text>
+<rect x='318' y='813' width='14' height='14' rx='2' fill='white' stroke='#1B1F23' stroke-width='1.6'/>
+<text x='310' y='825' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='15' fill='#1B1F23' text-anchor='end' font-weight='600'>GND</text>
+<text x='1440' y='98' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='15' fill='#D7263D' text-anchor='end' font-weight='600'>3V3 (từ chân 3V3 của ESP32)</text>
+<text x='1440' y='966' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='15' fill='#2B2B2B' text-anchor='end' font-weight='600'>GND (chung cho tất cả)</text>
+<rect x='1130' y='150' width='230' height='220' rx='10' fill='#F4F6F8' stroke='#AAB4BC' stroke-width='2'/>
+<text x='1245' y='195' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='20' fill='#1B1F23' text-anchor='middle' font-weight='600'>SHT3x</text>
+<text x='1245' y='215' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='13' fill='#5B6670' text-anchor='middle' font-weight='400'>module GY-SHT3x-D</text>
+<text x='1295' y='292' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='13' fill='#5B6670' text-anchor='middle' font-weight='400'>ADDR, ALR, RST:</text>
+<text x='1295' y='310' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='13' fill='#5B6670' text-anchor='middle' font-weight='400'>để trống</text>
+<rect x='1124' y='223' width='14' height='14' rx='2' fill='white' stroke='#1B1F23' stroke-width='1.6'/>
+<text x='1146' y='235' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='15' fill='#1B1F23' text-anchor='start' font-weight='600'>VIN</text>
+<rect x='1124' y='255' width='14' height='14' rx='2' fill='white' stroke='#1B1F23' stroke-width='1.6'/>
+<text x='1146' y='267' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='15' fill='#1B1F23' text-anchor='start' font-weight='600'>GND</text>
+<rect x='1124' y='293' width='14' height='14' rx='2' fill='white' stroke='#1B1F23' stroke-width='1.6'/>
+<text x='1146' y='305' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='15' fill='#1B1F23' text-anchor='start' font-weight='600'>SDA</text>
+<rect x='1124' y='338' width='14' height='14' rx='2' fill='white' stroke='#1B1F23' stroke-width='1.6'/>
+<text x='1146' y='350' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='15' fill='#1B1F23' text-anchor='start' font-weight='600'>SCL</text>
+<rect x='1130' y='395' width='230' height='190' rx='10' fill='#F4F6F8' stroke='#AAB4BC' stroke-width='2'/>
+<text x='1245' y='570' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='20' fill='#1B1F23' text-anchor='middle' font-weight='600'>HLK-LD2420</text>
+<rect x='1124' y='406' width='12' height='12' rx='2' fill='white' stroke='#1B1F23' stroke-width='1.6'/>
+<text x='1144' y='417' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='14' fill='#1B1F23' text-anchor='start' font-weight='600'>3V3</text>
+<rect x='1124' y='425' width='12' height='12' rx='2' fill='white' stroke='#1B1F23' stroke-width='1.6'/>
+<text x='1144' y='436' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='14' fill='#1B1F23' text-anchor='start' font-weight='600'>GND</text>
+<rect x='1124' y='444' width='12' height='12' rx='2' fill='white' stroke='#1B1F23' stroke-width='1.6'/>
+<text x='1144' y='455' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='14' fill='#1B1F23' text-anchor='start' font-weight='600'>OT1</text>
+<rect x='1124' y='479' width='12' height='12' rx='2' fill='white' stroke='#1B1F23' stroke-width='1.6'/>
+<text x='1144' y='490' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='14' fill='#1B1F23' text-anchor='start' font-weight='600'>RX</text>
+<rect x='1124' y='514' width='12' height='12' rx='2' fill='white' stroke='#1B1F23' stroke-width='1.6'/>
+<text x='1144' y='525' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='14' fill='#1B1F23' text-anchor='start' font-weight='600'>OT2</text>
+<text x='1176' y='490' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='13' fill='#5B6670' text-anchor='start' font-weight='400'>(để trống)</text>
+<rect x='900' y='615' width='150' height='175' rx='10' fill='#F4F6F8' stroke='#AAB4BC' stroke-width='2'/>
+<text x='985' y='778' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='17' fill='#1B1F23' text-anchor='middle' font-weight='600'>TSOP38238</text>
+<rect x='894' y='634' width='12' height='12' rx='2' fill='white' stroke='#1B1F23' stroke-width='1.6'/>
+<text x='914' y='645' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='14' fill='#1B1F23' text-anchor='start' font-weight='600'>OUT</text>
+<rect x='894' y='684' width='12' height='12' rx='2' fill='white' stroke='#1B1F23' stroke-width='1.6'/>
+<text x='914' y='695' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='14' fill='#1B1F23' text-anchor='start' font-weight='600'>VS</text>
+<rect x='894' y='744' width='12' height='12' rx='2' fill='white' stroke='#1B1F23' stroke-width='1.6'/>
+<text x='914' y='755' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='14' fill='#1B1F23' text-anchor='start' font-weight='600'>GND</text>
+<line x1='330' y1='230' x2='360' y2='230' stroke='#D7263D' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='330' y1='820' x2='360' y2='820' stroke='#2B2B2B' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='360' y1='110' x2='1440' y2='110' stroke='#D7263D' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='360' y1='940' x2='1440' y2='940' stroke='#2B2B2B' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='330' y1='300' x2='1130' y2='300' stroke='#1E6FD9' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='330' y1='345' x2='1130' y2='345' stroke='#D98E04' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='330' y1='450' x2='1130' y2='450' stroke='#7B4FBF' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='330' y1='520' x2='1130' y2='520' stroke='#1A9E5A' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='1095' y1='230' x2='1130' y2='230' stroke='#D7263D' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='1095' y1='412' x2='1130' y2='412' stroke='#D7263D' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='1070' y1='262' x2='1130' y2='262' stroke='#2B2B2B' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='1070' y1='431' x2='1130' y2='431' stroke='#2B2B2B' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='330' y1='720' x2='420' y2='720' stroke='#0E9AA7' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='420' y1='720' x2='432' y2='720' stroke='#0E9AA7' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='508' y1='720' x2='520' y2='720' stroke='#0E9AA7' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='520' y1='720' x2='560' y2='720' stroke='#0E9AA7' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='610' y1='460' x2='720' y2='460' stroke='#D7263D' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='330' y1='640' x2='900' y2='640' stroke='#C2185B' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='840' y1='690' x2='900' y2='690' stroke='#D7263D' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='900' y1='750' x2='810' y2='750' stroke='#2B2B2B' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='360' y1='230' x2='360' y2='110' stroke='white' stroke-width='9'/>
+<line x1='360' y1='230' x2='360' y2='110' stroke='#D7263D' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='360' y1='820' x2='360' y2='940' stroke='white' stroke-width='9'/>
+<line x1='360' y1='820' x2='360' y2='940' stroke='#2B2B2B' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='1095' y1='110' x2='1095' y2='412' stroke='white' stroke-width='9'/>
+<line x1='1095' y1='110' x2='1095' y2='412' stroke='#D7263D' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='1070' y1='262' x2='1070' y2='940' stroke='white' stroke-width='9'/>
+<line x1='1070' y1='262' x2='1070' y2='940' stroke='#2B2B2B' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='520' y1='740' x2='520' y2='752' stroke='white' stroke-width='9'/>
+<line x1='520' y1='740' x2='520' y2='752' stroke='#2B2B2B' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='520' y1='848' x2='520' y2='860' stroke='white' stroke-width='9'/>
+<line x1='520' y1='848' x2='520' y2='860' stroke='#2B2B2B' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='520' y1='720' x2='520' y2='740' stroke='white' stroke-width='9'/>
+<line x1='520' y1='720' x2='520' y2='740' stroke='#0E9AA7' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='520' y1='860' x2='520' y2='940' stroke='white' stroke-width='9'/>
+<line x1='520' y1='860' x2='520' y2='940' stroke='#2B2B2B' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='610' y1='750' x2='610' y2='940' stroke='white' stroke-width='9'/>
+<line x1='610' y1='750' x2='610' y2='940' stroke='#2B2B2B' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='610' y1='690' x2='610' y2='640' stroke='white' stroke-width='9'/>
+<line x1='610' y1='690' x2='610' y2='640' stroke='#1B1F23' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='610' y1='616' x2='610' y2='640' stroke='white' stroke-width='9'/>
+<line x1='610' y1='616' x2='610' y2='640' stroke='#1B1F23' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='610' y1='570' x2='610' y2='592' stroke='white' stroke-width='9'/>
+<line x1='610' y1='570' x2='610' y2='592' stroke='#D7263D' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='610' y1='470' x2='610' y2='482' stroke='white' stroke-width='9'/>
+<line x1='610' y1='470' x2='610' y2='482' stroke='#D7263D' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='610' y1='558' x2='610' y2='570' stroke='white' stroke-width='9'/>
+<line x1='610' y1='558' x2='610' y2='570' stroke='#D7263D' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='610' y1='110' x2='610' y2='470' stroke='white' stroke-width='9'/>
+<line x1='610' y1='110' x2='610' y2='470' stroke='#D7263D' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='720' y1='460' x2='720' y2='665.0' stroke='white' stroke-width='9'/>
+<line x1='720' y1='460' x2='720' y2='665.0' stroke='#D7263D' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='720' y1='675.0' x2='720' y2='880' stroke='white' stroke-width='9'/>
+<line x1='720' y1='675.0' x2='720' y2='880' stroke='#2B2B2B' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='720' y1='880' x2='720' y2='940' stroke='white' stroke-width='9'/>
+<line x1='720' y1='880' x2='720' y2='940' stroke='#2B2B2B' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='840' y1='110' x2='840' y2='690' stroke='white' stroke-width='9'/>
+<line x1='840' y1='110' x2='840' y2='690' stroke='#D7263D' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='810' y1='750' x2='810' y2='940' stroke='white' stroke-width='9'/>
+<line x1='810' y1='750' x2='810' y2='940' stroke='#2B2B2B' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='865' y1='690' x2='865' y2='715.0' stroke='white' stroke-width='9'/>
+<line x1='865' y1='690' x2='865' y2='715.0' stroke='#D7263D' stroke-width='2.6' stroke-linecap='round'/>
+<line x1='865' y1='725.0' x2='865' y2='750' stroke='white' stroke-width='9'/>
+<line x1='865' y1='725.0' x2='865' y2='750' stroke='#2B2B2B' stroke-width='2.6' stroke-linecap='round'/>
+<circle cx='360' cy='110' r='5.5' fill='#D7263D'/>
+<circle cx='360' cy='940' r='5.5' fill='#2B2B2B'/>
+<circle cx='1095' cy='110' r='5.5' fill='#D7263D'/>
+<circle cx='1095' cy='230' r='5.5' fill='#D7263D'/>
+<circle cx='1070' cy='940' r='5.5' fill='#2B2B2B'/>
+<circle cx='1070' cy='431' r='5.5' fill='#2B2B2B'/>
+<circle cx='520' cy='720' r='5.5' fill='#0E9AA7'/>
+<circle cx='520' cy='940' r='5.5' fill='#2B2B2B'/>
+<circle cx='610' cy='940' r='5.5' fill='#2B2B2B'/>
+<circle cx='610' cy='110' r='5.5' fill='#D7263D'/>
+<circle cx='610' cy='460' r='5.5' fill='#D7263D'/>
+<circle cx='720' cy='940' r='5.5' fill='#2B2B2B'/>
+<circle cx='840' cy='110' r='5.5' fill='#D7263D'/>
+<circle cx='810' cy='940' r='5.5' fill='#2B2B2B'/>
+<circle cx='865' cy='690' r='5.5' fill='#D7263D'/>
+<circle cx='865' cy='750' r='5.5' fill='#2B2B2B'/>
+<rect x='432' y='711' width='76' height='18' fill='white' stroke='#1B1F23' stroke-width='2'/>
+<rect x='511' y='752' width='18' height='96' fill='white' stroke='#1B1F23' stroke-width='2'/>
+<circle cx='593' cy='720' r='34' fill='white' stroke='#1B1F23' stroke-width='2'/>
+<line x1='560' y1='720' x2='575' y2='720' stroke='#0E9AA7' stroke-width='2.6'/>
+<line x1='575' y1='698' x2='575' y2='742' stroke='#1B1F23' stroke-width='3.5'/>
+<line x1='575' y1='710' x2='610' y2='690' stroke='#1B1F23' stroke-width='2.5'/>
+<line x1='575' y1='730' x2='610' y2='750' stroke='#1B1F23' stroke-width='2.5'/>
+<path d='M610,750 l-13,-1 l7,-10 z' fill='#1B1F23'/>
+<text x='616' y='684' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='12' fill='#5B6670'>C</text>
+<text x='616' y='768' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='12' fill='#5B6670'>E</text>
+<text x='559' y='708' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='12' fill='#5B6670'>B</text>
+<path d='M596,592 L624,592 L610,616 Z' fill='white' stroke='#1B1F23' stroke-width='2.2'/>
+<line x1='596' y1='616' x2='624' y2='616' stroke='#1B1F23' stroke-width='2.6'/>
+<path d='M630,598 l16,-10 M630,610 l16,-10' stroke='#1B1F23' stroke-width='1.8'/>
+<path d='M646,588 l-7,0 l3,5 z M646,600 l-7,0 l3,5 z' fill='#1B1F23'/>
+<rect x='601' y='482' width='18' height='76' fill='white' stroke='#1B1F23' stroke-width='2'/>
+<line x1='706' y1='665.0' x2='734' y2='665.0' stroke='#1B1F23' stroke-width='3'/>
+<path d='M706,679.0 Q720,671.0 734,679.0' fill='none' stroke='#1B1F23' stroke-width='3'/>
+<text x='696' y='662.0' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='13' fill='#1B1F23'>+</text>
+<line x1='851' y1='715.0' x2='879' y2='715.0' stroke='#1B1F23' stroke-width='3'/>
+<line x1='851' y1='725.0' x2='879' y2='725.0' stroke='#1B1F23' stroke-width='3'/>
+<rect x='444.0' y='691' width='48.6' height='20' rx='3' fill='white'/>
+<text x='448.0' y='704' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='14' fill='#1B1F23' text-anchor='start' font-weight='400'>330 Ω</text>
+<rect x='532.0' y='792.0' width='48.6' height='20' rx='3' fill='white'/>
+<text x='536' y='805.0' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='14' fill='#1B1F23' text-anchor='start' font-weight='400'>10 kΩ</text>
+<rect x='615.0' y='699' width='64.8' height='20' rx='3' fill='white'/>
+<text x='619' y='712' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='14' fill='#1B1F23' text-anchor='start' font-weight='400'>2N2222A</text>
+<rect x='650.0' y='594' width='113.6' height='20' rx='3' fill='white'/>
+<text x='654' y='607' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='14' fill='#1B1F23' text-anchor='start' font-weight='400'>LED IR 940 nm</text>
+<rect x='650.0' y='611' width='170.4' height='20' rx='3' fill='white'/>
+<text x='654' y='624' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='14' fill='#1B1F23' text-anchor='start' font-weight='400'>chân dài = anode (+)</text>
+<rect x='622.0' y='535' width='40.5' height='20' rx='3' fill='white'/>
+<text x='626' y='548' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='14' fill='#1B1F23' text-anchor='start' font-weight='400'>47 Ω</text>
+<rect x='730.0' y='663' width='162.3' height='20' rx='3' fill='white'/>
+<text x='734' y='676' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='14' fill='#1B1F23' text-anchor='start' font-weight='400'>100 µF (+ chân dài)</text>
+<rect x='896.0' y='807' width='219.1' height='20' rx='3' fill='white'/>
+<text x='900' y='820' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='14' fill='#1B1F23' text-anchor='start' font-weight='400'>100 nF đặt sát chân VS–GND</text>
+<rect x='683.8' y='278' width='32.4' height='20' rx='3' fill='white'/>
+<text x='700' y='291' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='14' fill='#1E6FD9' text-anchor='middle' font-weight='600'>SDA</text>
+<rect x='683.8' y='323' width='32.4' height='20' rx='3' fill='white'/>
+<text x='700' y='336' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='14' fill='#D98E04' text-anchor='middle' font-weight='600'>SCL</text>
+<rect x='877.0' y='428' width='146.0' height='20' rx='3' fill='white'/>
+<text x='950' y='441' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='14' fill='#7B4FBF' text-anchor='middle' font-weight='600'>OT1 (TX hoặc OUT)</text>
+<rect x='877.0' y='498' width='146.0' height='20' rx='3' fill='white'/>
+<text x='950' y='511' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='14' fill='#1A9E5A' text-anchor='middle' font-weight='600'>OT2 (OUT hoặc TX)</text>
+<rect x='375.7' y='618' width='48.6' height='20' rx='3' fill='white'/>
+<text x='400' y='631' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='14' fill='#C2185B' text-anchor='middle' font-weight='600'>IR RX</text>
+<rect x='355.7' y='698' width='48.6' height='20' rx='3' fill='white'/>
+<text x='380' y='711' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='14' fill='#0E9AA7' text-anchor='middle' font-weight='600'>IR TX</text>
+<text x='70' y='960' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='14' fill='#5B6670' text-anchor='start' font-weight='400'>• LD2420: chỉ 3,0–3,6 V. OT1/OT2 đổi vai trò theo firmware của module (≥ 1.5.3: OT2 = OUT). Chạy sensor_check để biết.</text>
+<text x='70' y='984' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='14' fill='#5B6670' text-anchor='start' font-weight='400'>• Thứ tự chân trên module thật có thể khác hình: nối theo TÊN in trên module. SHT3x đặt cách ESP32 và LD2420 ≥ 5–10 cm.</text>
+<text x='70' y='1008' font-family='Be Vietnam Pro, Segoe UI, Arial, sans-serif' font-size='14' fill='#5B6670' text-anchor='start' font-weight='400'>• 2N2222A: xác định E-B-C bằng đồng hồ như ở M2 (thứ tự chân khác nhau giữa các hãng). Tụ 100 µF đặt sát LED, đúng cực.</text>
+<metadata><c2pa:manifest>AAAWgmp1bWIAAAAeanVtZGMycGEAEQAQgAAAqgA4m3EDYzJwYQAAABZcanVtYgAAAEdqdW1kYzJtYQARABCAAACqADibcQN1cm46YzJwYTpmZGM1MjkzNC1jOGY4LTQ3MWYtYTY4MS05Y2E3YjJkYWRkMzQAAAADl2p1bWIAAAApanVtZGMyYXMAEQAQgAAAqgA4m3EDYzJwYS5hc3NlcnRpb25zAAAAALxqdW1iAAAARGp1bWRjYm9yABEAEIAAAKoAOJtxE2MycGEuaW5ncmVkaWVudC52MwAAAAAYYzJzaIKYE9PovbAm3HuTAlhCMxgAAABwY2JvcqNpZGM6Zm9ybWF0bWltYWdlL3N2Zyt4bWxqaW5zdGFuY2VJRHgseG1wOmlpZDowNzJkM2FlMC0yYTQzLTQzYjUtYjVkNC1hMDc3ZTU2MGM3OGNscmVsYXRpb25zaGlwaHBhcmVudE9mAAAB4mp1bWIAAABBanVtZGNib3IAEQAQgAAAqgA4m3ETYzJwYS5hY3Rpb25zLnYyAAAAABhjMnNo8sMBiZ2/wdjO57tp7eRFBwAAAZljYm9yomdhY3Rpb25zgqJmYWN0aW9ua2MycGEub3BlbmVkanBhcmFtZXRlcnOha2luZ3JlZGllbnRzgaJjdXJseC1zZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmluZ3JlZGllbnQudjNkaGFzaFggg/fJELpAI9geJD/iaxSlVQJEnHBiBbXT4Im5AGf8PqmkZmFjdGlvbngdY29tLmFudGhyb3BpYy5jbGF1ZGUucHJvdmlkZWRqcGFyYW1ldGVyc6F4H2NvbS5hbnRocm9waWMub3JpZ2luLWNvbmZpZGVuY2VndW5rbm93bmtkZXNjcmlwdGlvbnhmQ2xhdWRlIHByb3ZpZGVkIHRoaXMgZmlsZSBhdCB0aGUgcmVxdWVzdCBvZiBhIHVzZXIgYW5kIG1heSBoYXZlIGNyZWF0ZWQgb3IgbW9kaWZpZWQgdGhlIGZpbGUgY29udGVudHMubXNvZnR3YXJlQWdlbnShZG5hbWVmQ2xhdWRlcmFsbEFjdGlvbnNJbmNsdWRlZPUAAADIanVtYgAAAEBqdW1kY2JvcgARABCAAACqADibcRNjMnBhLmhhc2guZGF0YQAAAAAYYzJzaPvex2nNfz5fJBbBK/z7d3sAAACAY2JvcqVjYWxnZnNoYTI1NmNwYWRMAAAAAAAAAAAAAAAAZGhhc2hYIL/FIB+BxH6bfkDDJcLYVExLLTQdei7U1+FUSRG4WCB9ZG5hbWVuanVtYmYgbWFuaWZlc3RqZXhjbHVzaW9uc4GiZXN0YXJ0GVMFZmxlbmd0aBkeBAAAAj5qdW1iAAAAJ2p1bWRjMmNsABEAEIAAAKoAOJtxA2MycGEuY2xhaW0udjIAAAACD2Nib3KlY2FsZ2ZzaGEyNTZpc2lnbmF0dXJleE1zZWxmI2p1bWJmPS9jMnBhL3VybjpjMnBhOmZkYzUyOTM0LWM4ZjgtNDcxZi1hNjgxLTljYTdiMmRhZGQzNC9jMnBhLnNpZ25hdHVyZWppbnN0YW5jZUlEeCx4bXA6aWlkOjBiOWZjM2ZlLTFjN2MtNDlmNy04MzRkLWVjYjJmMzk5ZDNjMnJjcmVhdGVkX2Fzc2VydGlvbnODomN1cmx4LXNlbGYjanVtYmY9YzJwYS5hc3NlcnRpb25zL2MycGEuaW5ncmVkaWVudC52M2RoYXNoWCCD98kQukAj2B4kP+JrFKVVAkSccGIFtdPgibkAZ/w+qaJjdXJseCpzZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmFjdGlvbnMudjJkaGFzaFggbfm+3X8pYv6/lpzwipSJbyZJFRDb8V292NN1Z+1DYl2iY3VybHgpc2VsZiNqdW1iZj1jMnBhLmFzc2VydGlvbnMvYzJwYS5oYXNoLmRhdGFkaGFzaFggUU+gGiOz0U6lpKizT1LDsZZ3uEcN2JCc8+tbUuWQH/t0Y2xhaW1fZ2VuZXJhdG9yX2luZm+jZG5hbWVvQW50aHJvcGljIEZpbGVzZ3ZlcnNpb25lMS4wLjBrc3BlY1ZlcnNpb25lMi40LjAAABA4anVtYgAAAChqdW1kYzJjcwARABCAAACqADibcQNjMnBhLnNpZ25hdHVyZQAAABAIY2JvctKEWQISogEmGCFZAgowggIGMIIBjaADAgECAhRA5aAK7sI50L64g/oGQgU9Z1UTADAKBggqhkjOPQQDAzBJMRcwFQYDVQQKEw5BbnRocm9waWMsIFBCQzEuMCwGA1UEAxMlQW50aHJvcGljIENvbnRlbnQgQ3JlZGVudGlhbHMgUm9vdCBDQTAeFw0yNjA4MDcxODQzNTZaFw0yODA4MDYxOTQzNTZaMEQxFzAVBgNVBAoTDkFudGhyb3BpYywgUEJDMSkwJwYDVQQDEyBBbnRocm9waWMgQ2xhdWRlIENvbnRlbnQgU2lnbmluZzBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABJh6CmvLUBgFFNU0vUKlOVtE6djd17L5SuwX0LemFisBM3dkd/3cyjxFA3Qo5S46fX0/ihY0VZ7mfb9KF703t5OjWDBWMA4GA1UdDwEB/wQEAwIHgDAVBgNVHSUEDjAMBgorBgEEAYPoXgIBMAwGA1UdEwEB/wQCMAAwHwYDVR0jBBgwFoAUzlHiBIFOZFsj+OPEz5o+nMHXXMIwCgYIKoZIzj0EAwMDZwAwZAIwMXMdFJ4BetLLVY7ORuE9noqbbAZOZn/aArXyTwFAZfKrPzxF2vPoJNf1+UCdg1XGAjBwX1zd9WGqYkqmL5SFqw1QySjr1zJfpJM9+1rdDwSPLMOPOjKuiXjoU/pUUeG9RwmhY3BhZFkNngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPZYQAUE342qCxvOnxskODDviSktmlUAK4B1MVWrqPoa/c4ovCohL7HRxYTIFVBRAvgUKnFOoVcMHsUQ0+rOcuuMiY4=</c2pa:manifest></metadata></svg>

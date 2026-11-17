@@ -3,15 +3,18 @@
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/).
 
 ## [Unreleased]
-### Planned
-- Milestone 2: Daikin IR decode + transmit (IRremoteESP8266)
-### Added
-- Gateway Wi-Fi watchdog (`gateway/netwatch.py`, systemd `pbl5-netwatch`): starts backup AP `SmartAC-Backup` (10.42.0.1)
-  after 2 min without home Wi-Fi, retries home networks every 5 min.
 
-### Fixed
-- Watchdog activates saved home connections explicitly; NetworkManager may block autoconnect after a user
-  disconnect or repeated failures, which would leave the Pi stuck in AP mode.
+## [0.5.0] - 2026-11-XX
+### Added
+- Real climate sensing with Sensirion SHT3x (SHT30/31/35) over I²C; SHT4x still supported (`CLIMATE_SENSOR` in `config.h`).
+- Presence sensing with HLK-LD2420 (24 GHz radar) via its digital output; telemetry is sent immediately when presence changes.
+- Sensor liveness: presence is reported as `null` (unknown), not `false`, when the LD2420 loses power or a wire; a failed SHT3x is re-initialised every 30 s.
+- `firmware/tools/sensor_check`: I²C scan, LD2420 pin and firmware-variant detection, live sensor monitor.
+- `docs/hardware/sensors.md`, setup step 7. `show_data.py` shows presence and how many days of real data have been collected.
+
+### Changed
+- Simulated climate data is off by default (`CLIMATE_SIM_FALLBACK 0`) so it cannot contaminate the training data.
+- CI compiles `sensor_check` and installs the Adafruit SHT31 library.
 
 ## [0.4.0] - 2026-11-17
 ### Added

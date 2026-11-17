@@ -90,3 +90,9 @@ def test_ir_event_bad_json_is_rejected(gateway):
     gateway.handle_ir_event("room01", 8.0, "{oops")
     assert rows(gateway, "SELECT COUNT(*) FROM ir_events") == [(0,)]
     assert rows(gateway, "SELECT reason FROM rejected") == [("ir_event json loi",)]
+
+
+@pytest.mark.parametrize("presence, stored", [(True, 1), (False, 0), (None, None)])
+def test_presence_is_stored_as_tristate(gateway, presence, stored):
+    gateway.handle_telemetry("room01", 1.0, json.dumps({"temp": 27.0, "hum": 60, "presence": presence}))
+    assert rows(gateway, "SELECT presence, simulated FROM telemetry") == [(stored, 0)]
