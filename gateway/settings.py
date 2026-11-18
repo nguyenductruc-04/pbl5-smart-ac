@@ -2,6 +2,8 @@
 import os
 from pathlib import Path
 
+from safety import Policy
+
 BASE_DIR = Path(__file__).resolve().parent
 
 
@@ -24,3 +26,29 @@ MQTT_PORT = int(os.getenv("MQTT_PORT", "1883"))
 MQTT_USER = os.getenv("MQTT_USER", "gateway")
 MQTT_PASS = os.getenv("MQTT_PASS", "")
 DB_PATH = os.getenv("DB_PATH", str(BASE_DIR / "pbl5.db"))
+
+# Giao thuc IR cua dieu hoa (trung IR_PROTOCOL trong firmware). De trong = chap nhan moi remote dieu hoa.
+IR_PROTOCOL = os.getenv("IR_PROTOCOL", "")
+
+# --- REST API ---
+API_HOST = os.getenv("API_HOST", "0.0.0.0")
+API_PORT = int(os.getenv("API_PORT", "8000"))
+# Khoa cho app/dashboard (lenh cua nguoi dung) va khoa rieng cho dich vu tu dong (luat, AI).
+# Nguon lenh duoc suy ra tu KHOA, khong tin vao noi dung request -> AI khong the gia lam nguoi dung.
+API_KEY = os.getenv("API_KEY", "")
+API_KEY_AUTOMATION = os.getenv("API_KEY_AUTOMATION", "")
+COMMAND_TIMEOUT_S = float(os.getenv("COMMAND_TIMEOUT_S", "5"))
+
+
+def _policy_from_env() -> Policy:
+    """Cho phep ghi de tung tham so Safety Layer bang bien moi truong SAFETY_<TEN_IN_HOA>."""
+    base = Policy()
+    overrides = {}
+    for name, default in vars(base).items():
+        raw = os.getenv("SAFETY_" + name.upper())
+        if raw is not None:
+            overrides[name] = type(default)(raw)
+    return Policy(**overrides)
+
+
+POLICY = _policy_from_env()

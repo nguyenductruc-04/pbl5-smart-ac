@@ -5,7 +5,6 @@ import sqlite3
 import pytest
 
 import gateway as gw
-import settings
 
 
 @pytest.mark.parametrize(
@@ -34,12 +33,6 @@ def test_validate_accepts_plausible(payload):
 def test_validate_rejects_bad(payload):
     ok, reason = gw.validate_telemetry(payload)
     assert ok is False and reason
-
-
-@pytest.fixture
-def gateway(tmp_path, monkeypatch):
-    monkeypatch.setattr(settings, "DB_PATH", str(tmp_path / "t.db"))
-    return gw.Gateway()
 
 
 def rows(g, sql):
