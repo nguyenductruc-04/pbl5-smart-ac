@@ -33,8 +33,18 @@ Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 | 3 | Backup network | Pi backup AP, node follows the gateway, Wi-Fi provisioning over MQTT | Done (v0.4.0), tested on hardware |
 | 4 | Real sensors: SHT3x (I²C), LD2420 presence | Done (v0.5.0), tested on hardware; data collection started 17-11 |
 | 5 | Safety Layer + REST API (FastAPI) | Done (v0.6.0), tested on hardware |
-| 6 | Dashboard / app | Planned |
+| 6 | Web dashboard + comfort votes | Done (v0.7.0), tested on hardware |
 | 7 | Data collection + comfort model (scikit-learn) | Planned |
+
+## Dashboard
+
+Served by the Raspberry Pi itself at `http://gateway.local:8000`; works without Internet. Every command goes through the Safety Layer, and refusals are explained in plain language. The "Bạn thấy thế nào?" buttons record comfort votes, the training labels for the comfort model.
+
+| Desktop | Phone (dark mode) |
+|---|---|
+| ![Dashboard on desktop](docs/images/dashboard-desktop.png) | <img src="docs/images/dashboard-phone.png" alt="Dashboard on a phone" width="260"> |
+
+Screenshots use a simulated node and generated history.
 
 ### Measured results
 

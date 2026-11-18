@@ -398,6 +398,60 @@ Mọi ngưỡng nằm trong lớp `Policy` của `gateway/safety.py`. Ghi đè b
 - `ROOM_EMPTY` dựa trên giá trị `presence` mới nhất (LD2420 giữ trạng thái "có người" khoảng 15 s). Luật tắt điều hòa khi phòng trống nên đợi phòng trống liên tục 10–15 phút; việc này thuộc rule engine ở các bản sau.
 - `send_command.py` không đi qua Safety Layer, chỉ dùng để gỡ lỗi.
 
+## Bước 9: Dashboard và phiếu cảm nhận
+
+Dashboard là một trang web do chính Pi phục vụ: không cần Internet, không cần cài thêm gì. Lý do thiết kế: [ADR 0003](adr/0003-dashboard.md).
+
+### 9.1 Cập nhật
+
+```bash
+cd ~/pbl5-smart-ac && git pull
+sudo systemctl restart pbl5-gateway
+```
+
+### 9.2 Mở dashboard
+
+| Thiết bị đang ở mạng nào | Địa chỉ |
+|---|---|
+| Cùng Wi-Fi với Pi | `http://gateway.local:8000` |
+| Mạng dự phòng `SmartAC-Backup` | `http://10.42.0.1:8000` |
+| Ở xa, qua Tailscale | `http://<IP Tailscale của Pi>:8000` |
+
+Nếu điện thoại không mở được `gateway.local`, dùng địa chỉ IP của Pi (xem bằng `hostname -I` trên Pi).
+
+Lần đầu, trang hỏi khóa: nhập giá trị `API_KEY` (xem bằng `grep "^API_KEY=" ~/pbl5-smart-ac/gateway/.env`). Khóa được lưu trong trình duyệt đó. Trên điện thoại, chọn "Thêm vào màn hình chính" trong menu trình duyệt để mở như một ứng dụng.
+
+### 9.3 Kiểm thử
+
+| # | Thao tác | Kết quả đúng |
+|---|---|---|
+| 1 | Nhập khóa sai | Báo "Khóa không đúng", không vào được |
+| 2 | Nhập đúng khóa | Thấy nhiệt độ, độ ẩm, có người là số đo thật; biểu đồ 6 giờ / 24 giờ / 7 ngày |
+| 3 | Bấm "Bật điều hòa" | "Đã phát lệnh tới điều hòa", Serial của node in `IR DA PHAT` |
+| 4 | Bấm `−` ba lần liên tiếp | Số đổi ngay; node chỉ nhận **một** lệnh với giá trị cuối |
+| 5 | Đổi chế độ và quạt | Mỗi thay đổi hiện trong "Nhật ký điều khiển" |
+| 6 | Tắt rồi bật lại ngay | Bị từ chối, có đếm ngược "Máy nén đang nghỉ" |
+| 7 | Bấm "Muốn mát hơn" | "Đã ghi … phòng xx °C", có nút "Hoàn tác", số lần ghi hôm nay tăng 1; ba nút khóa khoảng 5 giây |
+| 8 | Bấm "Hoàn tác" | "Đã hoàn tác", số lần ghi giảm 1 |
+| 9 | Rút nguồn node, đợi khoảng 1 phút | Chấm trạng thái đỏ, nút điều khiển và nút cảm nhận bị khóa |
+| 10 | Cắm lại node | Thông báo "trạng thái có thể đã lệch" cho tới khi gửi một lệnh; nút cảm nhận dùng lại được |
+| 11 | Mở cùng lúc trên điện thoại và laptop, điều khiển ở một máy | Máy kia cập nhật trong khoảng 3 giây |
+| 12 | `sudo systemctl stop pbl5-gateway` rồi `start` lại | Trang báo mất kết nối tới Pi, rồi tự hồi phục |
+
+### 9.4 Thu nhãn cho AI
+
+Từ hôm nay, mỗi khi thấy **nóng, lạnh, hay dễ chịu**, bấm một nút trong mục "Bạn thấy thế nào?". Mục tiêu khoảng 5–10 lần mỗi ngày, và **bấm cả khi thấy dễ chịu**: nếu chỉ bấm lúc khó chịu, dữ liệu sẽ lệch.
+
+Xem các phiếu đã ghi:
+```bash
+curl -s -H "X-API-Key: $API_KEY" "http://localhost:8000/api/v1/rooms/room01/comfort?limit=10"
+```
+
+### 9.5 Giới hạn đã biết
+
+- Trang hỏi lại Pi mỗi 3 giây, nên thay đổi từ remote hoặc thiết bị khác hiện chậm tối đa 3 giây.
+- HTTP thường và khóa tĩnh: chỉ dùng trong mạng nội bộ, mạng dự phòng hoặc qua Tailscale. Nếu mất điện thoại đã lưu khóa, đổi `API_KEY` trong `.env` rồi khởi động lại dịch vụ.
+
 
 ## Xử lý lỗi thường gặp
 

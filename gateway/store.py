@@ -41,6 +41,24 @@ CREATE TABLE IF NOT EXISTS decisions (
     requested TEXT                         -- trang thai dich (JSON)
 );
 CREATE INDEX IF NOT EXISTS idx_decisions_room_ts ON decisions(room, ts);
+
+-- Phieu cam nhan cua nguoi dung: NHAN de huan luyen AI (M6).
+-- Luu kem anh chup moi truong va dieu hoa ngay luc bam, de mau du lieu dung doc lap.
+CREATE TABLE IF NOT EXISTS comfort_votes (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts              REAL NOT NULL,
+    room            TEXT NOT NULL,
+    vote            INTEGER NOT NULL,      -- -1 muon mat hon, 0 de chiu, +1 muon am hon
+    temp            REAL,
+    hum             REAL,
+    presence        INTEGER,               -- 1 / 0 / NULL (khong ro)
+    telemetry_age_s REAL,                  -- so do cach luc bam bao lau
+    ac_power        TEXT,                  -- trang thai DU KIEN cua dieu hoa (NULL = chua biet)
+    ac_mode         TEXT,
+    ac_temp         INTEGER,
+    ac_uncertain    INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_comfort_room_ts ON comfort_votes(room, ts);
 """
 
 AUTO_SOURCES_SQL = "('rule','ai')"
@@ -213,6 +231,21 @@ def telemetry_history(conn, room: str, limit: int, since: float | None, until: f
     return rows
 
 
+def telemetry_series(conn, room: str, since: float, until: float, points: int) -> dict:
+    """Chuoi nhiet do / do am da gom nhom de ve bieu do: toi da `points` diem trung binh.
+
+    Gom nhom ngay trong SQLite, nen 7 ngay du lieu (hang chuc nghin dong) van chi tra ve vai tram diem.
+    """
+    bucket_s = max(1.0, (until - since) / points)
+    rows = conn.execute(
+        "SELECT CAST((ts - ?) / ? AS INTEGER) AS b, AVG(ts), AVG(temp), AVG(hum), COUNT(*)"
+        " FROM telemetry WHERE room=? AND ts>=? AND ts<=? GROUP BY b ORDER BY b",
+        (since, bucket_s, room, since, until)).fetchall()
+    items = [{"ts": round(ts, 1), "temp": round(temp, 2), "hum": round(hum, 1), "n": n}
+             for _, ts, temp, hum, n in rows]
+    return {"since": since, "until": until, "bucket_s": round(bucket_s, 1), "items": items}
+
+
 def command_history(conn, room: str, limit: int) -> list[dict]:
     rows = _rows(
         conn,
@@ -244,6 +277,64 @@ def ir_event_history(conn, room: str, limit: int) -> list[dict]:
         "SELECT ts, protocol, power, mode, temp, fan FROM ir_events WHERE room=?"
         " ORDER BY id DESC LIMIT ?", (room, limit),
         ("ts", "protocol", "power", "mode", "temp", "fan"))
+
+
+# ------------------------------------------------------------------ phieu cam nhan
+VOTE_CODES = {"cooler": -1, "comfortable": 0, "warmer": 1}
+VOTE_NAMES = {v: k for k, v in VOTE_CODES.items()}
+VOTE_KEYS = ("id", "ts", "vote", "temp", "hum", "presence", "telemetry_age_s",
+             "ac_power", "ac_mode", "ac_temp", "ac_uncertain")
+
+
+def add_vote(conn: sqlite3.Connection, room: str, ts: float, vote: str) -> dict:
+    """Ghi mot phieu kem so do moi nhat va trang thai dieu hoa du kien. Tra ve phieu vua ghi."""
+    tel = latest_telemetry(conn, room) or {}
+    ac = ac_row(conn, room) or {}
+    presence = tel.get("presence")
+    cur = conn.execute(
+        "INSERT INTO comfort_votes(ts, room, vote, temp, hum, presence, telemetry_age_s,"
+        " ac_power, ac_mode, ac_temp, ac_uncertain) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+        (ts, room, VOTE_CODES[vote], tel.get("temp"), tel.get("hum"),
+         None if presence is None else int(presence),
+         None if "ts" not in tel else round(max(0.0, ts - tel["ts"]), 1),
+         ac.get("power"), ac.get("mode"), ac.get("temp"),
+         None if not ac else int(ac["uncertain"])))
+    conn.commit()
+    return get_vote(conn, room, cur.lastrowid)
+
+
+def _vote_dict(row) -> dict:
+    out = dict(zip(VOTE_KEYS, row, strict=True))
+    out["vote"] = VOTE_NAMES[out["vote"]]
+    out["presence"] = None if out["presence"] is None else bool(out["presence"])
+    out["ac_uncertain"] = None if out["ac_uncertain"] is None else bool(out["ac_uncertain"])
+    return out
+
+
+def get_vote(conn: sqlite3.Connection, room: str, vote_id: int) -> dict | None:
+    row = conn.execute(f"SELECT {', '.join(VOTE_KEYS)} FROM comfort_votes WHERE room=? AND id=?",
+                       (room, vote_id)).fetchone()
+    return _vote_dict(row) if row else None
+
+
+def last_vote_ts(conn: sqlite3.Connection, room: str) -> float | None:
+    return conn.execute("SELECT MAX(ts) FROM comfort_votes WHERE room=?", (room,)).fetchone()[0]
+
+
+def delete_vote(conn: sqlite3.Connection, room: str, vote_id: int) -> None:
+    conn.execute("DELETE FROM comfort_votes WHERE room=? AND id=?", (room, vote_id))
+    conn.commit()
+
+
+def vote_history(conn: sqlite3.Connection, room: str, limit: int, since: float | None) -> list[dict]:
+    sql = f"SELECT {', '.join(VOTE_KEYS)} FROM comfort_votes WHERE room=?"
+    params: list = [room]
+    if since is not None:
+        sql += " AND ts>=?"
+        params.append(since)
+    sql += " ORDER BY ts DESC LIMIT ?"
+    params.append(limit)
+    return [_vote_dict(r) for r in conn.execute(sql, params).fetchall()]
 
 
 def extract_state_fields(payload: str | None) -> dict | None:
