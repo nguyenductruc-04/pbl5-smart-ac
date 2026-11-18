@@ -6,7 +6,7 @@ target-version = "py311"
 select = ["E", "F", "I", "B"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["settings", "gateway"]
+known-first-party = ["api", "control", "gateway", "netwatch", "push_wifi", "safety", "settings", "store"]
 
 [tool.pytest.ini_options]
 testpaths = ["gateway/tests"]

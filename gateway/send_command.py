@@ -1,5 +1,8 @@
 """
 Gui mot lenh thu toi Room Node va cho command_result.
+
+CONG CU GO LOI: publish thang len MQTT, KHONG di qua Safety Layer. Dieu khien binh thuong hay dung
+REST API (python api.py, xem docs/API.md).
 Vi du:
     python send_command.py --room room01 --power on --mode cool --temp 26 --fan auto
 """
@@ -26,8 +29,8 @@ def main():
     p.add_argument("--timeout", type=float, default=5.0)
     args = p.parse_args()
 
-    if not 16 <= args.temp <= 30:
-        sys.exit("Nhiet do phai trong khoang 16-30")
+    if not 16 <= args.temp <= 32:
+        sys.exit("Nhiet do phai trong khoang 16-32")
 
     cmd = {
         "cmd_id": "c-" + uuid.uuid4().hex[:8],

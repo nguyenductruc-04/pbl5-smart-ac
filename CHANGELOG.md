@@ -4,7 +4,21 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versio
 
 ## [Unreleased]
 
-## [0.5.0] - 2026-11-XX
+## [0.6.0] - 2026-11-XX
+### Added
+- Safety Layer (`gateway/safety.py`): a pure, unit-tested gate that every command passes. Compressor minimum off-time, rate limits, temperature windows, and stricter rules for automatic sources (auto-hold after human action, fresh telemetry, 1 °C steps, no power-on when the room is empty).
+- Expected AC state tracking in SQLite (`ac_state`), updated from command results and overheard remote presses, flagged *uncertain* after any gap; survives restarts.
+- Audit log of every Safety Layer decision (`decisions` table).
+- REST API (`gateway/api.py`, FastAPI) under `/api/v1`: room state, history, commands, auto-hold. The command source is derived from the API key (app vs automation).
+- Defined offline behaviour: no command queuing, `503`/`504` errors with reason codes, clock-rollback healing at start-up.
+- ADR 0002, `docs/API.md`, setup step 8.
+
+### Changed
+- The gateway service now runs `api.py` (MQTT ingest and API in one process). `gateway.py` alone still works for ingest only.
+- SQLite opened in WAL mode; `*.db-wal` and `*.db-shm` are git-ignored.
+- CI installs `gateway/requirements-dev.txt`.
+
+## [0.5.0] - 2026-11-17
 ### Added
 - Real climate sensing with Sensirion SHT3x (SHT30/31/35) over I²C; SHT4x still supported (`CLIMATE_SENSOR` in `config.h`).
 - Presence sensing with HLK-LD2420 (24 GHz radar) via its digital output; telemetry is sent immediately when presence changes.

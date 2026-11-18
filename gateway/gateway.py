@@ -1,17 +1,23 @@
 """
-PBL5 Gateway - Milestone 1
-- Subscribe telemetry / status / command_result cua tat ca cac phong
+PBL5 Gateway
+- Subscribe telemetry / status / command_result / ir_event cua tat ca cac phong
 - Kiem tra lai du lieu, luu vao SQLite
-Chay:  python gateway.py
+- Theo doi trang thai DU KIEN cua dieu hoa (bang ac_state) cho Safety Layer
+
+Chay day du (co REST API):  python api.py
+Chi thu thap du lieu:       python gateway.py   (KHONG chay cung luc voi api.py: trung client_id)
 """
 import json
 import logging
 import sqlite3
+import threading
 import time
 
 import paho.mqtt.client as mqtt
 
+import safety
 import settings
+import store
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("gateway")
@@ -72,9 +78,12 @@ CREATE INDEX IF NOT EXISTS idx_ir_events_room_ts ON ir_events(room, ts);
 
 
 def open_db(path: str) -> sqlite3.Connection:
-    conn = sqlite3.connect(path, check_same_thread=False)
+    conn = sqlite3.connect(path, check_same_thread=False, timeout=5.0)
+    # WAL: tien trinh/luong khac doc duoc trong khi gateway dang ghi
+    conn.execute("PRAGMA journal_mode=WAL")
     conn.executescript(SCHEMA)
     conn.commit()
+    store.init(conn)
     return conn
 
 
@@ -90,9 +99,26 @@ def validate_telemetry(data: dict):
     return True, None
 
 
+def state_from_fields(data: dict) -> safety.AcState | None:
+    """Tao AcState tu dict power/mode/temp/fan. Tra ve None neu thieu hoac sai gia tri."""
+    power, mode, temp, fan = data.get("power"), data.get("mode"), data.get("temp"), data.get("fan")
+    if power not in ("on", "off") or mode not in safety.MODES or fan not in safety.FANS:
+        return None
+    if isinstance(temp, bool) or not isinstance(temp, int):
+        return None
+    return safety.AcState(power, mode, temp, fan)
+
+
 class Gateway:
-    def __init__(self):
+    def __init__(self, policy: safety.Policy | None = None):
+        self.policy = policy or settings.POLICY
         self.db = open_db(settings.DB_PATH)
+        # Gateway vua khoi dong: co the da bo lo lan bam remote -> trang thai chua chac chan
+        store.mark_uncertain(self.db)
+        if store.heal_clock(self.db, time.time(), self.policy):
+            log.warning("Dong ho he thong da bi lui: da chinh lai cac moc thoi gian cua Safety Layer")
+        self._waiters: dict[str, tuple[threading.Event, dict]] = {}
+        self._waiters_lock = threading.Lock()
         self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="pbl5-gateway")
         self.client.username_pw_set(settings.MQTT_USER, settings.MQTT_PASS)
         self.client.on_connect = self.on_connect
@@ -167,11 +193,17 @@ class Gateway:
             (room, status, now),
         )
         self.db.commit()
+        if status != "online":
+            # Trong luc node offline, nguoi dung co the bam remote ma Pi khong biet
+            store.mark_uncertain(self.db, room)
         log.info("[%s] node %s", room, status.upper())
 
     def handle_result(self, room, now, text):
         data = json.loads(text)
         cmd_id = data.get("cmd_id")
+        before = self.db.execute(
+            "SELECT source, payload, ts_result FROM commands WHERE cmd_id=? AND room=?",
+            (cmd_id, room)).fetchone()
         self.db.execute(
             "INSERT INTO commands(cmd_id, room, ts_result, ok, result) VALUES (?,?,?,?,?)"
             " ON CONFLICT(cmd_id) DO UPDATE SET ts_result=excluded.ts_result,"
@@ -179,7 +211,13 @@ class Gateway:
             (cmd_id or f"unknown-{now}", room, now, int(bool(data.get("ok"))), text),
         )
         self.db.commit()
+        # Lenh thanh cong lan dau -> cap nhat trang thai du kien cua dieu hoa
+        if data.get("ok") and before and before[2] is None:
+            state = state_from_fields(store.extract_state_fields(before[1]) or {})
+            if state is not None:
+                store.apply_state_change(self.db, room, now, before[0] or "cli", state, self.policy)
         log.info("[%s] ket qua lenh %s: %s", room, cmd_id, "OK" if data.get("ok") else "LOI")
+        self._notify(cmd_id, data)
 
     def handle_ir_event(self, room, now, text):
         """Nguoi dung bam remote goc (node nghe len). Day la thay doi uu tien cao nhat."""
@@ -196,6 +234,17 @@ class Gateway:
              temp if isinstance(temp, int) else None, data.get("fan"), text),
         )
         self.db.commit()
+        # Nguoi dung bam remote: dong bo trang thai va chan lenh tu dong mot thoi gian
+        expected = settings.IR_PROTOCOL
+        if expected and data.get("protocol") != expected:
+            log.info("[%s] remote giao thuc %s khac %s -> khong doi trang thai", room,
+                     data.get("protocol"), expected)
+        else:
+            state = state_from_fields(data)
+            if state is not None:
+                store.apply_state_change(self.db, room, now, "remote", state, self.policy)
+            else:
+                store.mark_uncertain(self.db, room)
         log.info("[%s] REMOTE %s: power=%s mode=%s temp=%s fan=%s", room, data.get("protocol"),
                  data.get("power"), data.get("mode"), temp, data.get("fan"))
 
@@ -205,10 +254,57 @@ class Gateway:
         self.db.commit()
         log.warning("[%s] loai bo telemetry: %s", room, reason)
 
+    # --------------------------------------------------------------- cho ket qua lenh
+    def expect_result(self, cmd_id: str) -> threading.Event:
+        """Dang ky cho command_result cua `cmd_id`. Goi TRUOC khi publish lenh."""
+        event = threading.Event()
+        with self._waiters_lock:
+            self._waiters[cmd_id] = (event, {})
+        return event
+
+    def take_result(self, cmd_id: str) -> dict | None:
+        """Lay ket qua (None neu chua co) va huy dang ky."""
+        with self._waiters_lock:
+            _, box = self._waiters.pop(cmd_id, (None, {}))
+        return box.get("data")
+
+    def _notify(self, cmd_id, data: dict) -> None:
+        with self._waiters_lock:
+            waiter = self._waiters.get(cmd_id)
+            if waiter:
+                waiter[1]["data"] = data
+                waiter[0].set()
+
+    # --------------------------------------------------------------- gui lenh
+    def is_connected(self) -> bool:
+        return self.client.is_connected()
+
+    def publish_command(self, room: str, payload: str) -> bool:
+        """Gui lenh xuong node. Tra ve False neu dang mat broker.
+
+        Khong publish khi mat ket noi: paho se giu lenh QoS 1 va gui bu khi noi lai (lenh den tre).
+        """
+        if not self.client.is_connected():
+            return False
+        self.client.publish(f"home/{room}/command", payload, qos=1)
+        return True
+
     # ---------------------------------------------------------------
-    def run(self):
+    def connect(self):
         log.info("Database: %s", settings.DB_PATH)
-        self.client.connect(settings.MQTT_HOST, settings.MQTT_PORT, keepalive=30)
+        self.client.connect_async(settings.MQTT_HOST, settings.MQTT_PORT, keepalive=30)
+
+    def start(self):
+        """Chay vong lap MQTT o luong nen (dung khi nhung vao REST API)."""
+        self.connect()
+        self.client.loop_start()
+
+    def stop(self):
+        self.client.loop_stop()
+        self.client.disconnect()
+
+    def run(self):
+        self.connect()
         self.client.loop_forever(retry_first_connection=True)
 
 

@@ -7,6 +7,8 @@ passwd
 
 # Runtime data
 *.db
+*.db-wal
+*.db-shm
 *.sqlite
 *.log
 

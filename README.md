@@ -32,7 +32,7 @@ Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 | 2 | Daikin IR decode + transmit | ✅ Done — send/receive validated by IR loopback (17/20, TSOP38238); **pending test on a real Daikin unit** |
 | 3 | Backup network | Pi backup AP, node follows the gateway, Wi-Fi provisioning over MQTT | Done (v0.4.0), tested on hardware |
 | 4 | Real sensors: SHT3x (I²C), LD2420 presence | Done (v0.5.0), tested on hardware; data collection started 17-11 |
-| 5 | Safety Layer + REST API (FastAPI) | Planned |
+| 5 | Safety Layer + REST API (FastAPI) | Done (v0.6.0), tested on hardware |
 | 6 | Dashboard / app | Planned |
 | 7 | Data collection + comfort model (scikit-learn) | Planned |
 
@@ -75,9 +75,9 @@ cd gateway
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env            # set MQTT_PASS
-python gateway.py               # terminal 1
+python api.py                   # terminal 1: MQTT ingest + Safety Layer + REST API (needs API_KEY in .env)
 python simulate_node.py --room room01 --password <pw> --interval 5   # terminal 2
-python send_command.py --room room01 --power on --mode cool --temp 26 --fan auto  # terminal 3
+curl -H "X-API-Key: <API_KEY>" -H "Content-Type: application/json" -d '{"power":"on","temp":26}' http://localhost:8000/api/v1/rooms/room01/commands
 python show_data.py
 ```
 
@@ -95,11 +95,14 @@ Broker setup (password file + ACL) and ESP32 flashing: see the step-by-step guid
 | `home/{room}/config` | gateway → node | `{"cfg_id","wifi":{"ssid","pass"}}` (retained until answered) |
 | `home/{room}/config_result` | node → gateway | `{"cfg_id","ok","error"}` |
 
+## REST API
+
+Every command goes through the Safety Layer; refusals come back with a reason code and, when relevant, `Retry-After`. Interactive docs at `http://gateway.local:8000/docs`; reference in [docs/API.md](docs/API.md).
+
 ## Development
 
 ```bash
-pip install -r gateway/requirements.txt pytest ruff
-ruff check . && pytest -q
+pip install -r gateway/requirements-dev.txt
 ```
 
 Commits follow [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `test:`, `ci:`); releases are tagged `vMAJOR.MINOR.PATCH` — see [CHANGELOG.md](CHANGELOG.md).

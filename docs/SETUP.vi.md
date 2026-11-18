@@ -301,6 +301,104 @@ Trên Pi: `journalctl -u pbl5-gateway -f` (hoặc chạy `python gateway.py` n�
 - Đảm bảo `pbl5-gateway` chạy như dịch vụ (Bước 5) để Pi ghi dữ liệu cả khi bạn không mở SSH.
 - Ghi ngày bắt đầu thu dữ liệu vào báo cáo. `python show_data.py` cho biết đã thu được bao nhiêu ngày dữ liệu thật.
 
+## Bước 8: Safety Layer và REST API
+
+Từ bước này, mọi lệnh điều khiển đi qua REST API trên Pi. API kiểm tra lệnh bằng Safety Layer trước khi gửi xuống node. Lý do thiết kế: [ADR 0002](adr/0002-safety-layer-and-control-api.md). Mô tả API: [API.md](API.md).
+
+### 8.1 Cài thư viện mới trên Pi
+
+```bash
+cd ~/pbl5-smart-ac && git pull
+cd gateway && source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+### 8.2 Tạo khóa API
+
+Chạy lệnh sau **hai lần** để có hai khóa khác nhau:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+Mở `nano .env` và thêm (xem mẫu trong `.env.example`):
+
+```
+API_KEY=<khóa thứ nhất: cho app/dashboard>
+API_KEY_AUTOMATION=<khóa thứ hai: cho luật và AI>
+IR_PROTOCOL=DAIKIN
+```
+
+File `.env` không được commit. Khi chụp màn hình, nhớ che hai khóa này.
+
+### 8.3 Cập nhật dịch vụ
+
+Từ bản này, dịch vụ `pbl5-gateway` chạy `api.py` thay cho `gateway.py`: một tiến trình vừa thu dữ liệu MQTT vừa phục vụ API. **Không chạy hai file cùng lúc**, vì chúng trùng tên kết nối MQTT và sẽ đá nhau khỏi broker.
+
+```bash
+cd ~/pbl5-smart-ac
+pgrep -af "gateway.py|api.py"                 # chỉ được thấy tiến trình của dịch vụ
+sudo cp gateway/pbl5-gateway.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl restart pbl5-gateway
+journalctl -u pbl5-gateway -f
+```
+
+Thấy `Uvicorn running on http://0.0.0.0:8000` và các dòng telemetry `nguoi=...` là được. Nếu thay vào đó thấy `Thieu API_KEY`, quay lại mục 8.2. Trên laptop, mở `http://gateway.local:8000/docs` để xem và thử từng endpoint: bấm **Authorize** rồi dán `API_KEY`.
+
+### 8.4 Kiểm thử với node thật
+
+Mở cửa sổ SSH thứ hai trên Pi và đặt biến cho gọn:
+
+```bash
+cd ~/pbl5-smart-ac/gateway
+set -a; source .env; set +a
+K="X-API-Key: $API_KEY"
+A="X-API-Key: $API_KEY_AUTOMATION"
+B=http://localhost:8000/api/v1
+J="Content-Type: application/json"
+```
+
+| # | Lệnh | Kết quả đúng |
+|---|---|---|
+| 1 | `curl $B/health` | `"status":"ok"` |
+| 2 | `curl $B/rooms` | `401 UNAUTHORIZED` (thiếu khóa) |
+| 3 | `curl -H "$K" $B/rooms/room01` | Có `telemetry` với nhiệt độ thật, `presence` là `true`, `false` hoặc `null` |
+| 4 | `curl -H "$K" -H "$J" -d '{"power":"on","temp":25}' $B/rooms/room01/commands` | `"status":"executed"`, Serial của node in `IR DA PHAT` |
+| 5 | Ngay sau đó: `curl -H "$K" -H "$J" -d '{"temp":24}' $B/rooms/room01/commands` | `RATE_LIMIT` (gửi quá nhanh) |
+| 6 | `curl -H "$K" -H "$J" -d '{"power":"off"}' $B/rooms/room01/commands` | `executed` (tắt luôn được phép) |
+| 7 | Ngay sau đó: `curl -H "$K" -H "$J" -d '{"power":"on"}' $B/rooms/room01/commands` | `COMPRESSOR_MIN_OFF`, có `retry_after_s` |
+| 8 | Đợi hết 3 phút rồi lặp lại lệnh 7 | `executed` |
+| 9 | `curl -H "$A" -H "$J" -d '{"temp":26,"source":"ai"}' $B/rooms/room01/commands` | `MANUAL_HOLD` (người dùng vừa điều chỉnh) |
+| 10 | `curl -X DELETE -H "$K" $B/rooms/room01/auto-hold` rồi lặp lại lệnh 9 | `executed`, `"source":"ai"` |
+| 11 | `curl -H "$A" -H "$J" -d '{"temp":29,"source":"ai"}' $B/rooms/room01/commands` | `STEP_TOO_LARGE` (tự động chỉ được đổi 1 °C mỗi lần) |
+| 12 | Tắt máy lạnh bằng lệnh 6, đợi 3 phút, ra khỏi tầm LD2420 cho tới khi node báo `presence:false`, rồi `curl -H "$A" -H "$J" -d '{"power":"on","source":"rule"}' $B/rooms/room01/commands` | `ROOM_EMPTY` (không tự bật khi phòng trống) |
+| 13 | Rút nguồn node, đợi khoảng 1 phút, gửi lại lệnh 4 | `NODE_OFFLINE`, lệnh **không** được xếp hàng |
+| 14 | Cắm lại node, đợi online: `curl -H "$K" $B/rooms/room01` | `"uncertain":true` |
+| 15 | Lặp lại lệnh 9 | `STATE_UNCERTAIN` cho tới khi người dùng gửi một lệnh |
+| 16 | `curl -H "$K" "$B/rooms/room01/decisions?limit=20"` | Nhật ký đủ các quyết định ở trên, kèm mã lý do |
+
+Ở bài 12, nếu bạn đã cấu hình nhưng chưa từng gửi lệnh tự động nào, có thể gặp `RATE_LIMIT` (lệnh tự động cách nhau ít nhất 10 phút). Đợi theo `retry_after_s` rồi thử lại.
+
+Khi có remote Daikin thật: bấm remote, rồi `curl -H "$K" $B/rooms/room01` phải cho `"source":"remote"` và `auto_hold_remaining_s` khoảng 3600. Khi chưa có remote, có thể giả lập:
+
+```bash
+mosquitto_pub -u gateway -P "$MQTT_PASS" -t home/room01/ir_event \
+  -m '{"protocol":"DAIKIN","power":"on","mode":"cool","temp":25,"fan":"auto"}'
+```
+
+### 8.5 Đổi ngưỡng Safety Layer
+
+Mọi ngưỡng nằm trong lớp `Policy` của `gateway/safety.py`. Ghi đè bằng biến `SAFETY_<TÊN_IN_HOA>` trong `.env` (ví dụ `SAFETY_MIN_OFF_S=240`), rồi `sudo systemctl restart pbl5-gateway`. Xem giá trị đang áp dụng: `curl -H "$K" $B/policy`.
+
+### 8.6 Giới hạn đã biết
+
+- API dùng HTTP thường và khóa tĩnh: chỉ dùng trong mạng nội bộ, mạng dự phòng `SmartAC-Backup` hoặc qua Tailscale. Không mở cổng 8000 ra Internet.
+- Trạng thái điều hòa là trạng thái **dự kiến** (IR một chiều). Nếu điều hòa lỡ mất tín hiệu, Pi không biết.
+- `ROOM_EMPTY` dựa trên giá trị `presence` mới nhất (LD2420 giữ trạng thái "có người" khoảng 15 s). Luật tắt điều hòa khi phòng trống nên đợi phòng trống liên tục 10–15 phút; việc này thuộc rule engine ở các bản sau.
+- `send_command.py` không đi qua Safety Layer, chỉ dùng để gỡ lỗi.
+
+
 ## Xử lý lỗi thường gặp
 
 | Hiện tượng | Nguyên nhân hay gặp |
