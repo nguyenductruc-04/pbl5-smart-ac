@@ -4,7 +4,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versio
 
 ## [Unreleased]
 
-## [0.6.0] - 2026-11-XX
+## [0.6.0] - 2026-11-18
 ### Added
 - Safety Layer (`gateway/safety.py`): a pure, unit-tested gate that every command passes. Compressor minimum off-time, rate limits, temperature windows, and stricter rules for automatic sources (auto-hold after human action, fresh telemetry, 1 °C steps, no power-on when the room is empty).
 - Expected AC state tracking in SQLite (`ac_state`), updated from command results and overheard remote presses, flagged *uncertain* after any gap; survives restarts.
