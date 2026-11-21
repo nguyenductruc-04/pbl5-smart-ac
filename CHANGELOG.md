@@ -4,6 +4,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versio
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-21
+### Added
+- Personal comfort model (`gateway/comfort.py`): ordinal logistic regression with a population prior fitted on the ASHRAE Global Thermal Comfort Database II (tropical and monsoon climates, about 20,000 votes) and per-user personalisation (preferred-temperature shift and sensitivity) learned on the Pi from comfort votes; older votes are down-weighted.
+- Advice rules: energy-aware setpoint (warmest temperature inside the personal comfort band), turn-on only when the user very likely wants it cooler, turn-off only after 15 min of empty room, one-degree steps. Between the comfort band and the turn-on threshold the dashboard offers turning on (`SLIGHTLY_WARM`) instead of calling the room comfortable; the automatic mode does not act there.
+- `GET /api/v1/rooms/{room}/suggestion`; dashboard card "Gợi ý cho bạn" with "Áp dụng".
+- Optional automatic mode (`ADVISOR_AUTO=1`): applies advice as source `ai`, previewing the Safety Layer decision so refusals do not flood the log.
+- `ml/`: population training with building-grouped cross-validation, prequential evaluation on real votes, and a simulator that writes only to a copy of the database (reports labelled as simulated).
+- ADR 0004, `docs/ml/`, setup step 10.
+
 ## [0.7.0] - 2026-11-20
 ### Added
 - Web dashboard served by the gateway at `/` (`gateway/web/`): power, set-point with a thermal scale showing room vs target temperature, mode and fan; live room readings; 6 h / 24 h / 7 d temperature and humidity charts; control log with the Safety Layer's reason for every refusal. Works on phones, in light and dark mode, and without Internet (no CDN, bundled font).

@@ -61,6 +61,7 @@ const S = {
   lastSendAt: -1e9,  // performance.now() cua lan gui gan nhat, de tu gian cach theo Safety Layer
   ticks: 0,
   series: null,
+  suggestion: null,
   votesToday: 0,
   lastVote: null,    // phieu vua ghi trong phien nay (de hoan tac)
   lastVoteAt: 0,     // performance.now() luc ghi
@@ -306,6 +307,7 @@ async function castVote(vote) {
     S.lastVoteAt = performance.now();
     S.voteCooldownUntil = S.lastVoteAt + 5000;
     S.votesToday += 1;
+    loadSuggestion();
     voteStatus(`Đã ghi "${VOTE_LABEL[v.vote]}" lúc ${when(v.ts)}, phòng ${num(v.temp, 1)} °C.`, "ok");
   } catch (e) {
     if (e.code === "UNAUTHORIZED") askKey(REASON.UNAUTHORIZED);
@@ -329,6 +331,62 @@ async function undoVote() {
   }
   S.lastVote = null;
   renderVotes();
+}
+
+// ------------------------------------------------------------------ goi y (M6)
+const MODE_NAME = { cool: "mát", dry: "khô", auto: "tự động", fan: "quạt", heat: "sưởi" };
+
+function adviceText(s) {
+  const t = s.target;
+  const room = s.room_temp == null ? "" : `Phòng ${num(s.room_temp, 1)} °C. `;
+  switch (s.reason) {
+    case "TOO_WARM": return `${room}Có vẻ hơi nóng với bạn. Nên bật điều hòa ở ${t.temp} °C.`;
+    case "WARMER_SETPOINT": return `Có thể tăng lên ${t.temp} °C mà vẫn dễ chịu, đỡ tốn điện.`;
+    case "COOLER_SETPOINT": return `${room}Nên giảm nhiệt độ đặt xuống ${t.temp} °C.`;
+    case "ROOM_EMPTY_LONG": return "Phòng đã trống hơn 15 phút. Nên tắt điều hòa.";
+    case "SLIGHTLY_WARM": {
+      const hi = num(s.comfort_band[1], 1);
+      const p = s.comfort ? ` (khả năng bạn muốn mát hơn: ${Math.round(s.comfort.cooler * 100)} %)` : "";
+      return `${room}Ấm hơn vùng dễ chịu của bạn (trên ${hi} °C) nhưng chưa nóng hẳn${p}. Nếu thấy nóng, có thể bật ở ${t.temp} °C.`;
+    }
+    case "COMFORTABLE": return `${room}Phòng đang dễ chịu với bạn, chưa cần bật điều hòa.`;
+    case "TOO_COOL_AC_OFF": return `${room}Phòng hơi mát với bạn.`;
+    case "SETPOINT_OK": return "Nhiệt độ đặt hiện tại đang hợp với bạn.";
+    case "ROOM_EMPTY": return "Phòng đang trống, chưa có gợi ý.";
+    case "MODE_NOT_SUPPORTED": return `Gợi ý chỉ áp dụng cho chế độ mát, khô hoặc tự động (đang ở ${MODE_NAME[S.snap?.ac?.mode] || "chế độ khác"}).`;
+    default: return "Chưa có số đo mới nên chưa có gợi ý.";
+  }
+}
+
+function renderAdvice() {
+  const s = S.suggestion;
+  $("advice").hidden = !s;
+  if (!s) return;
+  $("advice-text").textContent = adviceText(s);
+  const offered = s.action !== "none" || s.reason === "SLIGHTLY_WARM";   // SLIGHTLY_WARM: chi de nghi, khong tu lam
+  const canApply = s.target && offered && !s.auto && S.linkOk && nodeOnline();
+  $("advice-apply").hidden = !canApply;
+  const [lo, hi] = s.comfort_band;
+  const m = s.model;
+  let why = `Vùng dễ chịu của bạn: ${num(lo, 1)}–${num(hi, 1)} °C. `;
+  why += m.personal
+    ? `Học từ ${m.votes} phiếu của bạn và dữ liệu khảo sát tiện nghi ASHRAE.`
+    : `Đang dùng mô hình chung từ dữ liệu khảo sát ASHRAE; sẽ hợp với bạn hơn khi có từ 10 phiếu (hiện có ${m.votes}).`;
+  if (s.auto) why += " Chế độ tự động đang bật: hệ thống tự áp dụng gợi ý, qua Safety Layer.";
+  $("advice-why").textContent = why;
+}
+
+async function loadSuggestion() {
+  try {
+    S.suggestion = await api(`/rooms/${S.room}/suggestion`);
+  } catch { /* giu goi y cu */ }
+  renderAdvice();
+}
+
+function applyAdvice() {
+  const t = S.suggestion && S.suggestion.target;
+  if (!t) return;
+  change({ ...t }, 0);
 }
 
 function feedback(text, kind = "") {
@@ -381,6 +439,7 @@ async function flush() {
     S.sending = false;
     render();
     loadLog();
+    loadSuggestion();
     if (waitMs) S.timer = setTimeout(flush, waitMs);
     else if (S.again && Object.keys(S.pending).length) change({}, 0);
     S.again = false;
@@ -551,6 +610,7 @@ async function tick() {
     S.ticks += 1;
     await refresh();
     if (S.ticks % 4 === 0) loadLog();
+    if (S.ticks % 2 === 0) loadSuggestion();
     if (S.ticks % 20 === 0) loadSeries();
   }
   setTimeout(tick, POLL_MS);
@@ -598,6 +658,7 @@ async function start() {
   loadLog();
   loadSeries();
   loadVotes();
+  loadSuggestion();
 }
 
 // ------------------------------------------------------------------ khoa truy cap
@@ -657,6 +718,7 @@ $("room-select").addEventListener("change", (ev) => {
   S.pending = {};
   S.series = null;
   S.lastVote = null;
+  S.suggestion = null;
   voteStatus("");
   feedback("");
   start();
@@ -667,6 +729,7 @@ let resizeTimer = 0;
 window.addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(drawSeries, 150); });
 setInterval(() => { if (S.snap && !document.hidden) { render(); renderVotes(); } }, 1000);
 for (const b of $("votes").children) b.addEventListener("click", () => castVote(b.dataset.vote));
+$("advice-apply").addEventListener("click", applyAdvice);
 $("vote-undo").addEventListener("click", undoVote);   // dem nguoc muot giua hai lan hoi
 
 if (S.key) start(); else askKey();

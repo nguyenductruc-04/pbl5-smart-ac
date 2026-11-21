@@ -398,3 +398,74 @@ def test_vote_history_newest_first_and_since(client, clock):
     assert [i["vote"] for i in items] == ["warmer", "comfortable", "cooler"]
     since = items[1]["ts"]
     assert len(client.get(f"{VOTE}?since={since}", headers=H).json()["items"]) == 2
+
+
+# ------------------------------------------------------------------ goi y (M6)
+SUG = "/api/v1/rooms/room01/suggestion"
+
+
+def tel(client, clock, temp, presence=True, hum=65, at=None):
+    client.gateway.handle_telemetry("room01", clock() if at is None else at,
+                                    json.dumps({"temp": temp, "hum": hum, "presence": presence}))
+
+
+def test_suggestion_without_data(client):
+    s = client.get(SUG, headers=H).json()
+    assert (s["action"], s["reason"], s["comfort"], s["auto"]) == ("none", "NO_DATA", None, False)
+    assert s["model"]["votes"] == 0 and s["model"]["personal"] is False
+    assert "ASHRAE" in s["model"]["prior"]
+
+
+def test_hot_room_suggests_turning_on(client, clock):
+    tel(client, clock, 31.0)
+    s = client.get(SUG, headers=H).json()
+    assert (s["action"], s["reason"]) == ("turn_on", "TOO_WARM")
+    assert s["target"] == {"power": "on", "mode": "cool", "temp": s["setpoint"], "fan": "auto"}
+    assert s["comfort"]["cooler"] > 0.6 and s["comfort_band"][0] < s["comfort_band"][1]
+
+
+def test_suggestion_is_read_only(client, clock):
+    tel(client, clock, 31.0)
+    client.get(SUG, headers=H)
+    assert client.gateway.client.published == []
+    assert store.decision_history(client.gateway.db, "room01", 5) == []
+
+
+def test_votes_personalize_the_suggestion(client, clock):
+    before = client.get(SUG, headers=H).json()["neutral_temp"]
+    for i in range(12):                      # nguoi nay van muon mat hon o 24-25 do
+        tel(client, clock, 24.0 + (i % 2))
+        assert client.post("/api/v1/rooms/room01/comfort", json={"vote": "cooler"}, headers=H).status_code == 201
+        clock.advance(6)
+    s = client.get(SUG, headers=H).json()
+    assert s["model"]["votes"] == 12 and s["model"]["personal"] is True
+    assert s["model"]["shift_c"] < 0 and s["neutral_temp"] < before
+
+
+def test_long_empty_room_with_ac_on_suggests_off(client, clock):
+    client.post(CMD, json={"power": "on", "temp": 25}, headers=H)
+    tel(client, clock, 27.0, presence=True)
+    clock.advance(16 * 60)
+    tel(client, clock, 27.0, presence=False)
+    s = client.get(SUG, headers=H).json()
+    assert (s["action"], s["target"]["power"]) == ("turn_off", "off")
+
+
+def test_auto_step_respects_safety_layer(client, clock):
+    import advisor
+    adv = client.app.state.advisor
+    svc = client.app.state.service
+    tel(client, clock, 31.0)
+    db = client.gateway.db
+    assert advisor.auto_step(adv, svc, db, clock()) == []          # chua biet trang thai -> STATE_UNCERTAIN
+    client.post(CMD, json={"power": "off"}, headers=H)             # nguoi dung dong bo trang thai
+    clock.advance(200)
+    tel(client, clock, 31.0)
+    assert advisor.auto_step(adv, svc, db, clock()) == []          # MANUAL_HOLD 30 phut
+    client.delete("/api/v1/rooms/room01/auto-hold", headers=H)
+    done = advisor.auto_step(adv, svc, db, clock())
+    assert len(done) == 1 and done[0][1].status == "executed"
+    assert client.gateway.client.published[-1][1]["source"] == "ai"
+    codes = [d["code"] for d in store.decision_history(db, "room01", 10)]
+    assert "STATE_UNCERTAIN" not in codes and "MANUAL_HOLD" not in codes     # xem truoc khong ghi nhat ky
+    assert advisor.auto_step(adv, svc, db, clock()) == []          # da dat dung -> khong lam gi them

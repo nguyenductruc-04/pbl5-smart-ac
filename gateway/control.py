@@ -63,6 +63,21 @@ class CommandService:
         with self._locks_guard:
             return self._locks[room]
 
+    def preview(self, room: str, source: str, *, power: str | None = None, mode: str | None = None,
+                temp: int | None = None, fan: str | None = None) -> safety.Decision:
+        """Hoi Safety Layer xem lenh co duoc phep khong, KHONG gui va KHONG ghi nhat ky.
+
+        Dung cho che do tu dong de khong lam day nhat ky bang nhung lan bi chan lap lai moi phut.
+        Ket qua chi de tham khao: submit() danh gia lai duoi khoa cua phong.
+        """
+        conn = self._connect()
+        try:
+            view = store.load_room_view(conn, room)
+            target = safety.resolve_target(view.ac, self.policy, power=power, mode=mode, temp=temp, fan=fan)
+            return safety.evaluate(source, target, view, self.clock(), self.policy)
+        finally:
+            conn.close()
+
     def submit(self, room: str, source: str, *, power: str | None = None, mode: str | None = None,
                temp: int | None = None, fan: str | None = None) -> Outcome:
         with self._room_lock(room):

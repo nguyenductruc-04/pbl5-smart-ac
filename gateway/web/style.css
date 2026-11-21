@@ -231,3 +231,9 @@ code { font-size: 0.875em; background: var(--bg); padding: 1px 5px; border-radiu
 .vote-status[data-kind="ok"] { color: var(--ok); }
 .vote-status[data-kind="bad"] { color: var(--bad); }
 .vote-status .quiet { padding: 0 4px; }
+
+/* ---------- goi y ---------- */
+.advice { background: var(--cool-soft); border-radius: var(--radius); padding: 18px 20px; border: 1px solid color-mix(in srgb, var(--cool) 25%, transparent); }
+.advice-text { margin-top: 6px; font-size: 1.0625rem; }
+.advice .primary { margin-top: 12px; }
+.advice .muted { margin-top: 10px; }

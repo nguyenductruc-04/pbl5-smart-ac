@@ -39,6 +39,11 @@ API_KEY = os.getenv("API_KEY", "")
 API_KEY_AUTOMATION = os.getenv("API_KEY_AUTOMATION", "")
 COMMAND_TIMEOUT_S = float(os.getenv("COMMAND_TIMEOUT_S", "5"))
 
+# --- Goi y (M6) ---
+# 1 = tu dong ap dung goi y (nguon "ai", van qua Safety Layer). Mac dinh TAT: chi goi y tren dashboard.
+ADVISOR_AUTO = os.getenv("ADVISOR_AUTO", "0") == "1"
+ADVISOR_INTERVAL_S = float(os.getenv("ADVISOR_INTERVAL_S", "60"))
+
 
 def _policy_from_env() -> Policy:
     """Cho phep ghi de tung tham so Safety Layer bang bien moi truong SAFETY_<TEN_IN_HOA>."""
