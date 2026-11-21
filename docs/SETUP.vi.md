@@ -453,6 +453,56 @@ curl -s -H "X-API-Key: $API_KEY" "http://localhost:8000/api/v1/rooms/room01/comf
 - HTTP thường và khóa tĩnh: chỉ dùng trong mạng nội bộ, mạng dự phòng hoặc qua Tailscale. Nếu mất điện thoại đã lưu khóa, đổi `API_KEY` trong `.env` rồi khởi động lại dịch vụ.
 
 
+## Bước 10: Gợi ý nhiệt độ (mô hình tiện nghi)
+
+Thiết kế và cách đánh giá: [ADR 0004](adr/0004-comfort-model.md). Hướng dẫn chạy phần học máy: [docs/ml/README.md](ml/README.md).
+
+### 10.1 Cập nhật
+
+```bash
+cd ~/pbl5-smart-ac && git pull
+sudo systemctl restart pbl5-gateway
+```
+
+Không cần cài thêm thư viện trên Pi: mô hình viết bằng Python thuần.
+
+### 10.2 Xem gợi ý
+
+Mở dashboard: thẻ **"Gợi ý cho bạn"** nằm giữa phần điều khiển và phần "Bạn thấy thế nào?".
+
+- Dưới 10 phiếu: dòng cuối ghi "Đang dùng mô hình chung…". Từ 10 phiếu trở đi: "Học từ N phiếu của bạn…".
+- Nút **"Áp dụng"** gửi gợi ý như một lệnh của bạn: đi qua Safety Layer, và tạm dừng chế độ tự động 30 phút như mọi lệnh thủ công.
+
+Xem gợi ý thô: `curl -s -H "X-API-Key: $API_KEY" http://localhost:8000/api/v1/rooms/room01/suggestion`
+
+### 10.3 Kiểm thử
+
+| # | Thao tác | Kết quả đúng |
+|---|---|---|
+| 1 | Mở dashboard | Có thẻ "Gợi ý cho bạn", có "Vùng dễ chịu của bạn: …" |
+| 2 | Phòng nóng (khoảng 30 °C trở lên), điều hòa tắt | "Có vẻ hơi nóng với bạn. Nên bật điều hòa ở xx °C", có nút "Áp dụng" |
+| 3 | Bấm "Áp dụng" | "Đã phát lệnh tới điều hòa", gợi ý đổi thành "Nhiệt độ đặt hiện tại đang hợp với bạn" |
+| 4 | Ghi vài phiếu "Muốn mát hơn" liên tiếp (cách nhau trên 5 giây) | "Vùng dễ chịu của bạn" dịch xuống thấp hơn |
+| 5 | `curl` gợi ý như mục 10.2 | `"model": {"votes": N, ...}` khớp số phiếu đã ghi |
+
+### 10.4 Chế độ tự động (tùy chọn)
+
+Mặc định tắt. Bật bằng cách thêm vào `gateway/.env`:
+```
+ADVISOR_AUTO=1
+```
+rồi `sudo systemctl restart pbl5-gateway`. Log phải có `Che do tu dong BAT`. Từ đó, mỗi phút hệ thống tự áp dụng gợi ý với nguồn `ai`. Mọi luật của Safety Layer vẫn áp dụng: không chạy khi bạn vừa điều chỉnh, đổi tối đa 1 °C mỗi lần, cách nhau ít nhất 10 phút, không tự bật khi phòng trống. Các lệnh tự động hiện trong nhật ký với nguồn "AI".
+
+### 10.5 Đánh giá trên phiếu thật (sau khoảng 2 tuần, khi có từ 20 phiếu)
+
+Trên laptop:
+```bash
+pip install -r ml/requirements.txt
+scp truc0404@gateway.local:pbl5-smart-ac/gateway/pbl5.db ./pbl5-copy.db
+python ml/evaluate_personal.py --db pbl5-copy.db --room room01
+```
+Kết quả nằm ở `docs/ml/personal-evaluation.md`. Commit file đó kèm ảnh `.png`, rồi đưa bảng kết quả vào báo cáo.
+
 ## Xử lý lỗi thường gặp
 
 | Hiện tượng | Nguyên nhân hay gặp |
@@ -484,11 +534,11 @@ journalctl -u pbl5-gateway -f
 
 ACL chỉ cho mỗi node ghi và đọc topic của **chính phòng mình**: node `room01` không thể giả mạo dữ liệu của `room02`.
 
-## Các milestone tiếp theo
+## Các milestone
 
-1. **Milestone 1 (bước này):** đường truyền ESP32 ⇄ Pi, lưu database.
-2. **Milestone 2 – IR:** lắp mắt thu IR, giải mã remote Daikin để xác định đúng giao thức; lắp mạch LED IR + BJT, phát lệnh thật thay cho dòng `TODO` trong `onMessage()`.
-3. **Milestone 3 – Cảm biến thật:** SHT41 (I2C, chân 8/9) và HLK-LD2410 (UART).
-4. **Milestone 4 – Safety Layer + API:** FastAPI, trạng thái dự kiến, chống short-cycling, phân quyền.
-5. **Milestone 5 – App/Dashboard.**
-6. **Milestone 6 – Thu thập dữ liệu và huấn luyện mô hình gợi ý.**
+1. **Milestone 1:** đường truyền ESP32 ⇄ Pi, lưu database (v0.1.x). Mở rộng: mDNS (v0.2.0).
+2. **Milestone 2 – IR:** giải mã và phát lệnh IR điều hòa (v0.3.0). Mở rộng: mạng dự phòng (v0.4.0).
+3. **Milestone 3 – Cảm biến thật:** SHT3x (I2C, chân 8/9) và HLK-LD2420 (v0.5.0).
+4. **Milestone 4 – Safety Layer + API:** FastAPI, trạng thái dự kiến, chống short-cycling, phân quyền (v0.6.0).
+5. **Milestone 5 – Dashboard và phiếu cảm nhận** (v0.7.0).
+6. **Milestone 6 – Mô hình tiện nghi và gợi ý nhiệt độ** (v0.8.0).

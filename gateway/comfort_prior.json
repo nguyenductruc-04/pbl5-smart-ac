@@ -1,0 +1,35 @@
+{
+  "dataset": "ASHRAE Global Thermal Comfort Database II v2.1.0",
+  "source": "https://github.com/CenterForTheBuiltEnvironment/ashrae-db-II/tree/c527d6115ebadb4725a4e1406b2439a7a1ffd214",
+  "doi": "10.6078/D1F671",
+  "subset": "thermal_preference with ta and rh; climates: tropical, tropical rainforest, tropical monsoon, tropical savanna, tropical wet savanna, monsoon-influenced humid subtropical",
+  "n_votes": 20085,
+  "n_buildings": 262,
+  "trained": "2026-11-18",
+  "cv_building_grouped_5fold": {
+    "model": {
+      "accuracy": 0.569412465620672,
+      "macro_f1": 0.3828755637530902,
+      "log_loss": 0.8923777042992146
+    },
+    "majority": {
+      "accuracy": 0.5045625251718613,
+      "macro_f1": 0.2227858158464447,
+      "log_loss": 0.989230611976741
+    },
+    "band_23_26": {
+      "accuracy": 0.5157393696054893,
+      "macro_f1": 0.44168755920908004,
+      "log_loss": 1.0428403032355655
+    }
+  },
+  "params": {
+    "w_t": 0.29116943948925067,
+    "w_h": -0.0094404828174115,
+    "theta0": -2.1473068459987723,
+    "theta1": 0.6326534054108022,
+    "t_ref": 26.0,
+    "h_ref": 60.0,
+    "shift": 0.0
+  }
+}

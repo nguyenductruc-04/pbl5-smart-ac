@@ -35,6 +35,7 @@ Plain HTTP: use on the local network or over Tailscale only.
 | POST | `/rooms/{room}/comfort` | Record a comfort vote (app key only). |
 | GET | `/rooms/{room}/comfort?limit=&since=` | Comfort votes with their context, newest first (labelled data for Milestone 6). |
 | DELETE | `/rooms/{room}/comfort/{id}` | Undo a vote within 120 s (app key only). |
+| GET | `/rooms/{room}/suggestion` | Advice from the personal comfort model (read only). |
 | GET | `/rooms/{room}/ir-events?limit=` | Remote presses overheard by the node. |
 
 ## Sending a command
@@ -113,6 +114,32 @@ curl -X POST http://gateway.local:8000/api/v1/rooms/room01/comfort \
 | 409 | `TELEMETRY_STALE` | No reading in the last 120 s; a vote without context is not stored |
 | 429 | `VOTE_TOO_FAST` | Less than 5 s since the previous vote (double tap) |
 | 409 | `UNDO_EXPIRED` | Undo after 120 s |
+
+## Suggestion
+
+`GET /rooms/{room}/suggestion` returns the advice of the comfort model (ADR 0004). It never sends a command; `target` can be posted to `/commands` as is.
+
+```json
+{
+  "action": "turn_on", "reason": "TOO_WARM",
+  "target": {"power": "on", "mode": "cool", "temp": 25, "fan": "auto"},
+  "room_temp": 29.2,
+  "comfort": {"warmer": 0.002, "comfortable": 0.028, "cooler": 0.97},
+  "neutral_temp": 25.1, "comfort_band": [24.6, 25.5], "setpoint": 25,
+  "model": {"votes": 12, "personal": true, "shift_c": 1.66, "shift_sd_c": 0.55, "scale": 4.06,
+            "prior": "ASHRAE Global Thermal Comfort Database II v2.1.0"},
+  "auto": false
+}
+```
+
+| `action` | `reason` |
+|---|---|
+| `none` | `NO_DATA`, `COMFORTABLE`, `TOO_COOL_AC_OFF`, `SETPOINT_OK`, `ROOM_EMPTY`, `MODE_NOT_SUPPORTED` |
+| `turn_on` | `TOO_WARM` |
+| `set_temp` | `WARMER_SETPOINT`, `COOLER_SETPOINT` (one degree per step) |
+| `turn_off` | `ROOM_EMPTY_LONG` (empty for 15 min) |
+
+`auto: true` means the gateway applies the advice itself (`ADVISOR_AUTO=1`), always through the Safety Layer with source `ai`.
 
 ## Room state
 

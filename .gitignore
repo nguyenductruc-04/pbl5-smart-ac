@@ -26,3 +26,6 @@ build/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Du lieu ASHRAE tai ve de hoc mo hinh chung (khong phan phoi lai trong repo)
+ml/data/

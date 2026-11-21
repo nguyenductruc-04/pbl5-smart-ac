@@ -326,6 +326,25 @@ def delete_vote(conn: sqlite3.Connection, room: str, vote_id: int) -> None:
     conn.commit()
 
 
+def vote_samples(conn: sqlite3.Connection, room: str) -> list[tuple]:
+    """(ts, vote, temp, hum) cua moi phieu co so do, cu nhat truoc: du lieu de ca nhan hoa mo hinh."""
+    return conn.execute(
+        "SELECT ts, vote, temp, hum FROM comfort_votes WHERE room=? AND temp IS NOT NULL AND hum IS NOT NULL"
+        " ORDER BY ts", (room,)).fetchall()
+
+
+def empty_for_s(conn: sqlite3.Connection, room: str, now: float) -> float | None:
+    """Phong trong lien tuc bao lau. None neu dang co nguoi hoac khong biet (khong co cam bien)."""
+    tel = latest_telemetry(conn, room)
+    if tel is None or tel["presence"] is not False:
+        return None
+    last_seen = conn.execute("SELECT MAX(ts) FROM telemetry WHERE room=? AND presence=1", (room,)).fetchone()[0]
+    if last_seen is None:
+        last_seen = conn.execute("SELECT MIN(ts) FROM telemetry WHERE room=? AND presence=0",
+                                 (room,)).fetchone()[0]
+    return max(0.0, now - last_seen)
+
+
 def vote_history(conn: sqlite3.Connection, room: str, limit: int, since: float | None) -> list[dict]:
     sql = f"SELECT {', '.join(VOTE_KEYS)} FROM comfort_votes WHERE room=?"
     params: list = [room]

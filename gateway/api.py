@@ -8,6 +8,7 @@ Moi lenh dieu khien deu di qua control.CommandService -> Safety Layer.
 import hmac
 import logging
 import sqlite3
+import threading
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path as FsPath
@@ -19,13 +20,14 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+import advisor as advisor_mod
 import control
 import safety
 import settings
 import store
 from gateway import Gateway
 
-__version__ = "0.7.0"
+__version__ = "0.8.0"
 log = logging.getLogger("api")
 
 WEB_DIR = FsPath(__file__).resolve().parent / "web"
@@ -103,7 +105,16 @@ def create_app(gateway: Gateway | None = None, service: control.CommandService |
         else:
             app.state.gateway = gateway
         app.state.service = service or control.CommandService(app.state.gateway)
+        app.state.advisor = advisor_mod.Advisor(app.state.gateway.policy)
+        stop = threading.Event()
+        if settings.ADVISOR_AUTO:
+            threading.Thread(
+                target=advisor_mod.run_auto_loop, daemon=True, name="advisor",
+                args=(app.state.advisor, app.state.service,
+                      lambda: sqlite3.connect(settings.DB_PATH, timeout=5.0), stop, settings.ADVISOR_INTERVAL_S),
+            ).start()
         yield
+        stop.set()
         if own_gateway:
             app.state.gateway.stop()
 
@@ -311,6 +322,16 @@ def create_app(gateway: Gateway | None = None, service: control.CommandService |
             raise ApiError(409, "TELEMETRY_STALE",
                            "Chua co so do moi tu node nen phieu khong duoc ghi")
         return store.add_vote(db, room, now, body.vote)
+
+    @app.get("/api/v1/rooms/{room}/suggestion", tags=["goi y"])
+    def suggestion(room: KnownRoom, db: Db):
+        """Goi y tu mo hinh tien nghi ca nhan hoa. Chi doc, khong gui lenh.
+
+        `target` (neu co) la lenh co the gui bang POST /commands; nut "Ap dung" tren dashboard lam viec do.
+        """
+        out = app.state.advisor.suggest(db, room, clock())
+        out["auto"] = settings.ADVISOR_AUTO
+        return out
 
     @app.get("/api/v1/rooms/{room}/comfort", tags=["cam nhan"])
     def list_comfort(room: KnownRoom, db: Db, limit: Limit = 100,

@@ -44,6 +44,6 @@ Every command passes one pure function, `safety.evaluate()`, before it is publis
 
 **Availability:** node publishes `status=online` (retained); broker publishes `offline` via Last Will if the node vanishes.
 
-## ML plan (Milestone 6)
+## Comfort model (Milestone 6)
 
-Offline training (scikit-learn, e.g. Random Forest regression) with the user's manual adjustments as labels; report MAE/RMSE. Deployed as suggestions first (Manual → Suggest → Auto), with explanations, easy override and a Do-Not-Disturb mode.
+The original plan (Random Forest on manual AC adjustments) changed because the room with the node has no AC: labels now come from comfort votes on the dashboard. The model is an ordinal logistic regression with a population prior from the ASHRAE Global Thermal Comfort Database II, personalised on the Pi from the user's votes, and deployed in stages: suggestions first, optional automatic mode later, always through the Safety Layer. Details and evaluation: [ADR 0004](adr/0004-comfort-model.md), [docs/ml](ml/).

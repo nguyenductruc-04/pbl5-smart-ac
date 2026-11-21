@@ -30,11 +30,11 @@ Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 |---|---|---|
 | 1 | ESP32 ⇄ MQTT ⇄ Pi, SQLite storage, auth + ACL | ✅ Done — validated on ESP32-S3 + Raspberry Pi 5 over Wi-Fi |
 | 2 | Daikin IR decode + transmit | ✅ Done — send/receive validated by IR loopback (17/20, TSOP38238); **pending test on a real Daikin unit** |
-| 3 | Backup network: Pi backup AP, node follows the gateway, Wi-Fi provisioning over MQTT | Done (v0.4.0), tested on hardware |
-| 4 | Real sensors: SHT3x (I²C), LD2420 presence | Done (v0.5.0), tested on hardware; data collection started 17-11 |
-| 5 | Safety Layer + REST API (FastAPI) | Done (v0.6.0), tested on hardware |
-| 6 | Web dashboard + comfort votes | Done (v0.7.0), tested on hardware |
-| 7 | Data collection + comfort model (scikit-learn) | Planned |
+| 2+ | Backup network: Pi backup AP, node follows the gateway, Wi-Fi provisioning over MQTT | Done (v0.4.0), tested on hardware |
+| 3 | Real sensors: SHT3x (I²C), LD2420 presence | Done (v0.5.0), tested on hardware; data collection started 17-11 |
+| 4 | Safety Layer + REST API (FastAPI) | Done (v0.6.0), tested on hardware |
+| 5 | Web dashboard + comfort votes | Done (v0.7.0), tested on hardware |
+| 6 | Comfort model + suggestions (ASHRAE prior, personalised from votes) | Done (v0.8.0); evaluation on real votes pending data |
 
 ## Dashboard
 
@@ -68,12 +68,17 @@ IR circuit, component calculations and loopback test results: [docs/hardware/ir-
 
 ![Serial monitor](docs/images/serial-monitor.png)
 
+## Comfort model
+
+The gateway suggests an AC setting from a personal comfort model: an ordinal logistic regression whose population prior comes from about 20,000 votes in the ASHRAE Global Thermal Comfort Database II (tropical and monsoon climates), personalised on the Pi from the user's own "cooler / comfortable / warmer" votes. Suggestions can be applied by hand or, optionally, automatically; either way they pass the Safety Layer. Design and evaluation method: [ADR 0004](docs/adr/0004-comfort-model.md); results: [docs/ml](docs/ml/).
+
 ## Repository layout
 
 ```
 firmware/room_node/   ESP32-S3 Arduino sketch (config.example.h -> config.h)
 gateway/              Raspberry Pi services, Mosquitto config, tests
-docs/                 Architecture, Vietnamese setup guide, diagrams
+ml/                   Offline training and evaluation of the comfort model (laptop only)
+docs/                 Architecture, Vietnamese setup guide, ADRs, diagrams
 .github/workflows/    CI: ruff + pytest + firmware compile
 ```
 
