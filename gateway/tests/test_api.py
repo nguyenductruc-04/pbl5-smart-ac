@@ -261,3 +261,140 @@ def test_decision_log_records_requested_state(client):
     client.post(CMD, json={"power": "on", "temp": 12}, headers=H)
     row = store.decision_history(client.gateway.db, "room01", 1)[0]
     assert (row["code"], row["requested"]["temp"], row["cmd_id"]) == ("TEMP_OUT_OF_RANGE", 12, None)
+
+
+# ------------------------------------------------------------------ bieu do & dashboard
+def test_series_buckets_and_orders_oldest_first(client, clock):
+    for i in range(120):                                   # 1 gio du lieu, 30 s mot mau
+        client.gateway.handle_telemetry(
+            "room01", clock() - 3600 + i * 30, json.dumps({"temp": 26 + i / 60, "hum": 60}))
+    r = client.get("/api/v1/rooms/room01/telemetry/series?hours=1&points=12", headers=H).json()
+    items = r["items"]
+    assert r["bucket_s"] == 300 and len(items) == 12
+    assert [p["ts"] for p in items] == sorted(p["ts"] for p in items)
+    assert sum(p["n"] for p in items) == 120
+    assert items[0]["temp"] < items[-1]["temp"] and items[0]["hum"] == 60
+
+
+def test_series_empty_and_validation(client):
+    assert client.get("/api/v1/rooms/room01/telemetry/series", headers=H).json()["items"] == []
+    assert client.get("/api/v1/rooms/room01/telemetry/series?points=5", headers=H).status_code == 422
+    assert client.get("/api/v1/rooms/room01/telemetry/series?hours=0", headers=H).status_code == 422
+    assert client.get("/api/v1/rooms/room01/telemetry/series").status_code == 401
+
+
+def test_dashboard_is_served_with_strict_csp(client):
+    r = client.get("/")
+    assert r.status_code == 200 and "<title>" in r.text
+    csp = r.headers["Content-Security-Policy"]
+    assert "script-src 'self'" in csp and "unsafe-inline" not in csp
+    assert r.headers["X-Content-Type-Options"] == "nosniff"
+    for path in ("/app.js", "/style.css", "/icon.svg", "/manifest.webmanifest",
+                 "/fonts/be-vietnam-pro-vietnamese-400-normal.woff2"):
+        assert client.get(path).status_code == 200, path
+
+
+def test_dashboard_has_no_inline_code_or_external_hosts():
+    """CSP cam script/style noi tuyen va moi may chu ngoai: kiem tra ngay tren ma nguon."""
+    import re
+    html = (api.WEB_DIR / "index.html").read_text(encoding="utf-8")
+    assert not re.search(r"<script(?![^>]*\bsrc=)", html) and "<style" not in html
+    assert not re.search(r"\son\w+=|\sstyle=", html)
+    for name in ("index.html", "style.css", "app.js", "manifest.webmanifest"):
+        text = (api.WEB_DIR / name).read_text(encoding="utf-8")
+        assert not re.search(r"https?://(?!www\.w3\.org/)", text), name
+    assert "innerHTML" not in (api.WEB_DIR / "app.js").read_text(encoding="utf-8").replace("(khong innerHTML)", "")
+
+
+def test_api_docs_still_work_and_api_is_not_cached(client):
+    assert client.get("/docs").status_code == 200
+    assert "Content-Security-Policy" not in client.get("/docs").headers
+    assert client.get("/api/v1/health").headers["Cache-Control"] == "no-store"
+    assert client.get("/api/v1/nope").status_code == 404
+
+
+def test_snapshot_tells_dashboard_whether_automation_exists(client, gateway):
+    assert client.get("/api/v1/rooms/room01", headers=H).json()["safety"]["automation_enabled"] is True
+    app = api.create_app(gateway, api_key=KEY, automation_key="")
+    with TestClient(app) as c:
+        assert c.get("/api/v1/rooms/room01", headers=H).json()["safety"]["automation_enabled"] is False
+
+
+# ------------------------------------------------------------------ phieu cam nhan (nhan cho M6)
+VOTE = "/api/v1/rooms/room01/comfort"
+
+
+def test_vote_is_stored_with_context(client, clock):
+    fresh_telemetry(client, clock, presence=True)
+    client.post(CMD, json={"power": "on", "temp": 25}, headers=H)
+    clock.advance(30)
+    r = client.post(VOTE, json={"vote": "cooler"}, headers=H)
+    assert r.status_code == 201
+    v = r.json()
+    assert (v["vote"], v["temp"], v["hum"], v["presence"]) == ("cooler", 28.5, 60, True)
+    assert (v["telemetry_age_s"], v["ac_power"], v["ac_temp"], v["ac_uncertain"]) == (30, "on", 25, False)
+    row = client.gateway.db.execute("SELECT vote FROM comfort_votes").fetchone()
+    assert row == (-1,)                                         # luu dang so cho mo hinh
+
+
+def test_vote_without_known_ac_state(client, clock):
+    fresh_telemetry(client, clock, presence=None)
+    v = client.post(VOTE, json={"vote": "comfortable"}, headers=H).json()
+    assert (v["vote"], v["presence"], v["ac_power"], v["ac_uncertain"]) == ("comfortable", None, None, None)
+
+
+def test_vote_rejected_without_fresh_telemetry(client, clock):
+    r = client.post(VOTE, json={"vote": "warmer"}, headers=H)
+    assert (r.status_code, code(r)) == (409, "TELEMETRY_STALE")
+    fresh_telemetry(client, clock)
+    clock.advance(121)
+    assert code(client.post(VOTE, json={"vote": "warmer"}, headers=H)) == "TELEMETRY_STALE"
+    assert client.gateway.db.execute("SELECT COUNT(*) FROM comfort_votes").fetchone() == (0,)
+
+
+def test_double_tap_is_rejected(client, clock):
+    fresh_telemetry(client, clock)
+    assert client.post(VOTE, json={"vote": "cooler"}, headers=H).status_code == 201
+    clock.advance(2)
+    r = client.post(VOTE, json={"vote": "cooler"}, headers=H)
+    assert (r.status_code, code(r), r.headers["Retry-After"]) == (429, "VOTE_TOO_FAST", "3")
+    clock.advance(3)
+    assert client.post(VOTE, json={"vote": "warmer"}, headers=H).status_code == 201
+
+
+@pytest.mark.parametrize("body", [{}, {"vote": "hot"}, {"vote": "cooler", "temp": 20}])
+def test_bad_vote_is_422(client, clock, body):
+    fresh_telemetry(client, clock)
+    assert client.post(VOTE, json=body, headers=H).status_code == 422
+
+
+def test_only_people_can_vote_or_undo(client, clock):
+    fresh_telemetry(client, clock)
+    r = client.post(VOTE, json={"vote": "cooler"}, headers=HA)
+    assert (r.status_code, code(r)) == (403, "FORBIDDEN")
+    vote_id = client.post(VOTE, json={"vote": "cooler"}, headers=H).json()["id"]
+    assert client.delete(f"{VOTE}/{vote_id}", headers=HA).status_code == 403
+    assert client.post(VOTE, json={"vote": "cooler"}).status_code == 401
+
+
+def test_undo_within_window_only(client, clock):
+    fresh_telemetry(client, clock)
+    first = client.post(VOTE, json={"vote": "cooler"}, headers=H).json()["id"]
+    clock.advance(60)
+    assert client.delete(f"{VOTE}/{first}", headers=H).json() == {"deleted": first}
+    assert code(client.delete(f"{VOTE}/{first}", headers=H)) == "VOTE_NOT_FOUND"
+    fresh_telemetry(client, clock)
+    second = client.post(VOTE, json={"vote": "warmer"}, headers=H).json()["id"]
+    clock.advance(121)
+    assert code(client.delete(f"{VOTE}/{second}", headers=H)) == "UNDO_EXPIRED"
+
+
+def test_vote_history_newest_first_and_since(client, clock):
+    fresh_telemetry(client, clock)
+    for vote in ("cooler", "comfortable", "warmer"):
+        client.post(VOTE, json={"vote": vote}, headers=H)
+        clock.advance(10)
+    items = client.get(VOTE, headers=H).json()["items"]
+    assert [i["vote"] for i in items] == ["warmer", "comfortable", "cooler"]
+    since = items[1]["ts"]
+    assert len(client.get(f"{VOTE}?since={since}", headers=H).json()["items"]) == 2

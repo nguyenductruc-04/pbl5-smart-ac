@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#EDF1F3" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0E1A21" media="(prefers-color-scheme: dark)">
+  <title>Điều hòa thông minh</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="top">
+    <h1>Điều hòa thông minh</h1>
+    <div class="top-right">
+      <label class="visually-hidden" for="room-select">Phòng</label>
+      <select id="room-select" hidden></select>
+      <span id="link" class="link" data-state="wait"><span class="dot" aria-hidden="true"></span><span id="link-text">Đang kết nối</span></span>
+      <button id="key-btn" class="quiet" type="button">Đổi khóa</button>
+    </div>
+  </header>
+
+  <main id="app" hidden>
+    <div id="notices" class="notices" aria-live="polite"></div>
+
+    <div class="layout">
+      <div class="main-col">
+      <section class="control" aria-labelledby="control-title">
+        <div class="control-head">
+          <h2 id="control-title">Điều khiển</h2>
+          <p id="ac-summary" class="muted"></p>
+        </div>
+
+        <button id="power" class="power" type="button" aria-pressed="false">
+          <span class="power-icon" aria-hidden="true"></span>
+          <span id="power-text">Bật điều hòa</span>
+        </button>
+
+        <fieldset id="tuning" class="tuning">
+          <legend class="visually-hidden">Nhiệt độ đặt</legend>
+          <div class="setpoint">
+            <button id="temp-down" class="step" type="button" aria-label="Giảm 1 độ">−</button>
+            <output id="setpoint" class="setpoint-value" for="temp-range">–</output>
+            <button id="temp-up" class="step" type="button" aria-label="Tăng 1 độ">+</button>
+          </div>
+
+          <div class="scale" id="scale">
+            <div class="scale-room" id="scale-room" hidden><span id="scale-room-text"></span></div>
+            <div class="scale-track"><div class="scale-gap" id="scale-gap"></div></div>
+            <input id="temp-range" type="range" step="1" aria-label="Nhiệt độ đặt">
+            <div class="scale-ticks" id="scale-ticks" aria-hidden="true"></div>
+          </div>
+
+          <div class="choice">
+            <span class="choice-label" id="mode-label">Chế độ</span>
+            <div class="segmented" id="mode" role="radiogroup" aria-labelledby="mode-label"></div>
+          </div>
+          <div class="choice">
+            <span class="choice-label" id="fan-label">Quạt</span>
+            <div class="segmented" id="fan" role="radiogroup" aria-labelledby="fan-label"></div>
+          </div>
+        </fieldset>
+
+        <p id="feedback" class="feedback" role="status"></p>
+      </section>
+
+      <section class="comfort" aria-labelledby="comfort-title">
+        <h2 id="comfort-title">Bạn thấy thế nào?</h2>
+        <p class="muted">Bấm mỗi khi thấy nóng, lạnh, và cả khi thấy dễ chịu. Mỗi lần bấm giúp hệ thống học mức nhiệt bạn thích.</p>
+        <div class="vote-row" id="votes">
+          <button type="button" class="vote" data-vote="cooler"><span class="vote-mark" aria-hidden="true"></span>Muốn mát hơn</button>
+          <button type="button" class="vote" data-vote="comfortable"><span class="vote-mark" aria-hidden="true"></span>Dễ chịu</button>
+          <button type="button" class="vote" data-vote="warmer"><span class="vote-mark" aria-hidden="true"></span>Muốn ấm hơn</button>
+        </div>
+        <p class="vote-status" role="status"><span id="vote-text"></span> <button type="button" id="vote-undo" class="quiet" hidden>Hoàn tác</button></p>
+        <p id="vote-count" class="muted"></p>
+      </section>
+      </div>
+
+      <div class="side">
+        <section class="readings" aria-labelledby="readings-title">
+          <h2 id="readings-title">Trong phòng</h2>
+          <dl class="reading-list">
+            <div><dt>Nhiệt độ</dt><dd id="r-temp">–</dd></div>
+            <div><dt>Độ ẩm</dt><dd id="r-hum">–</dd></div>
+            <div><dt>Có người</dt><dd id="r-presence">–</dd></div>
+          </dl>
+          <p id="r-age" class="muted"></p>
+        </section>
+
+        <section class="history" aria-labelledby="history-title">
+          <div class="history-head">
+            <h2 id="history-title">Diễn biến</h2>
+            <div class="segmented small" id="range" role="radiogroup" aria-label="Khoảng thời gian"></div>
+          </div>
+          <figure class="chart">
+            <figcaption>Nhiệt độ phòng, °C</figcaption>
+            <div id="chart-temp" class="plot"></div>
+          </figure>
+          <figure class="chart">
+            <figcaption>Độ ẩm, %</figcaption>
+            <div id="chart-hum" class="plot"></div>
+          </figure>
+          <details class="table-view">
+            <summary>Xem dạng bảng</summary>
+            <div class="table-scroll"><table id="series-table"><thead><tr><th>Thời điểm</th><th>Nhiệt độ (°C)</th><th>Độ ẩm (%)</th></tr></thead><tbody></tbody></table></div>
+          </details>
+        </section>
+
+        <section class="log" aria-labelledby="log-title">
+          <h2 id="log-title">Nhật ký điều khiển</h2>
+          <ol id="log" class="log-list"></ol>
+          <p id="log-empty" class="muted" hidden>Chưa có lệnh nào. Lệnh từ ứng dụng, remote và chế độ tự động sẽ hiện ở đây, kèm lý do nếu bị từ chối.</p>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <p id="empty" class="empty" hidden></p>
+
+  <dialog id="key-dialog">
+    <form method="dialog" id="key-form">
+      <h2>Nhập khóa truy cập</h2>
+      <p>Khóa là giá trị <code>API_KEY</code> trong file <code>gateway/.env</code> trên Raspberry Pi. Khóa chỉ được lưu trong trình duyệt này.</p>
+      <label for="key-input">Khóa</label>
+      <input id="key-input" type="password" autocomplete="off" spellcheck="false" required minlength="16">
+      <p id="key-error" class="error" role="alert"></p>
+      <div class="dialog-actions">
+        <button type="button" id="key-forget" class="quiet">Xóa khóa đã lưu</button>
+        <button type="submit" class="primary">Lưu khóa</button>
+      </div>
+    </form>
+  </dialog>
+</body>
+</html>

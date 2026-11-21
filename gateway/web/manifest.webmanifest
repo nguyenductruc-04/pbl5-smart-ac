@@ -1,0 +1,9 @@
+{
+  "name": "Điều hòa thông minh",
+  "short_name": "Điều hòa",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#EDF1F3",
+  "theme_color": "#0A6C8C",
+  "icons": [{"src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}]
+}

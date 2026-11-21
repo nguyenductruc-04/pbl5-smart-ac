@@ -10,11 +10,13 @@ import logging
 import sqlite3
 import time
 from contextlib import asynccontextmanager
+from pathlib import Path as FsPath
 from typing import Annotated, Literal
 
 import uvicorn
 from fastapi import Depends, FastAPI, Header, Path, Query, Request
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 import control
@@ -23,8 +25,16 @@ import settings
 import store
 from gateway import Gateway
 
-__version__ = "0.6.0"
+__version__ = "0.7.0"
 log = logging.getLogger("api")
+
+WEB_DIR = FsPath(__file__).resolve().parent / "web"
+# Dashboard chi duoc tai tai nguyen tu chinh Pi: khong CDN (chay duoc khi mat Internet) va
+# khong script noi tuyen (khoa API nam trong trinh duyet, nen phai chan chen ma la).
+CSP = ("default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; "
+       "font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
+# Trang tai lieu tu sinh cua FastAPI can CDN va script noi tuyen -> khong ap CSP len chung
+CSP_EXEMPT = ("/docs", "/redoc", "/openapi.json")
 
 Room = Annotated[str, Path(pattern=r"^[A-Za-z0-9_-]{1,32}$", description="Ma phong, vd. room01")]
 Limit = Annotated[int, Query(ge=1, le=1000)]
@@ -52,6 +62,16 @@ class CommandIn(BaseModel):
             raise ValueError("can it nhat mot trong cac truong: power, mode, temp, fan")
         return self
 
+
+class ComfortIn(BaseModel):
+    """Phieu cam nhan: nguoi dung muon phong mat hon, giu nhu hien tai, hay am hon."""
+    model_config = ConfigDict(extra="forbid")
+
+    vote: Literal["cooler", "comfortable", "warmer"]
+
+
+VOTE_MIN_INTERVAL_S = 5      # chong bam dup
+VOTE_UNDO_WINDOW_S = 120     # duoc hoan tac phieu trong bao lau
 
 # HTTP status cho tung ma tu choi cua Safety Layer (mac dinh 409)
 REJECT_STATUS = {
@@ -88,6 +108,20 @@ def create_app(gateway: Gateway | None = None, service: control.CommandService |
             app.state.gateway.stop()
 
     app = FastAPI(title="PBL5 Smart AC Gateway", version=__version__, lifespan=lifespan)
+
+    @app.middleware("http")
+    async def _security_headers(request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        if not request.url.path.startswith(CSP_EXEMPT):
+            response.headers["Content-Security-Policy"] = CSP
+        if not request.url.path.startswith("/api/"):
+            # Trinh duyet luon hoi lai Pi (ETag) -> cap nhat dashboard xong la thay ngay
+            response.headers.setdefault("Cache-Control", "no-cache")
+        else:
+            response.headers["Cache-Control"] = "no-store"
+        return response
 
     @app.exception_handler(ApiError)
     async def _api_error(request: Request, exc: ApiError):
@@ -155,6 +189,8 @@ def create_app(gateway: Gateway | None = None, service: control.CommandService |
                 "auto_hold_remaining_s": hold_left,
                 "auto_hold_source": ac["hold_source"] if ac and hold_left else None,
                 "compressor_ready_in_s": compressor_wait,
+                # Dashboard chi nhac ve "tam dung tu dong" khi co dich vu tu dong duoc cau hinh
+                "automation_enabled": bool(automation_key),
             },
         }
 
@@ -186,6 +222,14 @@ def create_app(gateway: Gateway | None = None, service: control.CommandService |
                   since: Annotated[float | None, Query(description="unix time")] = None,
                   until: Annotated[float | None, Query(description="unix time")] = None):
         return {"items": store.telemetry_history(db, room, limit, since, until)}
+
+    @app.get("/api/v1/rooms/{room}/telemetry/series", tags=["lich su"])
+    def telemetry_series(room: KnownRoom, db: Db,
+                         hours: Annotated[float, Query(gt=0, le=24 * 31)] = 24,
+                         points: Annotated[int, Query(ge=10, le=500)] = 240):
+        """Nhiet do / do am trung binh theo tung khoang, cu nhat truoc. Dung de ve bieu do."""
+        now = clock()
+        return store.telemetry_series(db, room, now - hours * 3600, now, points)
 
     @app.get("/api/v1/rooms/{room}/commands", tags=["lich su"])
     def commands(room: KnownRoom, db: Db, limit: Limit = 50):
@@ -244,6 +288,53 @@ def create_app(gateway: Gateway | None = None, service: control.CommandService |
             raise ApiError(403, "FORBIDDEN", "Chi nguoi dung (khoa app) moi duoc bo manual hold")
         store.clear_hold(db, room)
         return room_snapshot(db, room)
+
+    # ------------------------------------------------------------ phieu cam nhan (nhan cho AI)
+    def require_app(role: str) -> None:
+        if role != "app":
+            raise ApiError(403, "FORBIDDEN", "Chi nguoi dung (khoa app) moi duoc ghi phieu cam nhan")
+
+    @app.post("/api/v1/rooms/{room}/comfort", tags=["cam nhan"], status_code=201)
+    def add_comfort(room: KnownRoom, body: ComfortIn, role: Role, db: Db):
+        """Ghi mot phieu cam nhan kem so do va trang thai dieu hoa luc bam.
+
+        Tu choi khi khong co so do moi: phieu thieu boi canh thi khong dung duoc de huan luyen.
+        """
+        require_app(role)
+        now = clock()
+        last = store.last_vote_ts(db, room)
+        if last is not None and 0 <= now - last < VOTE_MIN_INTERVAL_S:
+            raise ApiError(429, "VOTE_TOO_FAST", "Vua ghi mot phieu, cho vai giay",
+                           max(1, round(VOTE_MIN_INTERVAL_S - (now - last))))
+        tel = store.latest_telemetry(db, room)
+        if tel is None or now - tel["ts"] > app.state.gateway.policy.telemetry_stale_s:
+            raise ApiError(409, "TELEMETRY_STALE",
+                           "Chua co so do moi tu node nen phieu khong duoc ghi")
+        return store.add_vote(db, room, now, body.vote)
+
+    @app.get("/api/v1/rooms/{room}/comfort", tags=["cam nhan"])
+    def list_comfort(room: KnownRoom, db: Db, limit: Limit = 100,
+                     since: Annotated[float | None, Query(description="unix time")] = None):
+        """Cac phieu cam nhan, moi nhat truoc. Day la du lieu co nhan cho M6."""
+        return {"items": store.vote_history(db, room, limit, since)}
+
+    @app.delete("/api/v1/rooms/{room}/comfort/{vote_id}", tags=["cam nhan"])
+    def undo_comfort(room: KnownRoom, vote_id: int, role: Role, db: Db):
+        """Hoan tac phieu vua bam nham (chi trong VOTE_UNDO_WINDOW_S giay)."""
+        require_app(role)
+        vote = store.get_vote(db, room, vote_id)
+        if vote is None:
+            raise ApiError(404, "VOTE_NOT_FOUND", "Khong co phieu nay")
+        if clock() - vote["ts"] > VOTE_UNDO_WINDOW_S:
+            raise ApiError(409, "UNDO_EXPIRED", "Qua thoi gian hoan tac")
+        store.delete_vote(db, room, vote_id)
+        return {"deleted": vote_id}
+
+    # Dashboard (cac file tinh). Gan SAU CUNG de khong che cac duong dan /api va /docs.
+    if WEB_DIR.is_dir():
+        app.mount("/", StaticFiles(directory=WEB_DIR, html=True), name="web")
+    else:
+        log.warning("Khong thay thu muc dashboard %s", WEB_DIR)
 
     return app
 

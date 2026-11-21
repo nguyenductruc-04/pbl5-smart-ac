@@ -3,6 +3,8 @@
 Base URL: `http://gateway.local:8000/api/v1` (or `http://10.42.0.1:8000/api/v1` on the backup AP).
 Interactive documentation generated from the code: `http://gateway.local:8000/docs`.
 
+The dashboard at `http://gateway.local:8000/` is a client of this API ([ADR 0003](adr/0003-dashboard.md)).
+
 Design rationale: [ADR 0002](adr/0002-safety-layer-and-control-api.md).
 
 ## Authentication
@@ -27,8 +29,12 @@ Plain HTTP: use on the local network or over Tailscale only.
 | POST | `/rooms/{room}/commands` | Send a command through the Safety Layer. |
 | DELETE | `/rooms/{room}/auto-hold` | Let automation resume now (app key only). |
 | GET | `/rooms/{room}/telemetry?limit=&since=&until=` | Telemetry history, newest first. |
+| GET | `/rooms/{room}/telemetry/series?hours=&points=` | Bucket-averaged temperature/humidity for charts, oldest first. |
 | GET | `/rooms/{room}/commands?limit=` | Commands sent and their results. |
 | GET | `/rooms/{room}/decisions?limit=` | Safety Layer audit log. |
+| POST | `/rooms/{room}/comfort` | Record a comfort vote (app key only). |
+| GET | `/rooms/{room}/comfort?limit=&since=` | Comfort votes with their context, newest first (labelled data for Milestone 6). |
+| DELETE | `/rooms/{room}/comfort/{id}` | Undo a vote within 120 s (app key only). |
 | GET | `/rooms/{room}/ir-events?limit=` | Remote presses overheard by the node. |
 
 ## Sending a command
@@ -85,6 +91,29 @@ When `retry_after_s` is present the response also carries a `Retry-After` header
 | 503 | `NODE_OFFLINE`, `BROKER_UNAVAILABLE` | A link is down; the command was **not** queued |
 | 504 | `NODE_TIMEOUT` | No answer within 5 s; the AC state is now marked uncertain |
 
+## Comfort votes
+
+The dashboard asks "Bạn thấy thế nào?" and records the answer together with the latest sensor readings and the expected AC state, so each vote is a self-contained training sample.
+
+```bash
+curl -X POST http://gateway.local:8000/api/v1/rooms/room01/comfort \
+  -H "X-API-Key: $API_KEY" -H "Content-Type: application/json" -d '{"vote": "cooler"}'
+```
+
+`vote` is `cooler` (wants it cooler), `comfortable` or `warmer`; stored as −1 / 0 / +1. Response `201`:
+
+```json
+{"id": 12, "ts": 1794983381.1, "vote": "cooler", "temp": 29.4, "hum": 73.2, "presence": true,
+ "telemetry_age_s": 6.2, "ac_power": "on", "ac_mode": "cool", "ac_temp": 26, "ac_uncertain": false}
+```
+
+| HTTP | `code` | Meaning |
+|---|---|---|
+| 403 | `FORBIDDEN` | Automation key: only people vote |
+| 409 | `TELEMETRY_STALE` | No reading in the last 120 s; a vote without context is not stored |
+| 429 | `VOTE_TOO_FAST` | Less than 5 s since the previous vote (double tap) |
+| 409 | `UNDO_EXPIRED` | Undo after 120 s |
+
 ## Room state
 
 ```json
@@ -95,7 +124,8 @@ When `retry_after_s` is present the response also carries a `Retry-After` header
                 "simulated": false, "rssi": -55, "age_s": 3},
   "ac": {"power": "on", "mode": "cool", "temp": 25, "fan": "auto",
          "source": "app", "uncertain": false, "since": 1794885612.4},
-  "safety": {"auto_hold_remaining_s": 1790, "auto_hold_source": "app", "compressor_ready_in_s": 0}
+  "safety": {"auto_hold_remaining_s": 1790, "auto_hold_source": "app", "compressor_ready_in_s": 0,
+             "automation_enabled": true}
 }
 ```
 
