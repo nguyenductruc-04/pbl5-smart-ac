@@ -4,7 +4,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versio
 
 ## [Unreleased]
 
-## [0.7.0] - 2026-11-18
+## [0.7.0] - 2026-11-20
 ### Added
 - Web dashboard served by the gateway at `/` (`gateway/web/`): power, set-point with a thermal scale showing room vs target temperature, mode and fan; live room readings; 6 h / 24 h / 7 d temperature and humidity charts; control log with the Safety Layer's reason for every refusal. Works on phones, in light and dark mode, and without Internet (no CDN, bundled font).
 - Comfort votes ("Muốn mát hơn / Dễ chịu / Muốn ấm hơn") stored with the sensor readings and expected AC state at the moment of voting: the labels for the comfort model (Milestone 6). API: `POST/GET /comfort`, `DELETE /comfort/{id}` (undo within 120 s).
