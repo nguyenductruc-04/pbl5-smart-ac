@@ -344,6 +344,11 @@ function adviceText(s) {
     case "WARMER_SETPOINT": return `Có thể tăng lên ${t.temp} °C mà vẫn dễ chịu, đỡ tốn điện.`;
     case "COOLER_SETPOINT": return `${room}Nên giảm nhiệt độ đặt xuống ${t.temp} °C.`;
     case "ROOM_EMPTY_LONG": return "Phòng đã trống hơn 15 phút. Nên tắt điều hòa.";
+    case "SLIGHTLY_WARM": {
+      const hi = num(s.comfort_band[1], 1);
+      const p = s.comfort ? ` (khả năng bạn muốn mát hơn: ${Math.round(s.comfort.cooler * 100)} %)` : "";
+      return `${room}Ấm hơn vùng dễ chịu của bạn (trên ${hi} °C) nhưng chưa nóng hẳn${p}. Nếu thấy nóng, có thể bật ở ${t.temp} °C.`;
+    }
     case "COMFORTABLE": return `${room}Phòng đang dễ chịu với bạn, chưa cần bật điều hòa.`;
     case "TOO_COOL_AC_OFF": return `${room}Phòng hơi mát với bạn.`;
     case "SETPOINT_OK": return "Nhiệt độ đặt hiện tại đang hợp với bạn.";
@@ -358,7 +363,8 @@ function renderAdvice() {
   $("advice").hidden = !s;
   if (!s) return;
   $("advice-text").textContent = adviceText(s);
-  const canApply = s.target && s.action !== "none" && !s.auto && S.linkOk && nodeOnline();
+  const offered = s.action !== "none" || s.reason === "SLIGHTLY_WARM";   // SLIGHTLY_WARM: chi de nghi, khong tu lam
+  const canApply = s.target && offered && !s.auto && S.linkOk && nodeOnline();
   $("advice-apply").hidden = !canApply;
   const [lo, hi] = s.comfort_band;
   const m = s.model;

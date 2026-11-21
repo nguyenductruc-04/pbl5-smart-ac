@@ -225,9 +225,16 @@ def advise(model: ComfortModel, s: Situation, auto_min: int, auto_max: int) -> A
 
     p_warmer, _, p_cooler = model.proba(s.ta, s.rh)
     if s.ac_power != "on":
+        turn_on = {"power": "on", "mode": "cool", "temp": setpoint, "fan": fan}
         if p_cooler >= TURN_ON_P_COOLER:
-            return Advice(TURN_ON, "TOO_WARM", {"power": "on", "mode": "cool", "temp": setpoint, "fan": fan})
-        return Advice(NONE, "COMFORTABLE" if p_warmer < 0.5 else "TOO_COOL_AC_OFF")
+            return Advice(TURN_ON, "TOO_WARM", turn_on)
+        if p_warmer >= 0.5:
+            return Advice(NONE, "TOO_COOL_AC_OFF")
+        if p_cooler > BAND_P:
+            # Tren vung de chiu nhung chua du chac de khuyen bat: chi DE NGHI cho nguoi dung tu quyet.
+            # action van la NONE nen che do tu dong khong bat (tranh bat/tat vi chenh lech nho).
+            return Advice(NONE, "SLIGHTLY_WARM", turn_on)
+        return Advice(NONE, "COMFORTABLE")
 
     if s.ac_mode not in ("cool", "dry", "auto") or s.ac_temp is None:
         return Advice(NONE, "MODE_NOT_SUPPORTED")

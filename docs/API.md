@@ -134,10 +134,12 @@ curl -X POST http://gateway.local:8000/api/v1/rooms/room01/comfort \
 
 | `action` | `reason` |
 |---|---|
-| `none` | `NO_DATA`, `COMFORTABLE`, `TOO_COOL_AC_OFF`, `SETPOINT_OK`, `ROOM_EMPTY`, `MODE_NOT_SUPPORTED` |
+| `none` | `NO_DATA`, `COMFORTABLE`, `SLIGHTLY_WARM`, `TOO_COOL_AC_OFF`, `SETPOINT_OK`, `ROOM_EMPTY`, `MODE_NOT_SUPPORTED` |
 | `turn_on` | `TOO_WARM` |
 | `set_temp` | `WARMER_SETPOINT`, `COOLER_SETPOINT` (one degree per step) |
 | `turn_off` | `ROOM_EMPTY_LONG` (empty for 15 min) |
+
+`SLIGHTLY_WARM`: the AC is off and the room is above the comfort band, but P(want cooler) is below the 60 % turn-on threshold. `target` holds a turn-on command the user may apply by hand; the automatic mode ignores it.
 
 `auto: true` means the gateway applies the advice itself (`ADVISOR_AUTO=1`), always through the Safety Layer with source `ai`.
 

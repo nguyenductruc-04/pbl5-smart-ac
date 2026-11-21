@@ -29,7 +29,7 @@ The three answers are ordered (warmer < no change < cooler), so the model is a p
 
 - **Comfort band:** temperatures where the predicted probability of wanting a change in each direction is at most 30 %.
 - **Suggested setpoint:** the *warmest* integer temperature inside the band (comfort first, then energy), clamped to the automatic window of the Safety Layer (24–29 °C).
-- **Rules** (`comfort.advise`): suggest turning on only when P(want cooler) ≥ 60 % and someone is (or may be) present; move the setpoint by one degree towards the target; suggest turning off only after the room has been empty for 15 minutes (the LD2420 alone flips to "empty" after about 15 s); never act in heat or fan mode.
+- **Rules** (`comfort.advise`): suggest turning on only when P(want cooler) ≥ 60 % and someone is (or may be) present; between the band edge (30 %) and 60 % the dashboard says the room is warmer than the band and *offers* turning on, but the automatic mode does nothing (a gap between the two thresholds avoids switching on for marginal discomfort); move the setpoint by one degree towards the target; suggest turning off only after the room has been empty for 15 minutes (the LD2420 alone flips to "empty" after about 15 s); never act in heat or fan mode.
 
 ### Two ways to use it
 

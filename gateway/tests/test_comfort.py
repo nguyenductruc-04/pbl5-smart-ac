@@ -121,6 +121,16 @@ def test_mild_room_with_ac_off_no_advice():
     assert advise(PRIOR, sit(ta=25.0), 24, 29).action == c.NONE
 
 
+def test_room_above_band_but_not_hot_offers_turn_on_without_acting():
+    hi = PRIOR.comfort_band(65)[1]
+    ta = next(t / 10 for t in range(int(hi * 10) + 1, 400)
+              if c.BAND_P < PRIOR.proba(t / 10, 65)[2] < c.TURN_ON_P_COOLER)
+    a = advise(PRIOR, sit(ta=ta), 24, 29)
+    assert (a.action, a.reason) == (c.NONE, "SLIGHTLY_WARM")      # che do tu dong khong lam gi
+    assert a.target == {"power": "on", "mode": "cool", "temp": PRIOR.setpoint(65, 24, 29), "fan": "auto"}
+    assert advise(PRIOR, sit(ta=hi - 0.5), 24, 29).reason == "COMFORTABLE"
+
+
 def test_ac_on_moves_one_degree_toward_setpoint():
     sp = PRIOR.setpoint(65, 24, 29)
     a = advise(PRIOR, sit(ac_power="on", ac_temp=sp - 3), 24, 29)
