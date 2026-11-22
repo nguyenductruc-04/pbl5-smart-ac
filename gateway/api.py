@@ -6,7 +6,10 @@ Mot tien trinh chay ca hai viec: thu thap du lieu MQTT (lop Gateway) va phuc vu 
 Moi lenh dieu khien deu di qua control.CommandService -> Safety Layer.
 """
 import hmac
+import ipaddress
 import logging
+import secrets
+import socket
 import sqlite3
 import threading
 import time
@@ -14,6 +17,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path as FsPath
 from typing import Annotated, Literal
 
+import segno
 import uvicorn
 from fastapi import Depends, FastAPI, Header, Path, Query, Request
 from fastapi.responses import JSONResponse
@@ -22,12 +26,13 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 import advisor as advisor_mod
 import control
+import netmode
 import safety
 import settings
 import store
 from gateway import Gateway
 
-__version__ = "0.8.0"
+__version__ = "0.9.0"
 log = logging.getLogger("api")
 
 WEB_DIR = FsPath(__file__).resolve().parent / "web"
@@ -43,8 +48,10 @@ Limit = Annotated[int, Query(ge=1, le=1000)]
 
 
 class ApiError(Exception):
-    def __init__(self, status: int, code: str, message: str, retry_after_s: int | None = None):
+    def __init__(self, status: int, code: str, message: str, retry_after_s: int | None = None,
+                 extra: dict | None = None):
         self.status, self.code, self.message, self.retry_after_s = status, code, message, retry_after_s
+        self.extra = extra or {}
 
 
 class CommandIn(BaseModel):
@@ -57,6 +64,24 @@ class CommandIn(BaseModel):
     fan: Literal["auto", "low", "mid", "high"] | None = None
     source: Literal["app", "rule", "ai"] | None = Field(
         default=None, description="Chi dich vu tu dong moi can gui: 'rule' hoac 'ai'")
+    confirm: bool = Field(
+        default=False, description="Nguoi dung xac nhan bat lai som khi may nen vua tat (chi khoa app)")
+
+    @model_validator(mode="after")
+    def _at_least_one(self):
+        if self.power is None and self.mode is None and self.temp is None and self.fan is None:
+            raise ValueError("can it nhat mot trong cac truong: power, mode, temp, fan")
+        return self
+
+
+class AcSyncIn(BaseModel):
+    """Trang thai THAT cua dieu hoa do nguoi dung bao. Truong nao bo trong thi giu nguyen."""
+    model_config = ConfigDict(extra="forbid")
+
+    power: Literal["on", "off"] | None = None
+    mode: Literal["cool", "dry", "fan", "auto", "heat"] | None = None
+    temp: int | None = Field(default=None, ge=0, le=50)
+    fan: Literal["auto", "low", "mid", "high"] | None = None
 
     @model_validator(mode="after")
     def _at_least_one(self):
@@ -72,11 +97,31 @@ class ComfortIn(BaseModel):
     vote: Literal["cooler", "comfortable", "warmer"]
 
 
+class NetworkIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    mode: Literal["auto", "standalone", "home"]
+
+
+AP_SSID = "SmartAC-Backup"
+AP_ADDRESS = "10.42.0.1"     # dia chi cua Pi tren mang du phong (NetworkManager, ADR 0001)
+
+
+class PairClaimIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    code: str = Field(min_length=8, max_length=64)
+
+
+PAIR_TTL_S = 300             # ma ghep thiet bi het han sau 5 phut
+PAIR_MAX_FAILS_PER_MIN = 10  # chong do ma
+
 VOTE_MIN_INTERVAL_S = 5      # chong bam dup
 VOTE_UNDO_WINDOW_S = 120     # duoc hoan tac phieu trong bao lau
 
 # HTTP status cho tung ma tu choi cua Safety Layer (mac dinh 409)
 REJECT_STATUS = {
+    control.NO_STATE: 409,
     safety.NODE_OFFLINE: 503,
     safety.RATE_LIMIT: 429,
     safety.TEMP_OUT_OF_RANGE: 422,
@@ -96,6 +141,10 @@ def create_app(gateway: Gateway | None = None, service: control.CommandService |
 
     own_gateway = gateway is None
     started = time.monotonic()
+    # Ma ghep thiet bi: chi nam trong RAM (khoi dong lai Pi la mat het), moi ma dung MOT lan
+    pairing: dict[str, float] = {}          # ma -> thoi diem het han
+    pair_fails: list[float] = []            # thoi diem cac lan nhap sai gan day
+    pair_lock = threading.Lock()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -136,7 +185,7 @@ def create_app(gateway: Gateway | None = None, service: control.CommandService |
 
     @app.exception_handler(ApiError)
     async def _api_error(request: Request, exc: ApiError):
-        body = {"error": {"code": exc.code, "message": exc.message}}
+        body = {"error": {"code": exc.code, "message": exc.message, **exc.extra}}
         headers = {}
         if exc.retry_after_s is not None:
             body["error"]["retry_after_s"] = exc.retry_after_s
@@ -211,7 +260,8 @@ def create_app(gateway: Gateway | None = None, service: control.CommandService |
         """Khong can khoa. 503 khi gateway mat ket noi toi broker MQTT."""
         connected = app.state.gateway.is_connected()
         body = {"status": "ok" if connected else "degraded", "mqtt_connected": connected,
-                "version": __version__, "uptime_s": round(time.monotonic() - started)}
+                "version": __version__, "uptime_s": round(time.monotonic() - started),
+                "time": round(clock(), 1)}   # dashboard so voi dong ho dien thoai: Pi khong co pin RTC
         return JSONResponse(body, status_code=200 if connected else 503)
 
     @app.get("/api/v1/policy", tags=["he thong"])
@@ -271,11 +321,19 @@ def create_app(gateway: Gateway | None = None, service: control.CommandService |
                 raise ApiError(403, "SOURCE_NOT_ALLOWED", "Khoa tu dong phai gui source = 'rule' hoac 'ai'")
             source = body.source
 
+        if body.confirm and source != "app":
+            raise ApiError(403, "CONFIRM_NOT_ALLOWED", "Chi nguoi dung moi duoc xac nhan bat lai som")
+
         out = app.state.service.submit(room, source, power=body.power, mode=body.mode,
-                                       temp=body.temp, fan=body.fan)
+                                       temp=body.temp, fan=body.fan, confirmed=body.confirm)
+        return command_response(out, source, db, room)
+
+    def command_response(out: control.Outcome, source: str, db: sqlite3.Connection, room: str) -> dict:
         d = out.decision
         if out.status == control.REJECTED:
-            raise ApiError(REJECT_STATUS.get(d.code, 409), d.code, d.message, d.retry_after_s)
+            # Lenh thu cong bi chan vi may nen vua tat: nguoi dung duoc phep xac nhan va gui lai
+            extra = {"can_confirm": True} if d.code == safety.COMPRESSOR_MIN_OFF and source == "app" else None
+            raise ApiError(REJECT_STATUS.get(d.code, 409), d.code, d.message, d.retry_after_s, extra)
         if out.status == control.UNAVAILABLE:
             raise ApiError(503, "BROKER_UNAVAILABLE", "Gateway dang mat ket noi toi broker MQTT")
         if out.status == control.TIMEOUT:
@@ -291,6 +349,25 @@ def create_app(gateway: Gateway | None = None, service: control.CommandService |
             "latency_ms": out.latency_ms,
             "room": room_snapshot(db, room),
         }
+
+    @app.post("/api/v1/rooms/{room}/commands/resend", tags=["dieu khien"])
+    def resend_command(room: KnownRoom, role: Role, db: Db):
+        """Phat lai trang thai du kien hien tai, khi dieu hoa co ve da bo lo lenh truoc."""
+        if role != "app":
+            raise ApiError(403, "FORBIDDEN", "Chi nguoi dung (khoa app) moi duoc gui lai lenh")
+        return command_response(app.state.service.resend(room, "app"), "app", db, room)
+
+    @app.put("/api/v1/rooms/{room}/ac-state", tags=["dieu khien"])
+    def sync_ac_state(room: KnownRoom, body: AcSyncIn, role: Role, db: Db):
+        """Bao trang thai THAT cua dieu hoa khi man hinh hien sai. Khong phat IR.
+
+        Xoa danh dau "khong chac chan", tam dung che do tu dong nhu mot lenh cua nguoi dung,
+        va khong dong toi dong ho bao ve may nen.
+        """
+        if role != "app":
+            raise ApiError(403, "FORBIDDEN", "Chi nguoi dung (khoa app) moi duoc dong bo trang thai")
+        app.state.service.sync(room, power=body.power, mode=body.mode, temp=body.temp, fan=body.fan)
+        return room_snapshot(db, room)
 
     @app.delete("/api/v1/rooms/{room}/auto-hold", tags=["dieu khien"])
     def clear_auto_hold(room: KnownRoom, role: Role, db: Db):
@@ -350,6 +427,87 @@ def create_app(gateway: Gateway | None = None, service: control.CommandService |
             raise ApiError(409, "UNDO_EXPIRED", "Qua thoi gian hoan tac")
         store.delete_vote(db, room, vote_id)
         return {"deleted": vote_id}
+
+    # ------------------------------------------------------------ mang cua Pi
+    def network_info() -> dict:
+        port = f":{settings.API_PORT}" if settings.API_PORT != 80 else ""
+        return {
+            "mode": netmode.effective_mode(),     # che do netwatch se ap dung
+            "chosen": netmode.chosen_mode(),      # chon tren dashboard (None = theo .env)
+            "default": netmode.default_mode(),    # NETWORK_MODE trong .env
+            "status": netmode.read_status(clock()),
+            "ap_ssid": AP_SSID,
+            "ap_url": f"http://{AP_ADDRESS}{port}/",
+            "home_url": f"http://gateway.local{port}/",
+        }
+
+    @app.get("/api/v1/system/network", tags=["he thong"])
+    def get_network(role: Role):
+        """Che do mang cua Pi va trang thai Wi-Fi do netwatch bao (`status.running` = netwatch con chay)."""
+        return network_info()
+
+    @app.put("/api/v1/system/network", tags=["he thong"])
+    def set_network(body: NetworkIn, role: Role):
+        """Doi che do mang. netwatch ap dung trong khoang 15 s, khong can khoi dong lai dich vu."""
+        if role != "app":
+            raise ApiError(403, "FORBIDDEN", "Chi nguoi dung (khoa app) moi duoc doi che do mang")
+        try:
+            netmode.choose_mode(body.mode)
+        except OSError as e:
+            raise ApiError(500, "NETWORK_MODE_WRITE_FAILED", f"Khong ghi duoc lua chon: {e}") from e
+        log.warning("Doi che do mang -> %s", body.mode)
+        return network_info()
+
+    # ------------------------------------------------------------ ghep thiet bi (QR)
+    def lan_host(request: Request) -> str:
+        """Dia chi de dien thoai mo dashboard. Ten .local (mDNS) thuong khong chay tren Android,
+        nen doi sang IP cua Pi tren dung mang ma trinh duyet dang dung."""
+        host = request.url.hostname or "localhost"
+        if not host.endswith(".local") and host not in ("localhost", "127.0.0.1"):
+            return host
+        client = request.client.host if request.client else ""
+        try:
+            if ipaddress.ip_address(client).is_loopback:
+                return host
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                s.connect((client, 9))          # UDP: khong gui goi tin nao, chi de he dieu hanh chon card mang
+                return s.getsockname()[0]
+        except (ValueError, OSError):
+            return host
+
+    @app.post("/api/v1/pairing", tags=["ghep thiet bi"], status_code=201)
+    def create_pairing(request: Request, role: Role):
+        """Tao ma ghep dung mot lan (5 phut) kem ma QR. Thiet bi moi quet la dang nhap, khong can go khoa."""
+        if role != "app":
+            raise ApiError(403, "FORBIDDEN", "Chi nguoi dung (khoa app) moi duoc them thiet bi")
+        now = clock()
+        code = secrets.token_urlsafe(12)
+        with pair_lock:
+            for c, exp in list(pairing.items()):
+                if exp <= now:
+                    del pairing[c]
+            pairing[code] = now + PAIR_TTL_S
+        port = request.url.port
+        base = f"{request.url.scheme}://{lan_host(request)}{f':{port}' if port else ''}/"
+        url = f"{base}#pair={code}"              # sau dau # : trinh duyet KHONG gui len may chu, khong vao log
+        qr = segno.make(url, error="m")
+        return {"code": code, "url": url, "expires_in_s": PAIR_TTL_S,
+                "qr": qr.svg_data_uri(scale=6, border=2, dark="#12232D", light="#FFFFFF")}
+
+    @app.post("/api/v1/pairing/claim", tags=["ghep thiet bi"])
+    def claim_pairing(body: PairClaimIn):
+        """Doi ma ghep lay khoa truy cap. KHONG can khoa. Ma dung xong hoac het han la vo hieu."""
+        now = clock()
+        with pair_lock:
+            pair_fails[:] = [t for t in pair_fails if now - t < 60]
+            if len(pair_fails) >= PAIR_MAX_FAILS_PER_MIN:
+                raise ApiError(429, "PAIR_TOO_MANY", "Nhap sai qua nhieu lan, cho mot phut", 60)
+            exp = pairing.pop(body.code, None)
+            if exp is None or exp <= now:
+                pair_fails.append(now)
+                raise ApiError(410, "PAIR_INVALID", "Ma ghep khong dung, da dung roi hoac da het han")
+        log.info("Them mot thiet bi bang ma ghep")
+        return {"api_key": api_key}
 
     # Dashboard (cac file tinh). Gan SAU CUNG de khong che cac duong dan /api va /docs.
     if WEB_DIR.is_dir():

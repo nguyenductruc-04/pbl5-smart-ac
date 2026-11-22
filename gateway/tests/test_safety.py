@@ -95,6 +95,23 @@ def test_compressor_reason_wins_over_rate_limit():
     assert evaluate("app", ON26, r, NOW, P).code == s.COMPRESSOR_MIN_OFF
 
 
+def test_confirmed_manual_early_start_is_allowed_and_labelled():
+    r = room(ac=OFF, last_off_ts=NOW - 60, last_cmd_ts=NOW - 60)
+    d = evaluate("app", ON26, r, NOW, P, confirmed=True)
+    assert (d.verdict, d.code) == (s.ALLOW, s.EARLY_START_CONFIRMED)
+
+
+def test_confirmation_does_not_bypass_rate_limit():
+    r = room(ac=OFF, last_off_ts=NOW - 1, last_cmd_ts=NOW - 1)
+    assert evaluate("app", ON26, r, NOW, P, confirmed=True).code == s.RATE_LIMIT
+
+
+@pytest.mark.parametrize("source", ["rule", "ai"])
+def test_confirmation_is_ignored_for_automatic_commands(source):
+    r = room(ac=OFF, last_off_ts=NOW - 60, hold_until=None, last_auto_ts=None)
+    assert evaluate(source, ON26, r, NOW, P, confirmed=True).code == s.COMPRESSOR_MIN_OFF
+
+
 def test_compressor_min_off_boundary():
     assert evaluate("app", ON26, room(ac=OFF, last_off_ts=NOW - P.min_off_s), NOW, P).allowed
 

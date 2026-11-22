@@ -34,7 +34,7 @@
 #define SENSOR_SHT4X 4
 #include "config.h"
 
-#define FW_VERSION "0.5.0-dev.2"
+#define FW_VERSION "0.9.0"
 
 // config.h cu (truoc v0.5.0) chua co cac muc duoi day -> dung mac dinh va bao tren Serial luc khoi dong
 // (Arduino IDE mac dinh tat canh bao bien dich nen #warning khong hien)
@@ -115,6 +115,7 @@ bool          mdnsStarted    = false;
 // Wi-Fi (xem docs/adr/0001-node-wifi-provisioning.md)
 Preferences   prefs;
 String        homeSsid, homePass, lastCfgId;   // doc tu NVS
+bool          lastNetBackup  = false;           // lan ket noi thanh cong gan nhat la mang du phong? (NVS)
 bool          onBackup       = false;           // dang o mang du phong SmartAC-Backup?
 unsigned long lastHomeTry    = 0;
 volatile uint8_t lastDiscReason = 0;           // ly do mat ket noi Wi-Fi (driver bao)
@@ -131,6 +132,18 @@ void loadWifiConfig() {
   homeSsid  = prefs.getString("home_ssid", WIFI_SSID);
   homePass  = prefs.getString("home_pass", WIFI_PASS);
   lastCfgId = prefs.getString("last_cfg", "");
+  lastNetBackup = prefs.getBool("last_backup", false);
+  prefs.end();
+}
+
+// Nho mang vua ket noi thanh cong: lan khoi dong sau thu mang do TRUOC (v0.9.0).
+// Mang di thu nghiem chi co Pi phat Wi-Fi -> khoi dong la vao ngay, khong mat ~20 s cho Wi-Fi nha.
+void rememberNetwork(bool backup) {
+  onBackup = backup;
+  if (backup == lastNetBackup) return;           // khong ghi flash khi khong doi
+  lastNetBackup = backup;
+  prefs.begin("pbl5", false);
+  prefs.putBool("last_backup", backup);
   prefs.end();
 }
 
@@ -160,6 +173,15 @@ void startMdnsOnce() {
 // 202 = xac thuc that bai, 2 = auth het han
 void onWifiDisconnected(arduino_event_id_t event, arduino_event_info_t info) {
   lastDiscReason = info.wifi_sta_disconnected.reason;
+}
+
+// Mang co dang phat quanh day khong (quet ~2-3 s, khong ngat ket noi hien tai)
+bool ssidVisible(const char *ssid) {
+  int n = WiFi.scanNetworks();
+  bool found = false;
+  for (int i = 0; i < n && !found; i++) found = (WiFi.SSID(i) == ssid);
+  WiFi.scanDelete();
+  return found;
 }
 
 // Quet xem mang co dang phat khong (chi goi khi ket noi that bai, mat ~2-3 s)
@@ -213,35 +235,50 @@ bool tryWifi(const char *ssid, const char *pass, uint32_t timeoutMs) {
   return true;
 }
 
-// Uu tien Wi-Fi nha, khong duoc thi sang mang du phong cua Pi
+bool tryBackup() {
+  if (strlen(BACKUP_SSID) == 0 || !tryWifi(BACKUP_SSID, BACKUP_PASS, WIFI_CONNECT_TIMEOUT_MS)) return false;
+  rememberNetwork(true);
+  lastHomeTry = millis();
+  Serial.println("[WiFi] Dang dung MANG DU PHONG");
+  return true;
+}
+
+bool tryHome() {
+  if (!tryWifi(homeSsid.c_str(), homePass.c_str(), WIFI_CONNECT_TIMEOUT_MS)) return false;
+  rememberNetwork(false);
+  return true;
+}
+
+// Thu mang thanh cong lan truoc TRUOC, roi moi den mang con lai.
+// Mac dinh (lan dau, hoac lan truoc o nha): Wi-Fi nha truoc, mang du phong cua Pi sau.
 void connectWiFi() {
   if (WiFi.status() == WL_CONNECTED) return;
   WiFi.mode(WIFI_STA);
   WiFi.setAutoReconnect(false);   // tu quan ly viec chon mang; tranh driver tu noi lai mang cu
   WiFi.setSleep(false);   // tat modem sleep: giam do tre nhan lenh (v0.1.1)
-  if (tryWifi(homeSsid.c_str(), homePass.c_str(), WIFI_CONNECT_TIMEOUT_MS)) {
-    onBackup = false;
-  } else if (strlen(BACKUP_SSID) > 0 && tryWifi(BACKUP_SSID, BACKUP_PASS, WIFI_CONNECT_TIMEOUT_MS)) {
-    onBackup = true;
-    lastHomeTry = millis();
-    Serial.println("[WiFi] Dang dung MANG DU PHONG");
-  } else {
-    return;   // loop() se goi lai
-  }
+  bool ok = lastNetBackup ? (tryBackup() || tryHome()) : (tryHome() || tryBackup());
+  if (!ok) return;   // loop() se goi lai
   startMdnsOnce();
 }
 
-// Dang o mang du phong: dinh ky thu quay ve Wi-Fi nha
+// Dang o mang du phong: co nen thu quay ve Wi-Fi nha khong? (v0.9.0)
+// - Dang noi duoc broker -> O LAI. Pi chi co mot card Wi-Fi: khi Pi phat mang du phong thi Pi (va broker)
+//   khong o tren Wi-Fi nha, ve nha chi lam mat ket noi. Khi Pi ve nha, Pi tat mang du phong -> node mat
+//   Wi-Fi -> connectWiFi() tu tim lai (thu mang cu truoc, roi Wi-Fi nha).
+// - Mat broker qua WIFI_HOME_RETRY_MS: quet truoc, chi roi mang du phong khi THAY Wi-Fi nha.
+// Truoc ban nay node roi mang du phong moi 5 phut de thu, mat ket noi ~30 s moi lan.
 void maybeReturnHome() {
-  if (!onBackup || millis() - lastHomeTry < WIFI_HOME_RETRY_MS) return;
+  if (!onBackup) return;
+  if (mqtt.connected()) { lastHomeTry = millis(); return; }
+  if (millis() - lastHomeTry < WIFI_HOME_RETRY_MS) return;
   lastHomeTry = millis();
-  Serial.println("[WiFi] Thu quay ve Wi-Fi nha");
-  mqtt.disconnect();
-  if (tryWifi(homeSsid.c_str(), homePass.c_str(), WIFI_CONNECT_TIMEOUT_MS)) {
-    onBackup = false;
-  } else {
-    tryWifi(BACKUP_SSID, BACKUP_PASS, WIFI_CONNECT_TIMEOUT_MS);   // that bai thi loop() tu xu ly
+  if (!ssidVisible(homeSsid.c_str())) {
+    Serial.printf("[WiFi] Khong thay '%s' quanh day -> o lai mang du phong\n", homeSsid.c_str());
+    return;
   }
+  Serial.println("[WiFi] Thay Wi-Fi nha -> thu quay ve");
+  mqtt.disconnect();
+  if (!tryHome()) tryBackup();   // that bai ca hai thi loop() tu xu ly
 }
 
 // Co Wi-Fi nha nhung khong toi duoc broker qua lau (vd. Pi mat Wi-Fi nha va da bat AP du phong,
@@ -255,13 +292,7 @@ void maybeFollowGateway() {
   if (lost < WIFI_BROKER_LOST_MS) return;
   brokerLostSince = 0;
   Serial.println("[WiFi] Khong toi duoc broker tren Wi-Fi nha -> thu mang du phong");
-  if (tryWifi(BACKUP_SSID, BACKUP_PASS, WIFI_CONNECT_TIMEOUT_MS)) {
-    onBackup = true;
-    lastHomeTry = millis();
-    Serial.println("[WiFi] Dang dung MANG DU PHONG");
-  } else {
-    tryWifi(homeSsid.c_str(), homePass.c_str(), WIFI_CONNECT_TIMEOUT_MS);
-  }
+  if (!tryBackup()) tryHome();
 }
 
 // Ap dung Wi-Fi nha moi: THU TRUOC, thanh cong moi luu; that bai thi quay lai mang cu
@@ -276,7 +307,7 @@ void applyPendingConfig() {
   if (tryWifi(cfgSsid.c_str(), cfgPass.c_str(), WIFI_CONNECT_TIMEOUT_MS)) {
     homeSsid = cfgSsid;
     homePass = cfgPass;
-    onBackup = false;
+    rememberNetwork(false);
     res["ok"] = true;
     Serial.println("[CFG] Thanh cong -> da luu Wi-Fi nha moi");
   } else {

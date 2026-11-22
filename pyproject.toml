@@ -6,7 +6,7 @@ target-version = "py311"
 select = ["E", "F", "I", "B"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["advisor", "api", "ashrae", "comfort", "control", "gateway", "metrics", "netwatch", "push_wifi",
+known-first-party = ["advisor", "api", "ashrae", "comfort", "control", "gateway", "metrics", "netmode", "netwatch", "push_wifi",
                      "safety", "settings", "store", "votes"]
 
 [tool.ruff.lint.per-file-ignores]

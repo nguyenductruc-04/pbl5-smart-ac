@@ -102,6 +102,26 @@ def apply_state_change(conn: sqlite3.Connection, room: str, ts: float, source: s
     conn.commit()
 
 
+def sync_state(conn: sqlite3.Connection, room: str, ts: float, state: AcState, policy: Policy) -> None:
+    """Nguoi dung bao trang thai THAT cua dieu hoa (khong phat IR) -> sua trang thai du kien.
+
+    Khong dung toi dong ho may nen (last_on/last_off): dong bo khong phai la mot lan bat/tat,
+    va ta khong biet may da o trang thai do tu luc nao. Dat manual hold nhu mot lenh cua nguoi dung,
+    de che do tu dong khong lap tuc ghi de len trang thai vua sua.
+    """
+    hold_until = ts + policy.hold_app_s if policy.hold_app_s > 0 else None
+    conn.execute(
+        "INSERT INTO ac_state(room, power, mode, temp, fan, ts, source, uncertain, hold_until, hold_source)"
+        " VALUES (?,?,?,?,?,?,'sync',0,?,?)"
+        " ON CONFLICT(room) DO UPDATE SET power=excluded.power, mode=excluded.mode, temp=excluded.temp,"
+        " fan=excluded.fan, ts=excluded.ts, source='sync', uncertain=0,"
+        " hold_until=excluded.hold_until, hold_source=excluded.hold_source",
+        (room, state.power, state.mode, state.temp, state.fan, ts,
+         hold_until, "app" if hold_until else None),
+    )
+    conn.commit()
+
+
 def mark_uncertain(conn: sqlite3.Connection, room: str | None = None) -> None:
     """Danh dau trang thai co the da lech (node offline, lenh het han, gateway vua khoi dong)."""
     if room is None:

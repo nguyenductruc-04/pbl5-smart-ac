@@ -9,7 +9,7 @@ const POLL_MS = 3000;
 const MODES = [["cool", "Mát"], ["dry", "Khô"], ["fan", "Quạt"], ["auto", "Tự động"], ["heat", "Sưởi"]];
 const FANS = [["auto", "Tự động"], ["low", "Thấp"], ["mid", "Vừa"], ["high", "Cao"]];
 const RANGES = [[6, "6 giờ"], [24, "24 giờ"], [168, "7 ngày"]];
-const SOURCE = { app: "Ứng dụng", cli: "Dòng lệnh", remote: "Remote", rule: "Luật tự động", ai: "AI" };
+const SOURCE = { app: "Ứng dụng", cli: "Dòng lệnh", remote: "Remote", rule: "Luật tự động", ai: "AI", sync: "Bạn đồng bộ" };
 const MODE_PHRASE = { cool: "làm mát", dry: "hút ẩm", fan: "chỉ quạt", auto: "tự động", heat: "sưởi" };
 const FAN_PHRASE = { auto: "tự động", low: "thấp", mid: "vừa", high: "cao" };
 // Giai thich ma loi cua Safety Layer bang loi nguoi dung hieu duoc
@@ -33,6 +33,11 @@ const REASON = {
   VOTE_TOO_FAST: "Vừa ghi xong, chờ vài giây rồi bấm lại.",
   UNDO_EXPIRED: "Đã quá 2 phút nên không hoàn tác được nữa.",
   VOTE_NOT_FOUND: "Phiếu này không còn nữa.",
+  NO_STATE: "Chưa biết trạng thái điều hòa nên chưa có gì để gửi lại. Hãy bật hoặc tắt một lần.",
+  CONFIRM_NOT_ALLOWED: "Chỉ người dùng mới được xác nhận bật lại sớm.",
+  FORBIDDEN: "Khóa này không có quyền làm việc đó.",
+  PAIR_INVALID: "Mã QR đã dùng rồi hoặc đã hết hạn. Tạo mã mới trên thiết bị đã đăng nhập.",
+  PAIR_TOO_MANY: "Thử sai quá nhiều lần. Chờ một phút rồi quét lại.",
 };
 
 const $ = (id) => document.getElementById(id);
@@ -67,6 +72,11 @@ const S = {
   lastVoteAt: 0,     // performance.now() luc ghi
   voting: false,
   voteCooldownUntil: 0,   // khoa nut vai giay sau moi lan ghi, tranh bam dup
+  confirmBody: null,      // lenh bat dang cho nguoi dung xac nhan (may nen vua tat)
+  net: null,              // GET /system/network
+  netAsk: null,           // che do mang dang cho xac nhan
+  netSwitch: null,        // vua chuyen sang che do nay (de huong dan khi trang mat ket noi)
+  clockSkew: 0,           // dong ho Pi lech dong ho thiet bi nay (giay)
 };
 
 // ------------------------------------------------------------------ goi API
@@ -88,6 +98,7 @@ async function api(path, { method = "GET", body } = {}) {
     const err = (data && data.error) || {};
     throw Object.assign(new Error(err.message || res.statusText), {
       status: res.status, code: err.code || `HTTP_${res.status}`, retryAfter: err.retry_after_s,
+      canConfirm: Boolean(err.can_confirm),
     });
   }
   return data;
@@ -187,11 +198,15 @@ function render() {
   const notices = [];
   const compressorWait = safety.compressor_ready_in_s - dt;
   const holdLeft = safety.auto_hold_remaining_s - dt;
-  if (!S.linkOk) notices.push({ id: "link", bad: true, text: "Không kết nối được tới Raspberry Pi. Trang đang tự thử lại." });
+  if (!S.linkOk && S.netSwitch) notices.push({ id: "link", bad: true, text: NET_LOST[S.netSwitch] });
+  else if (!S.linkOk) notices.push({ id: "link", bad: true, text: "Không kết nối được tới Raspberry Pi. Trang đang tự thử lại." });
+  if (Math.abs(S.clockSkew) > 120) {
+    notices.push({ id: "clock", text: `Đồng hồ của Raspberry Pi đang lệch ${clock(Math.abs(S.clockSkew))} so với thiết bị này, nên số đo và phiếu cảm nhận sẽ ghi sai giờ. Cho Pi vào mạng có Internet để tự chỉnh giờ.` });
+  }
   else if (!online) notices.push({ id: "offline", bad: true, text: "Node của phòng đang mất kết nối. Điều hòa giữ nguyên trạng thái hiện tại và remote vẫn dùng được." });
-  else if (ac && ac.uncertain) notices.push({ id: "uncertain", text: "Trạng thái điều hòa hiển thị ở đây có thể đã lệch với thực tế. Gửi một lệnh bất kỳ để đồng bộ lại." });
+  else if (ac && ac.uncertain) notices.push({ id: "uncertain", text: "Trạng thái điều hòa hiển thị ở đây có thể đã lệch với thực tế. Gửi một lệnh bất kỳ, hoặc mở \"Điều hòa không làm theo?\" để sửa." });
   if (online && compressorWait > 0 && v.power === "off") {
-    notices.push({ id: "compressor", text: `Máy nén đang nghỉ. Bật lại được sau ${clock(compressorWait)}.` });
+    notices.push({ id: "compressor", text: `Máy nén đang nghỉ thêm ${clock(compressorWait)}. Cần bật ngay thì bấm Bật rồi xác nhận.` });
   }
   if (safety.automation_enabled && holdLeft > 0) {
     const who = safety.auto_hold_source === "remote" ? "remote" : "ứng dụng";
@@ -213,6 +228,9 @@ function render() {
   $("tuning").disabled = !canControl || !on;
   $("ac-summary").textContent = !ac ? "Chưa biết trạng thái điều hòa"
     : `${SOURCE[ac.source] || ac.source} đặt lúc ${when(ac.since)}`;
+  $("resend").disabled = !canControl || !ac || S.sending;
+  $("sync-power").disabled = !S.linkOk || S.sending;
+  $("sync-power").textContent = on ? "Thực tế điều hòa đang tắt" : "Thực tế điều hòa đang bật";
 
   const sp = $("setpoint");
   sp.replaceChildren(String(v.temp), el("small", { textContent: "°C" }));
@@ -427,6 +445,9 @@ async function flush() {
     if (e.code === "RATE_LIMIT" && e.retryAfter) {
       waitMs = e.retryAfter * 1000 + 100;          // tu gui lai trang thai moi nhat khi het han
       feedback("Đang chờ để gửi lệnh…");
+    } else if (e.code === "COMPRESSOR_MIN_OFF" && e.canConfirm) {
+      S.pending = {};
+      askConfirm(body, e.retryAfter);
     } else if (e.code === "UNAUTHORIZED") {
       S.pending = {};
       askKey(REASON.UNAUTHORIZED);
@@ -444,6 +465,74 @@ async function flush() {
     else if (S.again && Object.keys(S.pending).length) change({}, 0);
     S.again = false;
   }
+}
+
+// ------------------------------------------------------------------ khi dieu hoa khong lam theo
+// Bat lai som khi may nen vua tat: Pi hoi lai thay vi cam (dong ho co the dang tinh tu mot lan tat
+// ma dieu hoa chua he nhan). Lenh tu dong khong bao gio duoc xac nhan kieu nay.
+function askConfirm(body, waitS) {
+  S.confirmBody = body;
+  $("confirm-text").textContent = `Máy nén vừa tắt, còn ${clock(waitS || 0)} nữa mới hết thời gian nghỉ. ` +
+    "Nếu điều hòa vừa bỏ lỡ lệnh thì thật ra máy nén chưa chạy. Phần lớn điều hòa cũng tự chờ trước khi chạy lại máy nén. Vẫn bật?";
+  $("confirm").hidden = false;
+  feedback("");
+  $("confirm-yes").focus();
+}
+
+function closeConfirm(text) {
+  $("confirm").hidden = true;
+  S.confirmBody = null;
+  if (text) feedback(text);
+}
+
+// Chay mot thao tac gui len Pi, hien ket qua o dong phan hoi, roi lam moi giao dien
+async function act(label, run) {
+  if (S.sending) return;
+  S.sending = true;
+  feedback(label);
+  render();
+  try {
+    await run();
+  } catch (e) {
+    if (e.code === "UNAUTHORIZED") askKey(REASON.UNAUTHORIZED);
+    else feedback(explain(e), "bad");
+    refresh();
+  } finally {
+    S.sending = false;
+    render();
+    loadLog();
+    loadSuggestion();
+  }
+}
+
+function sendConfirmed() {
+  const body = S.confirmBody;
+  closeConfirm();
+  if (!body) return;
+  act("Đang gửi lệnh…", async () => {
+    const r = await api(`/rooms/${S.room}/commands`, { method: "POST", body: { ...body, confirm: true } });
+    S.lastSendAt = performance.now();
+    setSnap(r.room);
+    feedback(`Đã phát lệnh tới điều hòa (${r.latency_ms} ms).`, "ok");
+  });
+}
+
+function resendState() {
+  act("Đang gửi lại…", async () => {
+    const r = await api(`/rooms/${S.room}/commands/resend`, { method: "POST" });
+    S.lastSendAt = performance.now();
+    setSnap(r.room);
+    feedback(`Đã gửi lại: ${describe(r.requested)}.`, "ok");
+  });
+}
+
+function syncPower() {
+  const power = view().power === "on" ? "off" : "on";
+  act("Đang cập nhật…", async () => {
+    setSnap(await api(`/rooms/${S.room}/ac-state`, { method: "PUT", body: { power } }));
+    S.pending = {};
+    feedback(`Đã ghi nhận điều hòa đang ${power === "on" ? "bật" : "tắt"}. Không có tín hiệu nào được phát.`, "ok");
+  });
 }
 
 async function clearHold() {
@@ -470,9 +559,15 @@ async function loadLog() {
   const now = Date.now() / 1000;
   const rows = decisions.items.map((d) => {
     let verdict = d.verdict, why = REASON[d.code] || d.code;
+    const how = { RESEND: "Gửi lại. ", EARLY_START_CONFIRMED: "Bạn xác nhận bật lại sớm. " }[d.code] || "";
+    if (d.verdict === "sync") {
+      const actual = d.requested && d.requested.power === "on" ? "bật" : "tắt";
+      return { ts: d.ts, who: "Bạn", what: `báo điều hòa thực tế đang ${actual}`, verdict,
+               why: "Chỉ sửa trạng thái trên màn hình, không phát tín hiệu." };
+    }
     if (d.verdict === "allow") {
       const c = results.get(d.cmd_id);
-      if (c && c.ok) { why = `Đã phát lệnh (${c.latency_ms} ms).`; }
+      if (c && c.ok) { why = `${how}Đã phát lệnh (${c.latency_ms} ms).`; }
       else if (c && c.ok === false) { verdict = "fail"; why = REASON.NODE_ERROR; }
       else if (now - d.ts < 8) { why = "Đang chờ node trả lời."; }
       else { verdict = "fail"; why = REASON.NODE_TIMEOUT; }
@@ -598,6 +693,7 @@ async function refresh() {
     const snap = await api(`/rooms/${S.room}`);
     if (!S.sending) setSnap(snap);
     S.linkOk = true;
+    S.netSwitch = null;
   } catch (e) {
     if (e.code === "UNAUTHORIZED") return askKey(REASON.UNAUTHORIZED);
     S.linkOk = false;
@@ -612,6 +708,9 @@ async function tick() {
     if (S.ticks % 4 === 0) loadLog();
     if (S.ticks % 2 === 0) loadSuggestion();
     if (S.ticks % 20 === 0) loadSeries();
+    const netPending = S.net && S.net.status && S.net.status.mode !== S.net.mode;
+    if (S.ticks % (netPending ? 2 : 10) === 0) loadNet();
+    if (S.ticks % 100 === 0) checkClock();
   }
   setTimeout(tick, POLL_MS);
 }
@@ -654,12 +753,165 @@ async function start() {
   if (!S.snap) return showEmpty("Không đọc được trạng thái phòng. Tải lại trang để thử lại.");
   $("empty").hidden = true;
   $("app").hidden = false;
+  $("pair-btn").hidden = false;
   render();
   loadLog();
   loadSeries();
   loadVotes();
   loadSuggestion();
+  loadNet();
+  checkClock();
 }
+
+// ------------------------------------------------------------------ mang cua Pi
+const NET_MODES = [["auto", "Tự động"], ["standalone", "Độc lập"], ["home", "Chỉ Wi-Fi nhà"]];
+const NET_DESC = {
+  auto: "Dùng Wi-Fi nhà. Mất Wi-Fi nhà quá 2 phút thì Pi tự phát mạng SmartAC-Backup, và cứ 5 phút thử quay về. Dùng hằng ngày ở nhà.",
+  standalone: "Pi luôn phát mạng SmartAC-Backup, không dùng Wi-Fi nhà và không có Internet. Dùng khi đi thử nghiệm hoặc demo, chỉ cần Pi và node.",
+  home: "Chỉ dùng Wi-Fi nhà, không bao giờ phát mạng riêng. Router hỏng thì mất kết nối tới khi router chạy lại.",
+};
+const NET_NAME = Object.fromEntries(NET_MODES);
+let NET_LOST = {};   // huong dan khi trang mat ket noi ngay sau khi chuyen che do (dien sau khi biet dia chi)
+
+function netStatusText(n) {
+  const st = n.status;
+  if (!st || !st.running) return "Dịch vụ pbl5-netwatch không chạy, nên đổi chế độ sẽ chưa có tác dụng (xem SETUP bước 6).";
+  const where = st.state === "ap" ? `Pi đang phát Wi-Fi riêng ${n.ap_ssid}.`
+    : st.state === "home" ? `Pi đang dùng Wi-Fi nhà “${st.connection}”.` : "Pi đang mất Wi-Fi.";
+  const pending = st.mode !== n.mode ? ` Đang chuyển sang chế độ ${NET_NAME[n.mode]}…` : ` Chế độ: ${NET_NAME[n.mode]}.`;
+  return where + pending;
+}
+
+function renderNet() {
+  const n = S.net;
+  $("network").hidden = !n;
+  if (!n) return;
+  $("net-status").textContent = netStatusText(n);
+  markSegment($("net-mode"), S.netAsk || n.mode);
+  $("net-desc").textContent = NET_DESC[S.netAsk || n.mode];
+  const usable = Boolean(n.status && n.status.running) && S.linkOk;
+  for (const b of $("net-mode").children) b.disabled = !usable;
+}
+
+async function loadNet() {
+  try {
+    S.net = await api("/system/network");
+    NET_LOST = {
+      standalone: `Pi đã chuyển sang chế độ độc lập. Trên thiết bị này, vào Wi-Fi ${S.net.ap_ssid} rồi mở ${S.net.ap_url}`,
+      auto: `Pi đang quay về Wi-Fi nhà. Vào lại Wi-Fi nhà rồi mở ${S.net.home_url}`,
+      home: `Pi đang quay về Wi-Fi nhà. Vào lại Wi-Fi nhà rồi mở ${S.net.home_url}`,
+    };
+  } catch { /* lan sau thu lai */ }
+  renderNet();
+}
+
+function askNet(mode) {
+  const n = S.net;
+  if (!n || mode === n.mode) { S.netAsk = null; $("net-confirm").hidden = true; renderNet(); return; }
+  const onAp = n.status && n.status.state === "ap";
+  let text;
+  if (mode === "standalone" && !onAp) {
+    text = `Pi sẽ rời Wi-Fi nhà trong khoảng 15 giây và trang này sẽ mất kết nối. Để dùng tiếp: vào Wi-Fi ${n.ap_ssid}, rồi mở ${n.ap_url}. Về nhà nhớ chuyển lại Tự động.`;
+  } else if (mode !== "standalone" && onAp) {
+    text = `Pi sẽ tắt mạng ${n.ap_ssid} để vào lại Wi-Fi nhà, và trang này sẽ mất kết nối. Để dùng tiếp: vào lại Wi-Fi nhà, rồi mở ${n.home_url}.` +
+      (mode === "auto" ? " Không tìm thấy Wi-Fi nhà thì Pi sẽ phát lại mạng riêng." : " Không tìm thấy Wi-Fi nhà thì Pi sẽ mất mạng cho tới khi có lại.");
+  } else if (mode === "home") {
+    text = "Từ giờ Pi sẽ không tự phát mạng riêng khi router hỏng, nên khi đó sẽ không điều khiển được. Tiếp tục?";
+  } else {
+    text = `Chuyển sang chế độ ${NET_NAME[mode]}? Kết nối hiện tại không bị ảnh hưởng.`;
+  }
+  S.netAsk = mode;
+  $("net-confirm-text").textContent = text;
+  $("net-confirm").hidden = false;
+  renderNet();
+}
+
+async function applyNet() {
+  const mode = S.netAsk;
+  $("net-confirm").hidden = true;
+  S.netAsk = null;
+  if (!mode) return;
+  try {
+    S.net = await api("/system/network", { method: "PUT", body: { mode } });
+    S.netSwitch = mode;
+  } catch (e) {
+    $("net-status").textContent = explain(e);
+  }
+  renderNet();
+}
+
+segmented($("net-mode"), NET_MODES, askNet);
+$("net-yes").addEventListener("click", applyNet);
+$("net-no").addEventListener("click", () => { S.netAsk = null; $("net-confirm").hidden = true; renderNet(); });
+
+async function checkClock() {
+  try {
+    const t0 = Date.now();
+    const h = await (await fetch(`${API}/health`, { cache: "no-store" })).json();
+    S.clockSkew = h.time - (t0 + Date.now()) / 2000;
+  } catch { /* bo qua */ }
+}
+
+// ------------------------------------------------------------------ ghep thiet bi bang QR
+// Ma nam sau dau # trong duong dan: trinh duyet khong gui phan nay len may chu, nen ma khong vao log.
+let pairTimer = 0;
+
+async function claimPairing() {
+  const m = location.hash.match(/^#pair=([A-Za-z0-9_-]{8,64})$/);
+  if (!m) return false;
+  history.replaceState(null, "", location.pathname + location.search);   // xoa ma khoi thanh dia chi
+  try {
+    const r = await fetch(`${API}/pairing/claim`, {
+      method: "POST", cache: "no-store",
+      headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: m[1] }),
+    });
+    const data = await r.json().catch(() => null);
+    if (!r.ok) {
+      askKey(REASON[data && data.error && data.error.code] || REASON.PAIR_INVALID);
+      return true;
+    }
+    S.key = data.api_key;
+    saved.set("pbl5.key", S.key);
+    start();
+  } catch {
+    askKey(REASON.NETWORK);
+  }
+  return true;
+}
+
+async function showPairing() {
+  clearInterval(pairTimer);
+  const dialog = $("pair-dialog");
+  $("pair-left").textContent = "Đang tạo mã…";
+  $("pair-qr").removeAttribute("src");
+  $("pair-url").textContent = "";
+  if (!dialog.open) dialog.showModal();
+  try {
+    const r = await api("/pairing", { method: "POST" });
+    $("pair-qr").src = r.qr;
+    $("pair-url").textContent = r.url;
+    const until = performance.now() + r.expires_in_s * 1000;
+    const tickLeft = () => {
+      const left = (until - performance.now()) / 1000;
+      if (left <= 0) {
+        clearInterval(pairTimer);
+        $("pair-qr").removeAttribute("src");
+        $("pair-left").textContent = "Mã đã hết hạn. Bấm Tạo mã mới.";
+      } else {
+        $("pair-left").textContent = `Mã hết hạn sau ${clock(left)}.`;
+      }
+    };
+    tickLeft();
+    pairTimer = setInterval(tickLeft, 1000);
+  } catch (e) {
+    $("pair-left").textContent = explain(e);
+  }
+}
+
+$("pair-btn").addEventListener("click", showPairing);
+$("pair-new").addEventListener("click", showPairing);
+$("pair-close").addEventListener("click", () => $("pair-dialog").close());
+$("pair-dialog").addEventListener("close", () => clearInterval(pairTimer));
 
 // ------------------------------------------------------------------ khoa truy cap
 function askKey(message = "") {
@@ -730,7 +982,14 @@ window.addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer
 setInterval(() => { if (S.snap && !document.hidden) { render(); renderVotes(); } }, 1000);
 for (const b of $("votes").children) b.addEventListener("click", () => castVote(b.dataset.vote));
 $("advice-apply").addEventListener("click", applyAdvice);
+$("confirm-yes").addEventListener("click", sendConfirmed);
+$("confirm-no").addEventListener("click", () => closeConfirm("Đã hủy. Điều hòa giữ nguyên trạng thái."));
+$("resend").addEventListener("click", resendState);
+$("sync-power").addEventListener("click", syncPower);
 $("vote-undo").addEventListener("click", undoVote);   // dem nguoc muot giua hai lan hoi
 
-if (S.key) start(); else askKey();
+claimPairing().then((handled) => {
+  if (handled) return;
+  if (S.key) start(); else askKey();
+});
 tick();

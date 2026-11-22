@@ -6,6 +6,8 @@ passwd
 *.key
 
 # Runtime data
+gateway/network_mode
+gateway/network_status.json
 *.db
 *.db-wal
 *.db-shm

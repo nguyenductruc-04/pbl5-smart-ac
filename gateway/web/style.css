@@ -237,3 +237,21 @@ code { font-size: 0.875em; background: var(--bg); padding: 1px 5px; border-radiu
 .advice-text { margin-top: 6px; font-size: 1.0625rem; }
 .advice .primary { margin-top: 12px; }
 .advice .muted { margin-top: 10px; }
+
+/* Khi dieu hoa khong lam theo (v0.9.0) */
+.secondary { background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 9px 16px; font-weight: 500; min-height: 44px; }
+.secondary:hover:not(:disabled) { border-color: var(--ink-3); }
+.secondary:disabled, .primary:disabled { opacity: 0.5; }
+.row-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.confirm { margin-top: 12px; padding: 14px 16px; border-radius: 12px; background: var(--notice-bg); color: var(--notice-ink); border: 1px solid var(--notice-line); }
+.fix { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
+.fix summary { cursor: pointer; color: var(--ink-2); font-size: 0.9375rem; padding: 4px 0; width: fit-content; }
+.fix .muted { margin-top: 8px; }
+.small { font-size: 0.8125rem; }
+.log-list li[data-verdict="sync"] .why { color: var(--ink-3); }
+.pair-qr { display: block; width: 240px; max-width: 100%; height: auto; aspect-ratio: 1; margin: 14px auto; border-radius: 8px; background: #FFFFFF; }
+.pair-url { word-break: break-all; color: var(--ink-2); }
+.pair-left { font-weight: 600; margin-top: 8px; font-variant-numeric: tabular-nums; }
+.network .segmented { margin-top: 12px; }
+.net-status { margin-top: 6px; color: var(--ink-2); font-size: 0.9375rem; }
+.net-desc { margin-top: 10px; }

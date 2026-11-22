@@ -27,6 +27,12 @@ Plain HTTP: use on the local network or over Tailscale only.
 | GET | `/rooms` | Known rooms and node status. |
 | GET | `/rooms/{room}` | Node status, latest telemetry, expected AC state, safety timers. |
 | POST | `/rooms/{room}/commands` | Send a command through the Safety Layer. |
+| POST | `/rooms/{room}/commands/resend` | Send the expected state again, when the AC seems to have missed a frame (app key only). |
+| PUT | `/rooms/{room}/ac-state` | Tell the gateway what the AC is really doing; nothing is sent (app key only). |
+| POST | `/pairing` | Create a one-time code and QR image to sign in another device (app key only). |
+| GET | `/system/network` | Pi network mode and Wi-Fi state reported by `netwatch`. |
+| PUT | `/system/network` | Change the network mode: `auto`, `standalone` or `home` (app key only). |
+| POST | `/pairing/claim` | Exchange a pairing code for the app key. No key needed. |
 | DELETE | `/rooms/{room}/auto-hold` | Let automation resume now (app key only). |
 | GET | `/rooms/{room}/telemetry?limit=&since=&until=` | Telemetry history, newest first. |
 | GET | `/rooms/{room}/telemetry/series?hours=&points=` | Bucket-averaged temperature/humidity for charts, oldest first. |
@@ -55,6 +61,7 @@ curl -X POST http://gateway.local:8000/api/v1/rooms/room01/commands \
 | `temp` | integer °C (policy: 16–30 manual, 24–29 automatic) |
 | `fan` | `auto`, `low`, `mid`, `high` |
 | `source` | automation key only: `rule` or `ai` |
+| `confirm` | app key only: `true` to turn on although the compressor rest period is not over (see below) |
 
 Success (`200`):
 
@@ -72,6 +79,42 @@ Success (`200`):
 
 `status` is `skipped` (with `cmd_id: null`) when an automatic command equals the current state.
 
+### When the AC missed a command (v0.9.0, [ADR 0005](adr/0005-missed-ir-commands.md))
+
+- **Early start.** A manual power-on during the compressor rest period returns `409 COMPRESSOR_MIN_OFF` with `"can_confirm": true`. Sending the same command with `"confirm": true` is accepted (`code: EARLY_START_CONFIRMED`). Automatic commands cannot be confirmed.
+- **Resend.** `POST /rooms/{room}/commands/resend` (no body) sends the expected state again; response as above with `code: RESEND`. `409 NO_STATE` if the state was never known.
+- **Sync.** `PUT /rooms/{room}/ac-state` with any of `power`, `mode`, `temp`, `fan` sets the expected state without sending IR, clears `uncertain`, starts the app auto-hold and leaves the compressor timers alone. Returns the room state; the decision log gets an entry with verdict `sync`.
+
+## Device pairing (v0.9.0, [ADR 0006](adr/0006-field-network-and-device-pairing.md))
+
+```bash
+curl -X POST -H "X-API-Key: $API_KEY" http://gateway.local:8000/api/v1/pairing
+```
+
+```json
+{"code": "pfpAF2zAXt4k7aPh", "url": "http://10.42.0.1:8000/#pair=pfpAF2zAXt4k7aPh",
+ "expires_in_s": 300, "qr": "data:image/svg+xml;charset=utf-8,..."}
+```
+
+## Network mode (v0.9.0)
+
+```bash
+curl -X PUT -H "X-API-Key: $API_KEY" -H "Content-Type: application/json" \
+  -d '{"mode": "standalone"}' http://gateway.local:8000/api/v1/system/network
+```
+
+```json
+{"mode": "standalone", "chosen": "standalone", "default": "auto",
+ "status": {"mode": "auto", "state": "home", "connection": "Mai", "ap": "SmartAC-Backup", "ts": 1795290000.0, "running": true},
+ "ap_ssid": "SmartAC-Backup", "ap_url": "http://10.42.0.1:8000/", "home_url": "http://gateway.local:8000/"}
+```
+
+`mode` is what `netwatch` will apply (the dashboard choice, else `NETWORK_MODE` from `.env`); `status.mode` is what it applied on its last check, so the two differ for up to 15 s after a change. `status` is `null`, or `running: false`, when `netwatch` is not running. `GET /health` also returns `time` (gateway clock, unix seconds).
+
+## Device pairing, continued
+
+Opening `url` on another device signs it in: the dashboard posts the code to `/pairing/claim`, which returns `{"api_key": "..."}` once. A used, unknown or expired code gives `410 PAIR_INVALID`; more than 10 failures per minute give `429 PAIR_TOO_MANY`. Codes live in RAM only and vanish when the gateway restarts.
+
 ## Errors
 
 ```json
@@ -83,11 +126,13 @@ When `retry_after_s` is present the response also carries a `Retry-After` header
 | HTTP | `code` | Meaning |
 |---|---|---|
 | 401 | `UNAUTHORIZED` | Missing or wrong key |
-| 403 | `SOURCE_NOT_ALLOWED`, `FORBIDDEN` | Key not allowed to do this |
+| 403 | `SOURCE_NOT_ALLOWED`, `FORBIDDEN`, `CONFIRM_NOT_ALLOWED` | Key not allowed to do this |
 | 404 | `ROOM_NOT_FOUND` | No node has ever reported for this room |
-| 409 | `COMPRESSOR_MIN_OFF`, `COMPRESSOR_MIN_ON`, `MANUAL_HOLD`, `STATE_UNCERTAIN`, `TELEMETRY_STALE`, `ROOM_EMPTY`, `STEP_TOO_LARGE` | Rejected by the Safety Layer |
+| 409 | `COMPRESSOR_MIN_OFF`, `COMPRESSOR_MIN_ON`, `MANUAL_HOLD`, `STATE_UNCERTAIN`, `TELEMETRY_STALE`, `ROOM_EMPTY`, `STEP_TOO_LARGE` | Rejected by the Safety Layer (`COMPRESSOR_MIN_OFF` on a manual command adds `can_confirm: true`) |
+| 409 | `NO_STATE` | Nothing to resend yet |
+| 410 | `PAIR_INVALID` | Pairing code used, unknown or expired |
 | 422 | `TEMP_OUT_OF_RANGE`, or FastAPI validation detail | Invalid request |
-| 429 | `RATE_LIMIT` | Too frequent |
+| 429 | `RATE_LIMIT`, `PAIR_TOO_MANY` | Too frequent |
 | 502 | `NODE_ERROR` | Node answered but could not send the IR frame |
 | 503 | `NODE_OFFLINE`, `BROKER_UNAVAILABLE` | A link is down; the command was **not** queued |
 | 504 | `NODE_TIMEOUT` | No answer within 5 s; the AC state is now marked uncertain |

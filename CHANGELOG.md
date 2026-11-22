@@ -4,6 +4,22 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versio
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-22
+### Added
+- Recovering from missed IR commands (ADR 0005): **resend** the expected state (`POST /rooms/{room}/commands/resend`), **sync** the expected state to what the AC is really doing without sending IR (`PUT /rooms/{room}/ac-state`), and a **confirmed early start** for manual power-on during the compressor rest period (`confirm: true`, code `EARLY_START_CONFIRMED`). Dashboard: inline confirmation and a "Điều hòa không làm theo?" section.
+- Network modes for the Pi (ADR 0006), switchable from the dashboard ("Mạng của Pi") without SSH or restarts: `auto` (as before), `standalone` (start the Pi's own Wi-Fi immediately and stay on it: field tests, demos), `home` (never start it). `GET/PUT /system/network`; `NETWORK_MODE` in `.env` is the default.
+- Dashboard warns when the Pi's clock differs from the phone's by more than 2 minutes (no RTC battery, no NTP in standalone mode); `/health` returns `time`.
+- Device pairing by QR code (ADR 0006): "Thêm thiết bị" shows a one-time, 5-minute code; scanning it signs another phone or computer in without typing the API key. `POST /pairing`, `POST /pairing/claim`.
+
+### Changed
+- Firmware 0.9.0: the node tries the network that worked last time first, and stays on the Pi's Wi-Fi while the broker is reachable there (no more 30 s drop every 5 minutes); with the broker unreachable it retries home Wi-Fi only when that network is visible.
+- Manual `COMPRESSOR_MIN_OFF` is now a question rather than a ban; automatic commands are unchanged.
+- New gateway dependency: `segno` (QR codes, pure Python).
+- IR transmitter revision 2 (`docs/hardware/ir-circuit.md` section 8): LED on the board's 5 V pin (IN-OUT jumper bridged), 33 Ω / 0.5 W, 150 Ω base resistor, 470 µF. LED current 31 → 86 mA; a captured remote frame replays at 3 m.
+
+### Added (tools)
+- `firmware/tools/ir_replay`: capture a remote frame and replay it raw or through the library, from Serial or the BOOT button; stored in flash for tests away from the laptop.
+
 ## [0.8.0] - 2026-11-21
 ### Added
 - Personal comfort model (`gateway/comfort.py`): ordinal logistic regression with a population prior fitted on the ASHRAE Global Thermal Comfort Database II (tropical and monsoon climates, about 20,000 votes) and per-user personalisation (preferred-temperature shift and sensitivity) learned on the Pi from comfort votes; older votes are down-weighted.

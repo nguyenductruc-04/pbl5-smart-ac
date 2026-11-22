@@ -7,6 +7,12 @@ Wi-Fi watchdog cho Raspberry Pi (xem docs/adr/0001-node-wifi-provisioning.md).
   Khong cho NetworkManager tu ket noi, vi NM co the da chan tu ket noi (that bai nhieu lan,
   hoac nguoi dung vua "connection down") -> Pi se ket o che do AP mai mai.
 
+Che do (v0.9.0, xem netmode.py): mac dinh la NETWORK_MODE trong gateway/.env; doi duoc tu dashboard,
+netwatch doc lai moi vong nen khong can khoi dong lai.
+  auto        (mac dinh) nhu tren
+  standalone  bat AP NGAY, khong bao gio quay ve Wi-Fi nha: mang thu nghiem / demo chi co Pi va node
+  home        khong bao gio bat AP; dang o AP thi tat va ve Wi-Fi nha
+
 Logic quyet dinh nam trong ham thuan `decide()` (khong goi he thong) de unit test duoc.
 Chay nhu dich vu systemd: xem gateway/pbl5-netwatch.service
 """
@@ -14,6 +20,8 @@ import logging
 import subprocess
 import time
 from dataclasses import dataclass
+
+import netmode
 
 AP_CONNECTION = "SmartAC-Backup"
 WIFI_DEVICE = "wlan0"
@@ -29,6 +37,8 @@ log = logging.getLogger("netwatch")
 HOME, AP, OFFLINE = "home", "ap", "offline"
 # Hanh dong
 NONE, START_AP, STOP_AP = "none", "start_ap", "stop_ap"
+# Che do
+AUTO, STANDALONE, HOME_ONLY = netmode.AUTO, netmode.STANDALONE, netmode.HOME_ONLY
 
 
 @dataclass
@@ -38,8 +48,14 @@ class Memory:
     trying_until: float | None = None    # dang trong cua so thu Wi-Fi nha
 
 
-def decide(state: str, now: float, mem: Memory) -> str:
+def decide(state: str, now: float, mem: Memory, mode: str = AUTO) -> str:
     """Tra ve hanh dong can lam. Cap nhat `mem` tai cho."""
+    if mode == STANDALONE:
+        return NONE if state == AP else START_AP
+    if mode == HOME_ONLY:
+        mem.offline_since = mem.trying_until = None
+        return STOP_AP if state == AP else NONE
+
     if state == HOME:
         mem.offline_since = None
         mem.trying_until = None
@@ -115,19 +131,51 @@ def nmcli(*args: str) -> str:
     return res.stdout
 
 
+def fresh_memory(now: float) -> Memory:
+    """Bo nho moi khi khoi dong hoac khi doi che do. Dang o AP thi thu ve Wi-Fi nha NGAY lan dau
+    (vd. vua chuyen tu 'standalone' ve 'auto' luc da ve nha), khong cho them 5 phut."""
+    return Memory(last_home_try=now - RETRY_HOME_EVERY_S)
+
+
+def network_mode() -> str:
+    """Che do dang ap dung: lua chon tren dashboard, neu khong co thi NETWORK_MODE trong .env."""
+    return netmode.effective_mode()
+
+
+def connection_name(nmcli_output: str, device: str = WIFI_DEVICE) -> str:
+    """Ten ket noi dang dung tren `device` (rong neu chua ket noi)."""
+    for line in nmcli_output.splitlines():
+        parts = line.split(":", 2)
+        if len(parts) == 3 and parts[0] == device and parts[1] == "connected":
+            return parts[2].replace("\\:", ":")
+    return ""
+
+
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    mem = Memory()
+    mem = fresh_memory(time.monotonic())
     last_state = None
+    mode = None
     log.info("netwatch bat dau (AP=%s, device=%s)", AP_CONNECTION, WIFI_DEVICE)
     while True:
-        state = parse_state(nmcli("-t", "-f", "DEVICE,STATE,CONNECTION", "device"))
+        new_mode = network_mode()
+        if new_mode != mode:
+            log.info("Che do mang: %s%s", new_mode, "" if mode is None else f" (truoc: {mode})")
+            mode, mem = new_mode, fresh_memory(time.monotonic())
+        devices = nmcli("-t", "-f", "DEVICE,STATE,CONNECTION", "device")
+        state = parse_state(devices)
         if state != last_state:
             log.info("Trang thai Wi-Fi: %s", state)
             last_state = state
-        action = decide(state, time.monotonic(), mem)
+        try:
+            netmode.write_status({"mode": mode, "state": state, "connection": connection_name(devices),
+                                  "ap": AP_CONNECTION, "ts": time.time()})
+        except OSError as e:
+            log.warning("Khong ghi duoc %s: %s", netmode.STATUS_FILE, e)
+        action = decide(state, time.monotonic(), mem, mode)
         if action == START_AP:
-            log.warning("Mat Wi-Fi nha -> bat AP du phong %s", AP_CONNECTION)
+            log.warning("%s -> bat AP %s", "Che do doc lap" if mode == STANDALONE else "Mat Wi-Fi nha",
+                        AP_CONNECTION)
             nmcli("connection", "up", AP_CONNECTION)
         elif action == STOP_AP:
             log.info("Tat AP de thu ket noi lai Wi-Fi nha")

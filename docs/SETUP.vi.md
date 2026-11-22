@@ -503,6 +503,66 @@ python ml/evaluate_personal.py --db pbl5-copy.db --room room01
 ```
 Kết quả nằm ở `docs/ml/personal-evaluation.md`. Commit file đó kèm ảnh `.png`, rồi đưa bảng kết quả vào báo cáo.
 
+## Bước 11: Khi điều hòa không làm theo, chế độ độc lập, thêm thiết bị bằng QR
+
+Lý do thiết kế: [ADR 0005](adr/0005-missed-ir-commands.md) (lệnh bị điều hòa bỏ lỡ) và [ADR 0006](adr/0006-field-network-and-device-pairing.md) (mạng độc lập, ghép thiết bị). Mô tả API: [API.md](API.md).
+
+### 11.1 Cập nhật Pi
+
+Bản này có thêm thư viện `segno` (tạo mã QR):
+
+```bash
+cd ~/pbl5-smart-ac && git pull
+cd gateway && source .venv/bin/activate
+pip install -r requirements.txt
+sudo systemctl restart pbl5-gateway
+sudo systemctl restart pbl5-netwatch
+```
+
+`journalctl -u pbl5-netwatch -n 5` phải có `che do=auto`.
+
+### 11.2 Nạp firmware 0.9.0 cho node
+
+Mở `firmware/room_node/room_node.ino`, nạp như mọi lần (`config.h` giữ nguyên). Serial Monitor phải in `=== PBL5 Room Node 0.9.0`.
+
+### 11.3 Kiểm thử
+
+| # | Thao tác | Kết quả đúng |
+|---|---|---|
+| 1 | Trên laptop, bấm **Thêm thiết bị**, dùng camera điện thoại quét mã QR (điện thoại cùng mạng Wi-Fi với Pi) | Điện thoại mở thẳng dashboard, không hỏi khóa |
+| 2 | Quét lại đúng mã đó bằng thiết bị khác (hoặc tab ẩn danh) | Hỏi khóa, kèm "Mã QR đã dùng rồi hoặc đã hết hạn…" |
+| 3 | Mở **Điều hòa không làm theo?** → **Gửi lại lệnh** | "Đã gửi lại: …". Serial node có dòng `[RX] cmd_id=…`. Nhật ký ghi "Gửi lại. Đã phát lệnh" |
+| 4 | Bật → Tắt → Bật lại trong vòng 3 phút | Hiện khung hỏi "Máy nén vừa tắt… Vẫn bật?". Bấm **Vẫn bật**: lệnh được phát, nhật ký ghi "Bạn xác nhận bật lại sớm" |
+| 5 | Khi dashboard đang hiện điều hòa bật, bấm **Thực tế điều hòa đang tắt** | Nút chính đổi thành "Bật điều hòa". Serial node **không** có dòng `[RX]` mới. Nhật ký ghi "Bạn báo điều hòa thực tế đang tắt" |
+| 6 | Trong mục **Mạng của Pi** của dashboard, chọn **Độc lập** → đọc khung hướng dẫn → **Chuyển** | Dòng trạng thái ghi "Đang chuyển sang chế độ Độc lập…"; trong khoảng 15 giây Pi phát `SmartAC-Backup` và trang mất kết nối kèm hướng dẫn vào `SmartAC-Backup` |
+| 7 | Rút điện node rồi cắm lại | Node vào thẳng `SmartAC-Backup` (lần trước đã ở mạng này), không thử Wi-Fi nhà trước |
+| 8 | Để yên 10 phút. Điện thoại vào `SmartAC-Backup`, mở `http://10.42.0.1:8000` | Dashboard không báo mất kết nối lần nào. Serial node **không** có dòng `Thay Wi-Fi nha -> thu quay ve` (trước bản này, cứ 5 phút node lại rời mạng của Pi để thử Wi-Fi nhà) |
+| 9 | Vẫn ở `SmartAC-Backup`, mở `http://10.42.0.1:8000`, chọn **Tự động** → **Chuyển** | Pi tắt `SmartAC-Backup` và vào lại Wi-Fi nhà trong khoảng 1 phút; node đi theo; điện thoại vào lại Wi-Fi nhà, mở `http://gateway.local:8000`, mục Mạng ghi "Pi đang dùng Wi-Fi nhà" |
+
+### 11.4 Đi thử nghiệm ở nơi không có Wi-Fi nhà
+
+1. Ở nhà: trên dashboard chọn **Mạng của Pi → Độc lập → Chuyển**. Lựa chọn được lưu, nên rút điện mang đi Pi vẫn ở chế độ độc lập.
+2. Mang theo Pi, node và một sạc dự phòng hai cổng.
+3. Cắm điện, đợi khoảng 1 phút. Điện thoại vào `SmartAC-Backup`, mở `http://10.42.0.1:8000`. Nếu điện thoại chưa từng đăng nhập, quét QR từ một thiết bị đã đăng nhập, hoặc nhập khóa.
+4. Nếu dashboard báo **đồng hồ Raspberry Pi lệch**, đừng ghi phiếu cảm nhận trong buổi đó (giờ ghi sẽ sai). Pi không có pin đồng hồ, và ở chế độ độc lập không có Internet để chỉnh giờ.
+5. Về nhà: mở `http://10.42.0.1:8000`, chọn **Tự động → Chuyển**. Quên bước này thì Pi sẽ không quay về Wi-Fi nhà.
+
+Ba chế độ:
+
+| Chế độ | Pi làm gì | Mở dashboard ở đâu | Khi nào dùng |
+|---|---|---|---|
+| **Tự động** (mặc định) | Dùng Wi-Fi nhà; mất Wi-Fi nhà quá 2 phút thì tự phát `SmartAC-Backup`, cứ 5 phút thử quay về | `http://gateway.local:8000`, hoặc `http://10.42.0.1:8000` khi Pi đang phát mạng riêng | Hằng ngày ở nhà |
+| **Độc lập** | Phát `SmartAC-Backup` ngay, không bao giờ dùng Wi-Fi nhà, không có Internet | Vào `SmartAC-Backup`, mở `http://10.42.0.1:8000` | Đi thử nghiệm, buổi bảo vệ |
+| **Chỉ Wi-Fi nhà** | Không bao giờ phát mạng riêng | `http://gateway.local:8000` | Khi mạng riêng gây phiền, hoặc cần chắc Pi luôn ở mạng nhà |
+
+`NETWORK_MODE` trong `gateway/.env` chỉ là chế độ mặc định khi chưa chọn trên dashboard. Muốn bỏ lựa chọn trên dashboard và quay về giá trị trong `.env`: `rm ~/pbl5-smart-ac/gateway/network_mode`.
+
+### 11.5 Giới hạn đã biết
+
+- Mã QR cho thiết bị mới **toàn quyền** như khóa API. Chỉ cho người tin cậy quét, đừng chụp gửi mã.
+- "Vẫn bật" bỏ qua thời gian nghỉ của máy nén do Pi tính; điều hòa vẫn tự có trễ bảo vệ riêng (phần lớn các máy), nhưng đừng bật tắt liên tục.
+- Đồng bộ trạng thái chỉ sửa màn hình; nếu báo sai thì lệnh tiếp theo hoặc lần bấm remote sẽ sửa lại.
+
 ## Xử lý lỗi thường gặp
 
 | Hiện tượng | Nguyên nhân hay gặp |

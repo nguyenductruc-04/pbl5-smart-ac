@@ -1,6 +1,6 @@
 # ADR 0002: Safety Layer, control priority, offline behaviour and REST API
 
-- Status: Accepted
+- Status: Accepted; amended by [ADR 0005](0005-missed-ir-commands.md) (manual early start can be confirmed)
 - Date: 2026-11-17
 
 ## Context
@@ -37,7 +37,7 @@ The **API key determines the source**, not the request body: the app key can onl
 | Code | Applies to | Rule (defaults, see `safety.Policy`) |
 |---|---|---|
 | `NODE_OFFLINE` | all | Node must be online. Commands are never queued. |
-| `COMPRESSOR_MIN_OFF` | all | After power-off, wait 180 s before power-on (not for `fan` mode). |
+| `COMPRESSOR_MIN_OFF` | all | After power-off, wait 180 s before power-on (not for `fan` mode). Since v0.9.0 a person may confirm an early start (ADR 0005). |
 | `TEMP_OUT_OF_RANGE` | manual / auto | Manual 16–30 °C; automatic 24–29 °C. |
 | `RATE_LIMIT` | manual / auto | Manual ≥ 2 s between commands; automatic ≥ 600 s. |
 | `STATE_UNCERTAIN` | auto | No automatic control while the expected state may be wrong. |

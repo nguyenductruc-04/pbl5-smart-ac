@@ -117,6 +117,82 @@ def test_compressor_protection_is_409_then_allowed(client, clock):
     assert client.post(CMD, json={"power": "on"}, headers=H).status_code == 200
 
 
+def test_early_restart_can_be_confirmed_by_a_person(client, clock):
+    client.post(CMD, json={"power": "on"}, headers=H)
+    clock.advance(10)
+    client.post(CMD, json={"power": "off"}, headers=H)
+    clock.advance(30)
+    r = client.post(CMD, json={"power": "on"}, headers=H)
+    assert (r.status_code, code(r), r.json()["error"]["can_confirm"]) == (409, "COMPRESSOR_MIN_OFF", True)
+    r = client.post(CMD, json={"power": "on", "confirm": True}, headers=H)
+    assert (r.status_code, r.json()["code"]) == (200, "EARLY_START_CONFIRMED")
+    assert r.json()["room"]["ac"]["power"] == "on"
+
+
+def test_automation_key_cannot_confirm(client, clock):
+    r = client.post(CMD, json={"power": "on", "source": "ai", "confirm": True}, headers=HA)
+    assert (r.status_code, code(r)) == (403, "CONFIRM_NOT_ALLOWED")
+    assert client.gateway.client.published == []
+
+
+def test_resend_publishes_the_expected_state_again(client, clock):
+    client.post(CMD, json={"power": "on", "temp": 24}, headers=H)
+    clock.advance(10)
+    r = client.post(CMD + "/resend", headers=H)
+    assert (r.status_code, r.json()["code"], r.json()["status"]) == (200, "RESEND", "executed")
+    (_, first), (_, again) = client.gateway.client.published
+    assert {k: again[k] for k in ("power", "mode", "temp", "fan")} == {
+        k: first[k] for k in ("power", "mode", "temp", "fan")}
+    assert again["cmd_id"] != first["cmd_id"]
+
+
+def test_resend_does_not_restart_compressor_timer(client, clock):
+    client.post(CMD, json={"power": "on"}, headers=H)
+    clock.advance(10)
+    client.post(CMD, json={"power": "off"}, headers=H)
+    clock.advance(30)
+    assert client.post(CMD + "/resend", headers=H).status_code == 200      # gui lai lenh tat
+    assert client.get("/api/v1/rooms/room01", headers=H).json()["safety"]["compressor_ready_in_s"] == 150
+
+
+def test_resend_needs_a_known_state_and_a_person(client):
+    r = client.post(CMD + "/resend", headers=H)
+    assert (r.status_code, code(r)) == (409, "NO_STATE")
+    assert client.post(CMD + "/resend", headers=HA).status_code == 403
+    assert client.gateway.client.published == []
+
+
+def test_sync_fixes_state_without_sending_ir(client, clock):
+    client.post(CMD, json={"power": "on", "temp": 24}, headers=H)
+    clock.advance(10)
+    r = client.put("/api/v1/rooms/room01/ac-state", json={"power": "off"}, headers=H)
+    assert r.status_code == 200
+    ac = r.json()["ac"]
+    assert (ac["power"], ac["temp"], ac["source"], ac["uncertain"]) == ("off", 24, "sync", False)
+    assert len(client.gateway.client.published) == 1                     # khong phat IR
+    assert r.json()["safety"]["compressor_ready_in_s"] == 0               # khong bat dong ho may nen
+    assert client.post(CMD, json={"power": "on"}, headers=H).status_code == 200
+    log = client.get("/api/v1/rooms/room01/decisions", headers=H).json()["items"]
+    assert any(d["verdict"] == "sync" and d["code"] == "STATE_SYNC" for d in log)
+
+
+def test_sync_clears_uncertain_and_holds_automation(client, clock):
+    client.gateway.client.node = "silent"
+    client.post(CMD, json={"power": "on"}, headers=H)                     # het han -> khong chac chan
+    client.gateway.client.node = "ok"
+    clock.advance(5)
+    r = client.put("/api/v1/rooms/room01/ac-state", json={"power": "on", "temp": 25}, headers=H)
+    assert r.json()["ac"]["uncertain"] is False
+    assert r.json()["safety"]["auto_hold_remaining_s"] > 0
+
+
+def test_sync_validation_and_permissions(client):
+    assert client.put("/api/v1/rooms/room01/ac-state", json={}, headers=H).status_code == 422
+    assert client.put("/api/v1/rooms/room01/ac-state", json={"power": "maybe"}, headers=H).status_code == 422
+    assert client.put("/api/v1/rooms/room01/ac-state", json={"power": "on"}, headers=HA).status_code == 403
+    assert client.put("/api/v1/rooms/room01/ac-state", json={"power": "on"}).status_code == 401
+
+
 def test_parallel_commands_cannot_bypass_rate_limit(client):
     """10 lenh den cung luc: dung 1 lenh duoc gui, 9 lenh bi RATE_LIMIT, khong lenh nao loi 500."""
     from concurrent.futures import ThreadPoolExecutor
@@ -469,3 +545,78 @@ def test_auto_step_respects_safety_layer(client, clock):
     codes = [d["code"] for d in store.decision_history(db, "room01", 10)]
     assert "STATE_UNCERTAIN" not in codes and "MANUAL_HOLD" not in codes     # xem truoc khong ghi nhat ky
     assert advisor.auto_step(adv, svc, db, clock()) == []          # da dat dung -> khong lam gi them
+
+
+# ------------------------------------------------------------------ ghep thiet bi bang QR (v0.9.0)
+PAIR = "/api/v1/pairing"
+
+
+def test_pairing_code_logs_in_a_new_device_once(client):
+    r = client.post(PAIR, headers=H)
+    assert r.status_code == 201
+    body = r.json()
+    assert body["url"].endswith(f"/#pair={body['code']}") and body["expires_in_s"] == 300
+    assert body["qr"].startswith("data:image/svg+xml")
+    r = client.post(PAIR + "/claim", json={"code": body["code"]})            # khong can khoa
+    assert (r.status_code, r.json()["api_key"]) == (200, KEY)
+    r = client.post(PAIR + "/claim", json={"code": body["code"]})            # dung lan hai
+    assert (r.status_code, code(r)) == (410, "PAIR_INVALID")
+
+
+def test_pairing_code_expires(client, clock):
+    c = client.post(PAIR, headers=H).json()["code"]
+    clock.advance(301)
+    assert client.post(PAIR + "/claim", json={"code": c}).status_code == 410
+
+
+def test_only_people_can_create_pairing_codes(client):
+    assert client.post(PAIR).status_code == 401
+    assert client.post(PAIR, headers=HA).status_code == 403
+
+
+def test_guessing_pairing_codes_is_rate_limited(client):
+    for _ in range(10):
+        assert client.post(PAIR + "/claim", json={"code": "wrong-code-123"}).status_code == 410
+    good = client.post(PAIR, headers=H).json()["code"]
+    r = client.post(PAIR + "/claim", json={"code": good})
+    assert (r.status_code, code(r)) == (429, "PAIR_TOO_MANY")
+
+
+# ------------------------------------------------------------------ che do mang (v0.9.0)
+NET = "/api/v1/system/network"
+
+
+@pytest.fixture
+def net_files(tmp_path, monkeypatch):
+    import netmode
+    monkeypatch.setattr(netmode, "MODE_FILE", tmp_path / "network_mode")
+    monkeypatch.setattr(netmode, "STATUS_FILE", tmp_path / "network_status.json")
+    monkeypatch.setenv("NETWORK_MODE", "auto")
+    return netmode
+
+
+def test_network_mode_defaults_to_env_and_reports_missing_netwatch(client, net_files):
+    r = client.get(NET, headers=H).json()
+    assert (r["mode"], r["chosen"], r["default"], r["status"]) == ("auto", None, "auto", None)
+    assert r["ap_ssid"] == "SmartAC-Backup" and r["ap_url"].startswith("http://10.42.0.1")
+
+
+def test_person_can_switch_network_mode(client, net_files, clock):
+    net_files.write_status({"mode": "auto", "state": "home", "connection": "Mai", "ts": clock()})
+    r = client.put(NET, json={"mode": "standalone"}, headers=H)
+    assert r.status_code == 200
+    body = r.json()
+    assert (body["mode"], body["chosen"]) == ("standalone", "standalone")
+    assert body["status"]["running"] is True and body["status"]["mode"] == "auto"   # netwatch chua kip doc
+    assert net_files.MODE_FILE.read_text().strip() == "standalone"
+
+
+def test_network_mode_validation_and_permissions(client, net_files):
+    assert client.put(NET, json={"mode": "party"}, headers=H).status_code == 422
+    assert client.put(NET, json={"mode": "home"}, headers=HA).status_code == 403
+    assert client.put(NET, json={"mode": "home"}).status_code == 401
+    assert not net_files.MODE_FILE.exists()
+
+
+def test_health_reports_gateway_time(client, clock):
+    assert client.get("/api/v1/health").json()["time"] == round(clock(), 1)
