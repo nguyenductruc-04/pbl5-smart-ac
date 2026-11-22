@@ -33,6 +33,8 @@ The Pi has no RTC battery, and in `standalone` it has no Internet for NTP, so af
 
 No mode switch is needed on the node: it follows whatever network the Pi provides.
 
+**Advance notice.** On its own the node needs about 2.5 minutes to follow a switch to the AP: it waits 120 s without the broker before concluding the Pi has left (so that a gateway restart does not make it hop networks). When the switch comes from the dashboard the Pi knows in advance, so before `netwatch` acts the API publishes `{"net":"backup"}` (or `{"net":"home"}` when leaving the AP) on each node's `home/{room}/config`, not retained. On `backup` the node waits 15 s for the Pi to move, then joins the AP itself (retrying every 20 s, for at most 3 minutes); on `home` it tries home Wi-Fi first when the AP disappears. Outage after a dashboard switch: about 20–40 s. Older firmware ignores the message and falls back to the 120 s path.
+
 ### Device pairing by QR code
 
 - A signed-in dashboard can create a pairing code (`POST /pairing`): random (96 bits), single use, valid 5 minutes, kept only in RAM.

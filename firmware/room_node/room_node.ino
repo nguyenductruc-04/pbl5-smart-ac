@@ -117,6 +117,12 @@ Preferences   prefs;
 String        homeSsid, homePass, lastCfgId;   // doc tu NVS
 bool          lastNetBackup  = false;           // lan ket noi thanh cong gan nhat la mang du phong? (NVS)
 bool          onBackup       = false;           // dang o mang du phong SmartAC-Backup?
+char          netHint        = 0;               // Pi bao truoc sap doi mang: 'b' = sang mang rieng, 'h' = ve nha
+unsigned long netHintAt      = 0;
+unsigned long lastHintTry    = 0;
+const unsigned long NET_HINT_DELAY_MS = 15000;  // Pi doi mang trong vong ~15 s sau khi bao
+const unsigned long NET_HINT_RETRY_MS = 20000;
+const unsigned long NET_HINT_TTL_MS   = 180000; // qua 3 phut chua theo duoc -> bo, quay ve cach cu
 unsigned long lastHomeTry    = 0;
 volatile uint8_t lastDiscReason = 0;           // ly do mat ket noi Wi-Fi (driver bao)
 unsigned long brokerLostSince = 0;              // co Wi-Fi nha nhung khong toi duoc broker tu luc nao
@@ -140,6 +146,7 @@ void loadWifiConfig() {
 // Mang di thu nghiem chi co Pi phat Wi-Fi -> khoi dong la vao ngay, khong mat ~20 s cho Wi-Fi nha.
 void rememberNetwork(bool backup) {
   onBackup = backup;
+  if ((backup && netHint == 'b') || (!backup && netHint == 'h')) netHint = 0;   // da theo xong
   if (backup == lastNetBackup) return;           // khong ghi flash khi khong doi
   lastNetBackup = backup;
   prefs.begin("pbl5", false);
@@ -256,7 +263,8 @@ void connectWiFi() {
   WiFi.mode(WIFI_STA);
   WiFi.setAutoReconnect(false);   // tu quan ly viec chon mang; tranh driver tu noi lai mang cu
   WiFi.setSleep(false);   // tat modem sleep: giam do tre nhan lenh (v0.1.1)
-  bool ok = lastNetBackup ? (tryBackup() || tryHome()) : (tryHome() || tryBackup());
+  bool backupFirst = netHint ? netHint == 'b' : lastNetBackup;   // Pi vua bao truoc thi theo loi bao
+  bool ok = backupFirst ? (tryBackup() || tryHome()) : (tryHome() || tryBackup());
   if (!ok) return;   // loop() se goi lai
   startMdnsOnce();
 }
@@ -279,6 +287,20 @@ void maybeReturnHome() {
   Serial.println("[WiFi] Thay Wi-Fi nha -> thu quay ve");
   mqtt.disconnect();
   if (!tryHome()) tryBackup();   // that bai ca hai thi loop() tu xu ly
+}
+
+// Pi bao truoc "sap sang mang rieng" (nguoi dung doi che do tren dashboard, v0.9.0):
+// doi Pi doi mang (~15 s) roi chu dong sang mang du phong, khong cho mat broker 120 s.
+void maybeFollowHint() {
+  if (!netHint) return;
+  unsigned long age = millis() - netHintAt;
+  if (age > NET_HINT_TTL_MS) { netHint = 0; return; }
+  if (netHint != 'b' || onBackup) return;
+  if (age < NET_HINT_DELAY_MS || millis() - lastHintTry < NET_HINT_RETRY_MS) return;
+  lastHintTry = millis();
+  Serial.println("[NET] Di theo Pi sang mang du phong");
+  mqtt.disconnect();
+  if (!tryBackup()) tryHome();   // Pi chua kip phat -> ve tam Wi-Fi nha, 20 s sau thu lai
 }
 
 // Co Wi-Fi nha nhung khong toi duoc broker qua lau (vd. Pi mat Wi-Fi nha va da bat AP du phong,
@@ -689,11 +711,22 @@ void handleCommand(byte* payload, unsigned int len) {
 
 // ------------------------------------------------------------------
 // Nhan cau hinh Wi-Fi tu Pi: {"cfg_id":"...","wifi":{"ssid":"...","pass":"..."}}
+// hoac loi bao truoc doi mang: {"net":"backup"} / {"net":"home"} (v0.9.0)
 void handleConfig(byte* payload, unsigned int len) {
   if (len == 0) return;                       // Pi vua xoa ban tin retained
   JsonDocument doc;
   if (deserializeJson(doc, (const char*)payload, len)) {
     Serial.println("[CFG] JSON loi -> bo qua");
+    return;
+  }
+  String net = doc["net"] | "";
+  if (net.length()) {
+    if (net == "backup" || net == "home") {
+      netHint = net[0];
+      netHintAt = millis();
+      lastHintTry = 0;
+      Serial.printf("[NET] Pi bao sap %s\n", netHint == 'b' ? "phat mang rieng -> se di theo" : "ve Wi-Fi nha");
+    }
     return;
   }
   String id   = doc["cfg_id"] | "";
@@ -812,6 +845,7 @@ void loop() {
     connectWiFi();
     return;
   }
+  maybeFollowHint();   // Pi vua bao truoc sap doi mang
   maybeReturnHome();   // dang o mang du phong -> dinh ky thu Wi-Fi nha
 
   if (!mqtt.connected()) {

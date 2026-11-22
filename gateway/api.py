@@ -447,7 +447,7 @@ def create_app(gateway: Gateway | None = None, service: control.CommandService |
         return network_info()
 
     @app.put("/api/v1/system/network", tags=["he thong"])
-    def set_network(body: NetworkIn, role: Role):
+    def set_network(body: NetworkIn, role: Role, db: Db):
         """Doi che do mang. netwatch ap dung trong khoang 15 s, khong can khoi dong lai dich vu."""
         if role != "app":
             raise ApiError(403, "FORBIDDEN", "Chi nguoi dung (khoa app) moi duoc doi che do mang")
@@ -456,6 +456,14 @@ def create_app(gateway: Gateway | None = None, service: control.CommandService |
         except OSError as e:
             raise ApiError(500, "NETWORK_MODE_WRITE_FAILED", f"Khong ghi duoc lua chon: {e}") from e
         log.warning("Doi che do mang -> %s", body.mode)
+        # Bao truoc cho cac node (Pi con o mang cu thi moi gui toi duoc): node chuyen theo trong
+        # ~20 s thay vi cho mat broker 120 s. Node cu (firmware < 0.9.0) bo qua ban tin nay.
+        status = netmode.read_status(clock()) or {}
+        hint = ("backup" if body.mode == netmode.STANDALONE and status.get("state") != "ap" else
+                "home" if body.mode != netmode.STANDALONE and status.get("state") == "ap" else None)
+        if hint:
+            for room in [r["room"] for r in store.list_rooms(db)]:
+                app.state.gateway.publish_net_hint(room, hint)
         return network_info()
 
     # ------------------------------------------------------------ ghep thiet bi (QR)

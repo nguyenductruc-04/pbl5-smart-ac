@@ -109,6 +109,8 @@ curl -X PUT -H "X-API-Key: $API_KEY" -H "Content-Type: application/json" \
  "ap_ssid": "SmartAC-Backup", "ap_url": "http://10.42.0.1:8000/", "home_url": "http://gateway.local:8000/"}
 ```
 
+Before answering, a change that will move the Pi between its own Wi-Fi and home Wi-Fi publishes `{"net":"backup"}` or `{"net":"home"}` (not retained) on every node's `home/{room}/config`, so nodes follow in seconds (ADR 0006).
+
 `mode` is what `netwatch` will apply (the dashboard choice, else `NETWORK_MODE` from `.env`); `status.mode` is what it applied on its last check, so the two differ for up to 15 s after a change. `status` is `null`, or `running: false`, when `netwatch` is not running. `GET /health` also returns `time` (gateway clock, unix seconds).
 
 ## Device pairing, continued

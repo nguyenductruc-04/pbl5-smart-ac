@@ -12,7 +12,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versio
 - Device pairing by QR code (ADR 0006): "Thêm thiết bị" shows a one-time, 5-minute code; scanning it signs another phone or computer in without typing the API key. `POST /pairing`, `POST /pairing/claim`.
 
 ### Changed
-- Firmware 0.9.0: the node tries the network that worked last time first, and stays on the Pi's Wi-Fi while the broker is reachable there (no more 30 s drop every 5 minutes); with the broker unreachable it retries home Wi-Fi only when that network is visible.
+- Firmware 0.9.0: when the network mode is changed on the dashboard the gateway warns the nodes first (`{"net": ...}` on `home/{room}/config`), so they follow in about 20–40 s instead of about 2.5 minutes. The node also tries the network that worked last time first, and stays on the Pi's Wi-Fi while the broker is reachable there (no more 30 s drop every 5 minutes); with the broker unreachable it retries home Wi-Fi only when that network is visible.
 - Manual `COMPRESSOR_MIN_OFF` is now a question rather than a ban; automatic commands are unchanged.
 - New gateway dependency: `segno` (QR codes, pure Python).
 - IR transmitter revision 2 (`docs/hardware/ir-circuit.md` section 8): LED on the board's 5 V pin (IN-OUT jumper bridged), 33 Ω / 0.5 W, 150 Ω base resistor, 470 µF. LED current 31 → 86 mA; a captured remote frame replays at 3 m.

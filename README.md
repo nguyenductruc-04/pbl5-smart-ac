@@ -107,7 +107,7 @@ Broker setup (password file + ACL) and ESP32 flashing: see the step-by-step guid
 | `home/{room}/command_result` | node → gateway | `{"cmd_id","ok","ir_sent","note"}` |
 | `home/{room}/status` | node → gateway | `online` / `offline` (retained, Last Will) |
 | `home/{room}/ir_event` | node → gateway | `{"protocol","power","mode","temp","fan","source","uptime_s"}` — user pressed the original remote |
-| `home/{room}/config` | gateway → node | `{"cfg_id","wifi":{"ssid","pass"}}` (retained until answered) |
+| `home/{room}/config` | gateway → node | `{"cfg_id","wifi":{"ssid","pass"}}` (retained until answered); `{"net":"backup"\|"home"}` advance notice of a Pi network switch (not retained) |
 | `home/{room}/config_result` | node → gateway | `{"cfg_id","ok","error"}` |
 
 ## REST API

@@ -611,6 +611,25 @@ def test_person_can_switch_network_mode(client, net_files, clock):
     assert net_files.MODE_FILE.read_text().strip() == "standalone"
 
 
+def test_switching_tells_nodes_to_follow_before_the_pi_moves(client, net_files, clock):
+    net_files.write_status({"mode": "auto", "state": "home", "connection": "Mai", "ts": clock()})
+    client.put(NET, json={"mode": "standalone"}, headers=H)
+    assert client.gateway.client.config == [("home/room01/config", {"net": "backup"}, False)]
+
+    net_files.write_status({"mode": "standalone", "state": "ap", "connection": "SmartAC-Backup", "ts": clock()})
+    client.gateway.client.config.clear()
+    client.put(NET, json={"mode": "auto"}, headers=H)
+    assert client.gateway.client.config == [("home/room01/config", {"net": "home"}, False)]
+
+
+def test_no_hint_when_the_network_does_not_change(client, net_files, clock):
+    net_files.write_status({"mode": "auto", "state": "home", "connection": "Mai", "ts": clock()})
+    client.put(NET, json={"mode": "home"}, headers=H)                     # van o Wi-Fi nha
+    net_files.write_status({"mode": "standalone", "state": "ap", "connection": "SmartAC-Backup", "ts": clock()})
+    client.put(NET, json={"mode": "standalone"}, headers=H)               # van o mang rieng
+    assert client.gateway.client.config == []
+
+
 def test_network_mode_validation_and_permissions(client, net_files):
     assert client.put(NET, json={"mode": "party"}, headers=H).status_code == 422
     assert client.put(NET, json={"mode": "home"}, headers=HA).status_code == 403

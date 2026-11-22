@@ -13,6 +13,7 @@ class FakeMqttClient:
     def __init__(self, *args, **kwargs):
         self.connected = True
         self.published = []          # [(topic, payload_dict)]
+        self.config = []             # [(topic, payload_dict, retain)] gui toi home/<room>/config
         self.node = "ok"             # "ok" | "silent" | "error"
         self.gateway = None
         self.clock = None
@@ -25,6 +26,9 @@ class FakeMqttClient:
 
     def publish(self, topic, payload, qos=0, retain=False):
         cmd = json.loads(payload)
+        if topic.endswith("/config"):                 # ban tin cau hinh / bao doi mang: khong tra loi
+            self.config.append((topic, cmd, retain))
+            return
         self.published.append((topic, cmd))
         room = topic.split("/")[1]
         if self.node == "silent":
