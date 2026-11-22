@@ -238,7 +238,7 @@ code { font-size: 0.875em; background: var(--bg); padding: 1px 5px; border-radiu
 .advice .primary { margin-top: 12px; }
 .advice .muted { margin-top: 10px; }
 
-/* Khi dieu hoa khong lam theo (v0.9.0) */
+/* Khi dieu hoa khong lam theo (v0.10.0) */
 .secondary { background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 9px 16px; font-weight: 500; min-height: 44px; }
 .secondary:hover:not(:disabled) { border-color: var(--ink-3); }
 .secondary:disabled, .primary:disabled { opacity: 0.5; }
@@ -255,3 +255,26 @@ code { font-size: 0.875em; background: var(--bg); padding: 1px 5px; border-radiu
 .network .segmented { margin-top: 12px; }
 .net-status { margin-top: 6px; color: var(--ink-2); font-size: 0.9375rem; }
 .net-desc { margin-top: 10px; }
+.notice-link { display: inline-block; margin-top: 8px; font-weight: 600; color: inherit; text-decoration: underline; }
+
+/* Tai khoan (v0.10.0) */
+.account-btn { max-width: 11rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.auth-key { margin-top: 14px; text-align: center; }
+.auth-key .quiet, #auth-switch { color: var(--ink-2); }
+dialog h3 { font-size: 1rem; margin: 18px 0 2px; }
+.password-form { border-top: 1px solid var(--line); margin-top: 14px; }
+.password-form .secondary { margin-top: 4px; }
+#pw-status[data-kind="ok"] { color: var(--ok) !important; }
+.members { background: var(--surface); border-radius: var(--radius); padding: 18px 20px; border: 1px solid var(--line); }
+.members .muted { margin-top: 4px; font-size: 0.875rem; }
+.member-list { list-style: none; margin: 10px 0 0; padding: 0; }
+.member-list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.member-list li:last-child { border-bottom: 0; }
+.member-who b { font-weight: 600; }
+.member-who span { display: block; color: var(--ink-3); font-size: 0.8125rem; }
+.member-list li[data-role="pending"] .member-who span { color: var(--notice-ink); font-weight: 600; }
+.member-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.member-actions .secondary, .member-actions .primary { min-height: 36px; padding: 6px 12px; font-size: 0.875rem; }
+.member-actions select { min-height: 36px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); padding: 4px 8px; }
+.member-actions .danger { color: var(--bad); }
+#auth-submit { margin-left: auto; }

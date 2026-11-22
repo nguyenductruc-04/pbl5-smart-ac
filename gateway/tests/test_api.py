@@ -10,6 +10,7 @@ import store
 
 KEY = "app-key-0123456789abcdef"
 AUTO_KEY = "auto-key-0123456789abcdef"
+SETUP_CODE = "ABCD-EFGH-JKMN"
 H = {"X-API-Key": KEY}
 HA = {"X-API-Key": AUTO_KEY}
 CMD = "/api/v1/rooms/room01/commands"
@@ -19,7 +20,8 @@ CMD = "/api/v1/rooms/room01/commands"
 def client(gateway, clock):
     gateway.handle_status("room01", clock(), "online")
     service = control.CommandService(gateway, clock=clock, timeout_s=0.05)
-    app = api.create_app(gateway, service, api_key=KEY, automation_key=AUTO_KEY, clock=clock)
+    app = api.create_app(gateway, service, api_key=KEY, automation_key=AUTO_KEY, clock=clock,
+                         setup_code=SETUP_CODE, device_id="d3v1ce00")
     with TestClient(app) as c:
         c.gateway = gateway
         yield c
@@ -32,9 +34,9 @@ def code(resp):
 # ------------------------------------------------------------------ khoi dong & xac thuc
 def test_refuses_to_start_without_api_key(gateway):
     with pytest.raises(SystemExit):
-        api.create_app(gateway, api_key="")
+        api.create_app(gateway, api_key="", setup_code=SETUP_CODE, device_id="d3v1ce00")
     with pytest.raises(SystemExit):
-        api.create_app(gateway, api_key=KEY, automation_key=KEY)
+        api.create_app(gateway, api_key=KEY, automation_key=KEY, setup_code=SETUP_CODE, device_id="d3v1ce00")
 
 
 def test_health_needs_no_key(client):
@@ -391,7 +393,7 @@ def test_api_docs_still_work_and_api_is_not_cached(client):
 
 def test_snapshot_tells_dashboard_whether_automation_exists(client, gateway):
     assert client.get("/api/v1/rooms/room01", headers=H).json()["safety"]["automation_enabled"] is True
-    app = api.create_app(gateway, api_key=KEY, automation_key="")
+    app = api.create_app(gateway, api_key=KEY, automation_key="", setup_code=SETUP_CODE, device_id="d3v1ce00")
     with TestClient(app) as c:
         assert c.get("/api/v1/rooms/room01", headers=H).json()["safety"]["automation_enabled"] is False
 
@@ -547,7 +549,7 @@ def test_auto_step_respects_safety_layer(client, clock):
     assert advisor.auto_step(adv, svc, db, clock()) == []          # da dat dung -> khong lam gi them
 
 
-# ------------------------------------------------------------------ ghep thiet bi bang QR (v0.9.0)
+# ------------------------------------------------------------------ ghep thiet bi bang QR (v0.10.0)
 PAIR = "/api/v1/pairing"
 
 
@@ -569,6 +571,14 @@ def test_pairing_code_expires(client, clock):
     assert client.post(PAIR + "/claim", json={"code": c}).status_code == 410
 
 
+def test_pairing_code_for_a_network_switch_can_live_longer(client, clock):
+    r = client.post(PAIR + "?ttl_s=900", headers=H)
+    assert r.json()["expires_in_s"] == 900
+    clock.advance(600)
+    assert client.post(PAIR + "/claim", json={"code": r.json()["code"]}).status_code == 200
+    assert client.post(PAIR + "?ttl_s=3600", headers=H).status_code == 422
+
+
 def test_only_people_can_create_pairing_codes(client):
     assert client.post(PAIR).status_code == 401
     assert client.post(PAIR, headers=HA).status_code == 403
@@ -582,7 +592,7 @@ def test_guessing_pairing_codes_is_rate_limited(client):
     assert (r.status_code, code(r)) == (429, "PAIR_TOO_MANY")
 
 
-# ------------------------------------------------------------------ che do mang (v0.9.0)
+# ------------------------------------------------------------------ che do mang (v0.10.0)
 NET = "/api/v1/system/network"
 
 

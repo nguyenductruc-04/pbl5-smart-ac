@@ -1,0 +1,20 @@
+# Nut reset tai khoan (GPIO 17 <-> GND, giu 10 giay). Dung python he thong vi gpiozero co san.
+# Sua User va duong dan neu ban dat project o cho khac, roi:
+#   sudo cp pbl5-reset.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now pbl5-reset
+#   journalctl -u pbl5-reset -f
+[Unit]
+Description=PBL5 account reset button (GPIO 17, hold 10 s)
+After=local-fs.target
+
+[Service]
+User=truc0404
+SupplementaryGroups=gpio
+WorkingDirectory=/home/truc0404/pbl5-smart-ac/gateway
+ExecStart=/usr/bin/python3 reset_button.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

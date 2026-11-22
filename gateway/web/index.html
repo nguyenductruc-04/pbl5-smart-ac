@@ -20,7 +20,7 @@
       <select id="room-select" hidden></select>
       <span id="link" class="link" data-state="wait"><span class="dot" aria-hidden="true"></span><span id="link-text">Đang kết nối</span></span>
       <button id="pair-btn" class="quiet" type="button" hidden>Thêm thiết bị</button>
-      <button id="key-btn" class="quiet" type="button">Đổi khóa</button>
+      <button id="account-btn" class="quiet account-btn" type="button" hidden>Tài khoản</button>
     </div>
   </header>
 
@@ -139,6 +139,7 @@
         <section class="network" aria-labelledby="network-title" id="network" hidden>
           <h2 id="network-title">Mạng của Pi</h2>
           <p id="net-status" class="net-status"></p>
+          <div id="net-lost" class="notice bad" hidden><span id="net-lost-text"></span> <a id="net-lost-link" class="notice-link" hidden>Mở dashboard ở mạng mới</a></div>
           <div class="segmented" id="net-mode" role="radiogroup" aria-label="Chế độ mạng"></div>
           <p id="net-desc" class="muted net-desc"></p>
           <div id="net-confirm" class="confirm" role="group" aria-labelledby="net-confirm-text" hidden>
@@ -148,6 +149,13 @@
               <button type="button" id="net-no" class="secondary">Thôi</button>
             </div>
           </div>
+        </section>
+
+        <section class="members" aria-labelledby="members-title" id="members" hidden>
+          <h2 id="members-title">Thành viên</h2>
+          <p class="muted">Người khác tự tạo tài khoản trên trang đăng nhập, rồi bạn cấp quyền ở đây. Thành viên điều khiển được điều hòa; khách chỉ xem.</p>
+          <ul id="member-list" class="member-list"></ul>
+          <p id="member-status" class="small muted" role="status"></p>
         </section>
 
         <section class="log" aria-labelledby="log-title">
@@ -163,27 +171,73 @@
 
   <dialog id="pair-dialog" aria-labelledby="pair-title">
     <h2 id="pair-title">Thêm thiết bị</h2>
-    <p>Trên điện thoại hoặc máy tính mới, mở camera và quét mã này. Thiết bị đó phải dùng cùng mạng Wi-Fi với Raspberry Pi.</p>
+    <p>Trên điện thoại hoặc máy tính mới, mở camera và quét mã này để đăng nhập bằng tài khoản của bạn mà không cần gõ mật khẩu. Thiết bị đó phải dùng cùng mạng Wi-Fi với Raspberry Pi.</p>
     <img id="pair-qr" class="pair-qr" alt="Mã QR để đăng nhập dashboard trên thiết bị khác" width="240" height="240">
     <p class="muted">Hoặc mở đường dẫn: <span id="pair-url" class="pair-url"></span></p>
     <p id="pair-left" class="pair-left" role="status"></p>
-    <p class="muted small">Mã chỉ dùng được một lần. Ai quét được mã này cũng điều khiển được điều hòa, nên đừng chụp gửi cho người khác.</p>
+    <p class="muted small">Mã chỉ dùng được một lần. Ai quét được mã này sẽ đăng nhập thành bạn, nên đừng chụp gửi cho người khác. Người khác nên tự tạo tài khoản.</p>
     <div class="dialog-actions">
       <button type="button" id="pair-new" class="secondary">Tạo mã mới</button>
       <button type="button" id="pair-close" class="primary">Xong</button>
     </div>
   </dialog>
 
+  <dialog id="auth-dialog" aria-labelledby="auth-title">
+    <form method="dialog" id="auth-form" novalidate>
+      <h2 id="auth-title">Đăng nhập</h2>
+      <p id="auth-intro"></p>
+      <div id="auth-code-row">
+        <label for="auth-code">Mã thiết lập</label>
+        <input id="auth-code" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXX-XXXX-XXXX">
+      </div>
+      <label for="auth-user">Tên đăng nhập</label>
+      <input id="auth-user" autocomplete="username" autocapitalize="none" spellcheck="false" required minlength="3" maxlength="32">
+      <div id="auth-name-row">
+        <label for="auth-name">Tên hiển thị (không bắt buộc)</label>
+        <input id="auth-name" autocomplete="name" maxlength="40">
+      </div>
+      <label for="auth-pass">Mật khẩu</label>
+      <input id="auth-pass" type="password" autocomplete="current-password" required minlength="8" maxlength="128">
+      <div id="auth-pass2-row">
+        <label for="auth-pass2">Nhập lại mật khẩu</label>
+        <input id="auth-pass2" type="password" autocomplete="new-password" maxlength="128">
+      </div>
+      <p id="auth-error" class="error" role="alert"></p>
+      <div class="dialog-actions">
+        <button type="button" id="auth-switch" class="quiet">Tạo tài khoản</button>
+        <button type="submit" id="auth-submit" class="primary">Đăng nhập</button>
+      </div>
+      <p class="small auth-key"><button type="button" id="auth-key" class="quiet">Dùng khóa API</button></p>
+    </form>
+  </dialog>
+
+  <dialog id="account-dialog" aria-labelledby="account-title">
+    <h2 id="account-title">Tài khoản</h2>
+    <p id="account-who"></p>
+    <form id="password-form" class="password-form">
+      <h3>Đổi mật khẩu</h3>
+      <label for="pw-old">Mật khẩu hiện tại</label>
+      <input id="pw-old" type="password" autocomplete="current-password" required>
+      <label for="pw-new">Mật khẩu mới (ít nhất 8 ký tự)</label>
+      <input id="pw-new" type="password" autocomplete="new-password" required minlength="8" maxlength="128">
+      <p id="pw-status" class="error" role="status"></p>
+      <button type="submit" class="secondary">Đổi mật khẩu</button>
+    </form>
+    <div class="dialog-actions">
+      <button type="button" id="sign-out" class="quiet">Đăng xuất</button>
+      <button type="button" id="account-close" class="primary">Xong</button>
+    </div>
+  </dialog>
+
   <dialog id="key-dialog">
     <form method="dialog" id="key-form">
-      <h2>Nhập khóa truy cập</h2>
-      <p>Cách nhanh nhất: trên một thiết bị đã đăng nhập, bấm <b>Thêm thiết bị</b> rồi quét mã QR.</p>
-      <p>Hoặc nhập khóa: giá trị <code>API_KEY</code> trong file <code>gateway/.env</code> trên Raspberry Pi. Khóa chỉ được lưu trong trình duyệt này.</p>
+      <h2>Đăng nhập bằng khóa API</h2>
+      <p>Dành cho người quản lý Raspberry Pi: giá trị <code>API_KEY</code> trong file <code>gateway/.env</code>. Khóa có quyền quản trị và chỉ được lưu trong trình duyệt này. Người dùng bình thường nên đăng nhập bằng tài khoản.</p>
       <label for="key-input">Khóa</label>
       <input id="key-input" type="password" autocomplete="off" spellcheck="false" required minlength="16">
       <p id="key-error" class="error" role="alert"></p>
       <div class="dialog-actions">
-        <button type="button" id="key-forget" class="quiet">Xóa khóa đã lưu</button>
+        <button type="button" id="key-back" class="quiet">Dùng tài khoản</button>
         <button type="submit" class="primary">Lưu khóa</button>
       </div>
     </form>

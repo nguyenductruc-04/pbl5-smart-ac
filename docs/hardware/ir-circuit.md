@@ -1,6 +1,6 @@
 # IR transmit / receive circuit (Room Node)
 
-Status: revision 2 (section 8, v0.9.0): LED powered from 5 V, about 86 mA, replays a remote command at 3 m. Receiving works with a Casper AC remote; the Casper protocol is not decoded correctly yet. **Not yet tested on a real Daikin unit.** Sections 1–7 describe revision 1 (3V3 supply) and the measurements that led to revision 2.
+Status: revision 2 (section 8, v0.10.0): LED powered from 5 V, about 86 mA, replays a remote command at 3 m. Receiving works with a Casper AC remote; the Casper protocol is not decoded correctly yet. **Not yet tested on a real Daikin unit.** Sections 1–7 describe revision 1 (3V3 supply) and the measurements that led to revision 2.
 
 ## 1. Circuit
 
@@ -103,7 +103,7 @@ Rules adopted:
 - [ ] Real-AC range test with the 5 V circuit (replay and library encoding), and receive success rate from the user's normal position.
 - [x] Self-interference handling in firmware: disable receiver during send + blanking window.
 
-## 8. Revision 2 (v0.9.0): LED on 5 V
+## 8. Revision 2 (v0.10.0): LED on 5 V
 
 ### Why
 

@@ -14,6 +14,7 @@ import sqlite3
 import threading
 import time
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from pathlib import Path as FsPath
 from typing import Annotated, Literal
 
@@ -24,6 +25,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+import accounts
 import advisor as advisor_mod
 import control
 import netmode
@@ -32,7 +34,7 @@ import settings
 import store
 from gateway import Gateway
 
-__version__ = "0.9.0"
+__version__ = "0.10.0"
 log = logging.getLogger("api")
 
 WEB_DIR = FsPath(__file__).resolve().parent / "web"
@@ -107,6 +109,70 @@ AP_SSID = "SmartAC-Backup"
 AP_ADDRESS = "10.42.0.1"     # dia chi cua Pi tren mang du phong (NetworkManager, ADR 0001)
 
 
+class SetupIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    code: str = Field(min_length=8, max_length=40, description="Ma thiet lap in tren tem dan Pi")
+    username: str = Field(min_length=3, max_length=32)
+    password: str = Field(min_length=8, max_length=128)
+    display_name: str | None = Field(default=None, max_length=40)
+    device: str | None = Field(default=None, max_length=60, description="Ten thiet bi, de quan ly phien")
+
+
+class RegisterIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    username: str = Field(min_length=3, max_length=32)
+    password: str = Field(min_length=8, max_length=128)
+    display_name: str | None = Field(default=None, max_length=40)
+
+
+class LoginIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    username: str = Field(min_length=1, max_length=32)
+    password: str = Field(min_length=1, max_length=128)
+    device: str | None = Field(default=None, max_length=60)
+
+
+class PasswordIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    old_password: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=8, max_length=128)
+
+
+class RoleIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    role: Literal["admin", "member", "guest"]
+
+
+@dataclass(frozen=True)
+class Who:
+    """Ai dang goi API: mot tai khoan (qua phien dang nhap) hoac mot khoa API."""
+    kind: str                     # "user" | "key"
+    role: str                     # admin | member | guest | automation
+    user_id: int | None = None
+    username: str | None = None
+    token: str | None = None
+
+    @property
+    def can_control(self) -> bool:
+        return self.role in (accounts.ADMIN, accounts.MEMBER)
+
+    @property
+    def is_admin(self) -> bool:
+        return self.role == accounts.ADMIN
+
+
+LOGIN_MAX_FAILS = 5          # sai mat khau bay nhieu lan trong LOGIN_WINDOW_S thi khoa ten do tam thoi
+LOGIN_WINDOW_S = 300
+SETUP_MAX_FAILS_PER_MIN = 5
+REGISTER_MAX_PER_MIN = 10
+MAX_PENDING = 20             # chan spam dang ky tu mang Wi-Fi du phong
+
+
 class PairClaimIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -114,6 +180,7 @@ class PairClaimIn(BaseModel):
 
 
 PAIR_TTL_S = 300             # ma ghep thiet bi het han sau 5 phut
+PAIR_MAX_TTL_S = 900         # ma kem theo khi doi mang (con phai doi Wi-Fi tren dien thoai)
 PAIR_MAX_FAILS_PER_MIN = 10  # chong do ma
 
 VOTE_MIN_INTERVAL_S = 5      # chong bam dup
@@ -130,6 +197,7 @@ REJECT_STATUS = {
 
 def create_app(gateway: Gateway | None = None, service: control.CommandService | None = None,
                *, api_key: str | None = None, automation_key: str | None = None,
+               setup_code: str | None = None, device_id: str | None = None,
                clock=time.time) -> FastAPI:
     api_key = settings.API_KEY if api_key is None else api_key
     automation_key = settings.API_KEY_AUTOMATION if automation_key is None else automation_key
@@ -141,8 +209,15 @@ def create_app(gateway: Gateway | None = None, service: control.CommandService |
 
     own_gateway = gateway is None
     started = time.monotonic()
+    # Ma thiet lap (in tren tem) va ma thiet bi: tao lan dau, giu mai (accounts.py)
+    setup_code = setup_code or accounts.setup_code()
+    device_id = device_id or accounts.device_id()
+    login_fails: dict[str, list[float]] = {}   # ten dang nhap -> thoi diem cac lan sai
+    setup_fails: list[float] = []
+    registrations: list[float] = []
+    auth_lock = threading.Lock()
     # Ma ghep thiet bi: chi nam trong RAM (khoi dong lai Pi la mat het), moi ma dung MOT lan
-    pairing: dict[str, float] = {}          # ma -> thoi diem het han
+    pairing: dict[str, tuple[float, int | None]] = {}   # ma -> (het han, tai khoan tao ma)
     pair_fails: list[float] = []            # thoi diem cac lan nhap sai gan day
     pair_lock = threading.Lock()
 
@@ -204,18 +279,40 @@ def create_app(gateway: Gateway | None = None, service: control.CommandService |
 
     Db = Annotated[sqlite3.Connection, Depends(get_db)]
 
-    def get_role(x_api_key: Annotated[str | None, Header()] = None) -> str:
-        """Tra ve 'app' hoac 'automation' theo khoa. So sanh thoi gian hang de tranh do khoa."""
+    def get_who(db: Db, authorization: Annotated[str | None, Header()] = None,
+                x_api_key: Annotated[str | None, Header()] = None) -> Who:
+        """Phien dang nhap (Authorization: Bearer ...) hoac khoa API (X-API-Key).
+
+        Khoa app (API_KEY) giu quyen quan tri cho cong cu dong lenh tren Pi; khoa tu dong chi gui lenh
+        nguon rule/ai. Nguoi dung dung tai khoan.
+        """
+        if authorization and authorization.lower().startswith("bearer "):
+            token = authorization[7:].strip()
+            user = accounts.session_user(db, token, clock()) if token else None
+            if user is None:
+                raise ApiError(401, "SESSION_INVALID", "Phien dang nhap het han hoac da bi thu hoi")
+            if user["role"] == accounts.PENDING:
+                raise ApiError(403, "ACCOUNT_PENDING", "Tai khoan dang cho quan tri vien duyet")
+            return Who("user", user["role"], user["id"], user["username"], token)
         given = (x_api_key or "").encode()
-        if hmac.compare_digest(given, api_key.encode()):
-            return "app"
-        if automation_key and hmac.compare_digest(given, automation_key.encode()):
-            return "automation"
-        raise ApiError(401, "UNAUTHORIZED", "Thieu hoac sai header X-API-Key")
+        if given and hmac.compare_digest(given, api_key.encode()):
+            return Who("key", accounts.ADMIN)
+        if given and automation_key and hmac.compare_digest(given, automation_key.encode()):
+            return Who("key", "automation")
+        raise ApiError(401, "UNAUTHORIZED", "Can dang nhap (Authorization: Bearer) hoac khoa X-API-Key")
 
-    Role = Annotated[str, Depends(get_role)]
+    WhoDep = Annotated[Who, Depends(get_who)]
 
-    def known_room(room: Room, db: Db, role: Role) -> str:
+    def require_control(who: Who) -> None:
+        if not who.can_control:
+            raise ApiError(403, "FORBIDDEN", "Tai khoan khach chi duoc xem" if who.role == accounts.GUEST
+                           else "Khoa nay khong duoc lam viec nay")
+
+    def require_admin(who: Who) -> None:
+        if not who.is_admin:
+            raise ApiError(403, "FORBIDDEN", "Chi quan tri vien moi duoc lam viec nay")
+
+    def known_room(room: Room, db: Db, who: WhoDep) -> str:
         if not store.room_exists(db, room):
             raise ApiError(404, "ROOM_NOT_FOUND", f"Chua tung thay node cua phong '{room}'")
         return room
@@ -265,12 +362,12 @@ def create_app(gateway: Gateway | None = None, service: control.CommandService |
         return JSONResponse(body, status_code=200 if connected else 503)
 
     @app.get("/api/v1/policy", tags=["he thong"])
-    def get_policy(role: Role):
+    def get_policy(who: WhoDep):
         """Cac nguong Safety Layer dang ap dung."""
         return vars(app.state.gateway.policy)
 
     @app.get("/api/v1/rooms", tags=["phong"])
-    def rooms(db: Db, role: Role):
+    def rooms(db: Db, who: WhoDep):
         return {"rooms": store.list_rooms(db)}
 
     @app.get("/api/v1/rooms/{room}", tags=["phong"])
@@ -307,19 +404,21 @@ def create_app(gateway: Gateway | None = None, service: control.CommandService |
         return {"items": store.ir_event_history(db, room, limit)}
 
     @app.post("/api/v1/rooms/{room}/commands", tags=["dieu khien"])
-    def send_command(room: KnownRoom, body: CommandIn, role: Role, db: Db):
+    def send_command(room: KnownRoom, body: CommandIn, who: WhoDep, db: Db):
         """Gui lenh. Tra ve sau khi node bao ket qua (hoac het han).
 
-        Nguon lenh lay tu KHOA: khoa app -> `app`; khoa tu dong -> phai neu `source` la `rule`/`ai`.
+        Nguon lenh lay tu NGUOI GOI: tai khoan / khoa app -> `app`; khoa tu dong -> phai neu `source`
+        la `rule`/`ai`. Tai khoan khach khong duoc gui lenh.
         """
-        if role == "app":
-            if body.source not in (None, "app"):
-                raise ApiError(403, "SOURCE_NOT_ALLOWED", "Khoa nay chi duoc gui lenh nguon 'app'")
-            source = "app"
-        else:
+        if who.role == "automation":
             if body.source not in ("rule", "ai"):
                 raise ApiError(403, "SOURCE_NOT_ALLOWED", "Khoa tu dong phai gui source = 'rule' hoac 'ai'")
             source = body.source
+        else:
+            require_control(who)
+            if body.source not in (None, "app"):
+                raise ApiError(403, "SOURCE_NOT_ALLOWED", "Nguoi dung chi duoc gui lenh nguon 'app'")
+            source = "app"
 
         if body.confirm and source != "app":
             raise ApiError(403, "CONFIRM_NOT_ALLOWED", "Chi nguoi dung moi duoc xac nhan bat lai som")
@@ -351,44 +450,37 @@ def create_app(gateway: Gateway | None = None, service: control.CommandService |
         }
 
     @app.post("/api/v1/rooms/{room}/commands/resend", tags=["dieu khien"])
-    def resend_command(room: KnownRoom, role: Role, db: Db):
+    def resend_command(room: KnownRoom, who: WhoDep, db: Db):
         """Phat lai trang thai du kien hien tai, khi dieu hoa co ve da bo lo lenh truoc."""
-        if role != "app":
-            raise ApiError(403, "FORBIDDEN", "Chi nguoi dung (khoa app) moi duoc gui lai lenh")
+        require_control(who)
         return command_response(app.state.service.resend(room, "app"), "app", db, room)
 
     @app.put("/api/v1/rooms/{room}/ac-state", tags=["dieu khien"])
-    def sync_ac_state(room: KnownRoom, body: AcSyncIn, role: Role, db: Db):
+    def sync_ac_state(room: KnownRoom, body: AcSyncIn, who: WhoDep, db: Db):
         """Bao trang thai THAT cua dieu hoa khi man hinh hien sai. Khong phat IR.
 
         Xoa danh dau "khong chac chan", tam dung che do tu dong nhu mot lenh cua nguoi dung,
         va khong dong toi dong ho bao ve may nen.
         """
-        if role != "app":
-            raise ApiError(403, "FORBIDDEN", "Chi nguoi dung (khoa app) moi duoc dong bo trang thai")
+        require_control(who)
         app.state.service.sync(room, power=body.power, mode=body.mode, temp=body.temp, fan=body.fan)
         return room_snapshot(db, room)
 
     @app.delete("/api/v1/rooms/{room}/auto-hold", tags=["dieu khien"])
-    def clear_auto_hold(room: KnownRoom, role: Role, db: Db):
+    def clear_auto_hold(room: KnownRoom, who: WhoDep, db: Db):
         """Nguoi dung cho phep che do tu dong chay lai ngay (bo manual hold)."""
-        if role != "app":
-            raise ApiError(403, "FORBIDDEN", "Chi nguoi dung (khoa app) moi duoc bo manual hold")
+        require_control(who)
         store.clear_hold(db, room)
         return room_snapshot(db, room)
 
     # ------------------------------------------------------------ phieu cam nhan (nhan cho AI)
-    def require_app(role: str) -> None:
-        if role != "app":
-            raise ApiError(403, "FORBIDDEN", "Chi nguoi dung (khoa app) moi duoc ghi phieu cam nhan")
-
     @app.post("/api/v1/rooms/{room}/comfort", tags=["cam nhan"], status_code=201)
-    def add_comfort(room: KnownRoom, body: ComfortIn, role: Role, db: Db):
+    def add_comfort(room: KnownRoom, body: ComfortIn, who: WhoDep, db: Db):
         """Ghi mot phieu cam nhan kem so do va trang thai dieu hoa luc bam.
 
         Tu choi khi khong co so do moi: phieu thieu boi canh thi khong dung duoc de huan luyen.
         """
-        require_app(role)
+        require_control(who)
         now = clock()
         last = store.last_vote_ts(db, room)
         if last is not None and 0 <= now - last < VOTE_MIN_INTERVAL_S:
@@ -398,7 +490,7 @@ def create_app(gateway: Gateway | None = None, service: control.CommandService |
         if tel is None or now - tel["ts"] > app.state.gateway.policy.telemetry_stale_s:
             raise ApiError(409, "TELEMETRY_STALE",
                            "Chua co so do moi tu node nen phieu khong duoc ghi")
-        return store.add_vote(db, room, now, body.vote)
+        return store.add_vote(db, room, now, body.vote, who.user_id, who.username)
 
     @app.get("/api/v1/rooms/{room}/suggestion", tags=["goi y"])
     def suggestion(room: KnownRoom, db: Db):
@@ -417,12 +509,14 @@ def create_app(gateway: Gateway | None = None, service: control.CommandService |
         return {"items": store.vote_history(db, room, limit, since)}
 
     @app.delete("/api/v1/rooms/{room}/comfort/{vote_id}", tags=["cam nhan"])
-    def undo_comfort(room: KnownRoom, vote_id: int, role: Role, db: Db):
-        """Hoan tac phieu vua bam nham (chi trong VOTE_UNDO_WINDOW_S giay)."""
-        require_app(role)
+    def undo_comfort(room: KnownRoom, vote_id: int, who: WhoDep, db: Db):
+        """Hoan tac phieu vua bam nham (chi trong VOTE_UNDO_WINDOW_S giay). Chi phieu cua minh."""
+        require_control(who)
         vote = store.get_vote(db, room, vote_id)
         if vote is None:
             raise ApiError(404, "VOTE_NOT_FOUND", "Khong co phieu nay")
+        if vote["user_id"] is not None and vote["user_id"] != who.user_id and not who.is_admin:
+            raise ApiError(403, "NOT_YOUR_VOTE", "Chi nguoi gui moi hoan tac duoc phieu nay")
         if clock() - vote["ts"] > VOTE_UNDO_WINDOW_S:
             raise ApiError(409, "UNDO_EXPIRED", "Qua thoi gian hoan tac")
         store.delete_vote(db, room, vote_id)
@@ -442,22 +536,21 @@ def create_app(gateway: Gateway | None = None, service: control.CommandService |
         }
 
     @app.get("/api/v1/system/network", tags=["he thong"])
-    def get_network(role: Role):
+    def get_network(who: WhoDep):
         """Che do mang cua Pi va trang thai Wi-Fi do netwatch bao (`status.running` = netwatch con chay)."""
         return network_info()
 
     @app.put("/api/v1/system/network", tags=["he thong"])
-    def set_network(body: NetworkIn, role: Role, db: Db):
-        """Doi che do mang. netwatch ap dung trong khoang 15 s, khong can khoi dong lai dich vu."""
-        if role != "app":
-            raise ApiError(403, "FORBIDDEN", "Chi nguoi dung (khoa app) moi duoc doi che do mang")
+    def set_network(body: NetworkIn, who: WhoDep, db: Db):
+        """Doi che do mang (chi quan tri vien). netwatch ap dung trong khoang 15 s."""
+        require_admin(who)
         try:
             netmode.choose_mode(body.mode)
         except OSError as e:
             raise ApiError(500, "NETWORK_MODE_WRITE_FAILED", f"Khong ghi duoc lua chon: {e}") from e
         log.warning("Doi che do mang -> %s", body.mode)
         # Bao truoc cho cac node (Pi con o mang cu thi moi gui toi duoc): node chuyen theo trong
-        # ~20 s thay vi cho mat broker 120 s. Node cu (firmware < 0.9.0) bo qua ban tin nay.
+        # ~20 s thay vi cho mat broker 120 s. Node cu (firmware < 0.10.0) bo qua ban tin nay.
         status = netmode.read_status(clock()) or {}
         hint = ("backup" if body.mode == netmode.STANDALONE and status.get("state") != "ap" else
                 "home" if body.mode != netmode.STANDALONE and status.get("state") == "ap" else None)
@@ -484,38 +577,183 @@ def create_app(gateway: Gateway | None = None, service: control.CommandService |
             return host
 
     @app.post("/api/v1/pairing", tags=["ghep thiet bi"], status_code=201)
-    def create_pairing(request: Request, role: Role):
-        """Tao ma ghep dung mot lan (5 phut) kem ma QR. Thiet bi moi quet la dang nhap, khong can go khoa."""
-        if role != "app":
-            raise ApiError(403, "FORBIDDEN", "Chi nguoi dung (khoa app) moi duoc them thiet bi")
+    def create_pairing(request: Request, who: WhoDep,
+                       ttl_s: Annotated[int, Query(ge=60, le=PAIR_MAX_TTL_S)] = PAIR_TTL_S):
+        """Tao ma ghep dung mot lan (mac dinh 5 phut) kem ma QR. Thiet bi moi quet la dang nhap.
+
+        Dashboard cung tao mot ma (toi da 15 phut) ngay truoc khi doi mang cua Pi: trinh duyet luu khoa
+        theo TUNG DIA CHI, nen http://10.42.0.1:8000 la "trang moi" va se hoi khoa lai neu khong co ma.
+        """
+        require_control(who)
         now = clock()
         code = secrets.token_urlsafe(12)
         with pair_lock:
-            for c, exp in list(pairing.items()):
+            for c, (exp, _) in list(pairing.items()):
                 if exp <= now:
                     del pairing[c]
-            pairing[code] = now + PAIR_TTL_S
+            pairing[code] = (now + ttl_s, who.user_id)
         port = request.url.port
         base = f"{request.url.scheme}://{lan_host(request)}{f':{port}' if port else ''}/"
         url = f"{base}#pair={code}"              # sau dau # : trinh duyet KHONG gui len may chu, khong vao log
         qr = segno.make(url, error="m")
-        return {"code": code, "url": url, "expires_in_s": PAIR_TTL_S,
+        return {"code": code, "url": url, "expires_in_s": ttl_s,
                 "qr": qr.svg_data_uri(scale=6, border=2, dark="#12232D", light="#FFFFFF")}
 
     @app.post("/api/v1/pairing/claim", tags=["ghep thiet bi"])
-    def claim_pairing(body: PairClaimIn):
-        """Doi ma ghep lay khoa truy cap. KHONG can khoa. Ma dung xong hoac het han la vo hieu."""
+    def claim_pairing(body: PairClaimIn, db: Db):
+        """Doi ma ghep lay phien dang nhap cua nguoi tao ma (hoac khoa app, neu ma tao bang khoa).
+
+        KHONG can dang nhap. Ma dung xong hoac het han la vo hieu.
+        """
         now = clock()
         with pair_lock:
             pair_fails[:] = [t for t in pair_fails if now - t < 60]
             if len(pair_fails) >= PAIR_MAX_FAILS_PER_MIN:
                 raise ApiError(429, "PAIR_TOO_MANY", "Nhap sai qua nhieu lan, cho mot phut", 60)
-            exp = pairing.pop(body.code, None)
-            if exp is None or exp <= now:
+            exp, user_id = pairing.pop(body.code, (0.0, None))
+            if exp <= now:
                 pair_fails.append(now)
                 raise ApiError(410, "PAIR_INVALID", "Ma ghep khong dung, da dung roi hoac da het han")
         log.info("Them mot thiet bi bang ma ghep")
-        return {"api_key": api_key}
+        if user_id is None:
+            return {"api_key": api_key}
+        if db.execute("SELECT 1 FROM users WHERE id=?", (user_id,)).fetchone() is None:
+            raise ApiError(410, "PAIR_INVALID", "Tai khoan tao ma khong con nua")
+        return {"token": accounts.new_session(db, user_id, now, "Ghep bang ma QR")}
+
+    # ------------------------------------------------------------ thiet lap lan dau, tai khoan
+    def user_out(u: dict) -> dict:
+        return {"username": u["username"], "display_name": u["display_name"], "role": u["role"],
+                "created_ts": u["created_ts"], "approved_ts": u["approved_ts"], "approved_by": u["approved_by"]}
+
+    def account_error(e: accounts.AccountError) -> ApiError:
+        status = {"USERNAME_TAKEN": 409, "USER_NOT_FOUND": 404, "LAST_ADMIN": 409}.get(e.code, 422)
+        return ApiError(status, e.code, e.message)
+
+    @app.get("/api/v1/setup/status", tags=["tai khoan"])
+    def setup_status(db: Db):
+        """Khong can dang nhap. `claimed` = da co quan tri vien; `device_id` de app nhan dung Pi."""
+        return {"claimed": accounts.has_admin(db), "device_id": device_id, "version": __version__}
+
+    @app.post("/api/v1/setup", tags=["tai khoan"], status_code=201)
+    def first_setup(body: SetupIn, db: Db):
+        """Tao tai khoan quan tri dau tien bang ma thiet lap tren tem. Chi dung duoc khi chua co chu."""
+        now = clock()
+        with auth_lock:
+            setup_fails[:] = [t for t in setup_fails if now - t < 60]
+            if len(setup_fails) >= SETUP_MAX_FAILS_PER_MIN:
+                raise ApiError(429, "SETUP_TOO_MANY", "Nhap sai ma qua nhieu lan, cho mot phut", 60)
+            if accounts.has_admin(db):
+                raise ApiError(409, "ALREADY_CLAIMED",
+                               "Pi da co quan tri vien. Giu nut reset tren Pi 10 giay de thiet lap lai")
+            if not accounts.setup_code_matches(body.code, setup_code):
+                setup_fails.append(now)
+                raise ApiError(403, "SETUP_CODE_INVALID", "Ma thiet lap khong dung (xem tem dan tren Pi)")
+            try:
+                user = accounts.create_user(db, body.username, body.password, accounts.ADMIN, now,
+                                            body.display_name, approved_by="ma thiet lap")
+            except accounts.AccountError as e:
+                raise account_error(e) from e
+        log.warning("Thiet lap lan dau: quan tri vien '%s'", user["username"])
+        return {"token": accounts.new_session(db, user["id"], now, body.device), "user": user_out(user)}
+
+    @app.post("/api/v1/auth/register", tags=["tai khoan"], status_code=201)
+    def register(body: RegisterIn, db: Db):
+        """Tu dang ky. Tai khoan o trang thai cho duyet cho toi khi quan tri vien cap quyen."""
+        now = clock()
+        with auth_lock:
+            registrations[:] = [t for t in registrations if now - t < 60]
+            if len(registrations) >= REGISTER_MAX_PER_MIN:
+                raise ApiError(429, "REGISTER_TOO_MANY", "Qua nhieu dang ky, cho mot phut", 60)
+            if not accounts.has_admin(db):
+                raise ApiError(409, "NOT_CLAIMED", "Pi chua duoc thiet lap: tao tai khoan quan tri bang ma tren tem")
+            pending = db.execute("SELECT COUNT(*) FROM users WHERE role=?", (accounts.PENDING,)).fetchone()[0]
+            if pending >= MAX_PENDING:
+                raise ApiError(429, "TOO_MANY_PENDING", "Qua nhieu tai khoan cho duyet; nho quan tri vien duyet truoc")
+            registrations.append(now)
+        try:
+            user = accounts.create_user(db, body.username, body.password, accounts.PENDING, now, body.display_name)
+        except accounts.AccountError as e:
+            raise account_error(e) from e
+        log.info("Dang ky moi, cho duyet: '%s'", user["username"])
+        return {"status": "pending", "user": user_out(user)}
+
+    @app.post("/api/v1/auth/login", tags=["tai khoan"])
+    def login(body: LoginIn, db: Db):
+        """Dang nhap, tra ve phien (`token`) dung cho header Authorization: Bearer."""
+        now = clock()
+        name = accounts.normalize_username(body.username)
+        with auth_lock:
+            fails = login_fails.setdefault(name, [])
+            fails[:] = [t for t in fails if now - t < LOGIN_WINDOW_S]
+            if len(fails) >= LOGIN_MAX_FAILS:
+                wait = round(LOGIN_WINDOW_S - (now - fails[0]))
+                raise ApiError(429, "LOGIN_LOCKED", "Sai mat khau qua nhieu lan, thu lai sau", max(1, wait))
+        user = accounts.authenticate(db, name, body.password)
+        if user is None:
+            with auth_lock:
+                login_fails.setdefault(name, []).append(now)
+            raise ApiError(401, "LOGIN_FAILED", "Sai ten dang nhap hoac mat khau")
+        with auth_lock:
+            login_fails.pop(name, None)
+        if user["role"] == accounts.PENDING:
+            raise ApiError(403, "ACCOUNT_PENDING", "Tai khoan dang cho quan tri vien duyet")
+        return {"token": accounts.new_session(db, user["id"], now, body.device), "user": user_out(user)}
+
+    @app.post("/api/v1/auth/logout", tags=["tai khoan"], status_code=204)
+    def logout(who: WhoDep, db: Db):
+        if who.token:
+            accounts.end_session(db, who.token)
+
+    @app.get("/api/v1/auth/me", tags=["tai khoan"])
+    def me(who: WhoDep, db: Db):
+        if who.kind == "key":
+            return {"username": None, "display_name": "Khoa API", "role": who.role, "kind": "key"}
+        out = user_out(accounts.get_user(db, who.username))
+        out["kind"] = "user"
+        out["sessions"] = accounts.list_sessions(db, who.user_id)
+        return out
+
+    @app.put("/api/v1/auth/password", tags=["tai khoan"])
+    def change_password(body: PasswordIn, who: WhoDep, db: Db):
+        """Doi mat khau; dang xuat moi thiet bi khac."""
+        if who.kind != "user":
+            raise ApiError(403, "FORBIDDEN", "Khoa API khong co mat khau")
+        if accounts.authenticate(db, who.username, body.old_password) is None:
+            raise ApiError(403, "WRONG_PASSWORD", "Mat khau hien tai khong dung")
+        try:
+            accounts.change_password(db, who.user_id, body.new_password, who.token)
+        except accounts.AccountError as e:
+            raise account_error(e) from e
+        return {"changed": True}
+
+    @app.get("/api/v1/users", tags=["tai khoan"])
+    def users(who: WhoDep, db: Db):
+        """Moi tai khoan, cho duyet len dau (chi quan tri vien)."""
+        require_admin(who)
+        return {"items": [user_out(u) for u in accounts.list_users(db)]}
+
+    @app.put("/api/v1/users/{username}", tags=["tai khoan"])
+    def set_user_role(username: str, body: RoleIn, who: WhoDep, db: Db):
+        """Cap quyen (duyet tai khoan cho duyet) hoac doi quyen."""
+        require_admin(who)
+        try:
+            user = accounts.set_role(db, username, body.role, who.username or "khoa API", clock())
+        except accounts.AccountError as e:
+            raise account_error(e) from e
+        log.warning("'%s' cap quyen %s cho '%s'", who.username, body.role, user["username"])
+        return user_out(user)
+
+    @app.delete("/api/v1/users/{username}", tags=["tai khoan"])
+    def remove_user(username: str, who: WhoDep, db: Db):
+        """Xoa tai khoan va moi phien cua no."""
+        require_admin(who)
+        try:
+            accounts.delete_user(db, username)
+        except accounts.AccountError as e:
+            raise account_error(e) from e
+        log.warning("'%s' xoa tai khoan '%s'", who.username, username)
+        return {"deleted": accounts.normalize_username(username)}
 
     # Dashboard (cac file tinh). Gan SAU CUNG de khong che cac duong dan /api va /docs.
     if WEB_DIR.is_dir():

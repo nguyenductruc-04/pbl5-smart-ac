@@ -25,7 +25,7 @@ Switching from the dashboard ("Mạng của Pi"): the API (running as the normal
 
 The Pi has no RTC battery, and in `standalone` it has no Internet for NTP, so after a reboot its clock can be wrong. `/health` now returns the gateway time and the dashboard warns when it differs from the phone by more than 2 minutes, because telemetry and comfort votes would be stored with wrong timestamps.
 
-### Node (firmware 0.9.0)
+### Node (firmware 0.10.0)
 
 - Remembers in NVS whether the last successful connection was the backup AP and tries that network **first** on boot.
 - While on the backup AP **and connected to the broker**, it never leaves. The Pi has one Wi-Fi radio, so while it serves the AP the broker is not on the home network; when the Pi goes home it stops the AP, the node loses Wi-Fi and reconnects through the normal path (last network first, then the other).
@@ -40,6 +40,8 @@ No mode switch is needed on the node: it follows whatever network the Pi provide
 - A signed-in dashboard can create a pairing code (`POST /pairing`): random (96 bits), single use, valid 5 minutes, kept only in RAM.
 - The QR code encodes `http://<pi>:8000/#pair=<code>`. The code sits after `#`, so browsers never send it to the server or write it to logs. When the page was opened as `gateway.local`, the URL uses the Pi's IP on the same interface instead, because `.local` names often do not resolve on Android.
 - The new device exchanges the code for the app key (`POST /pairing/claim`, no key needed) and stores it like a typed key. Failed claims are limited to 10 per minute.
+
+Browsers store the key per address (origin), so `http://gateway.local:8000`, the Pi's home IP and `http://10.42.0.1:8000` each ask for it once. To keep a dashboard switch to standalone from ending at a key prompt, the dashboard creates a 15-minute pairing code just before switching and shows "Mở dashboard ở mạng mới" with `http://10.42.0.1:8000/#pair=<code>` once the page loses the Pi.
 
 Considered and postponed: user accounts with roles (owner / member / guest). They are the right long-term answer and would let comfort votes belong to a person, but need password storage, sessions and a first-run setup (planned as a later release). Pairing removes most of the day-to-day friction now and keeps the security model unchanged (one app key per installation).
 

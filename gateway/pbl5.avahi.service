@@ -1,0 +1,18 @@
+<?xml version="1.0" standalone='no'?>
+<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+<!-- Quang ba Pi trong mang LAN de app Android tu tim thay, khong phai go dia chi IP.
+     sudo cp pbl5.avahi.service /etc/avahi/services/pbl5.service   (avahi tu nap lai)
+     Kiem tra: avahi-browse -rt _pbl5._tcp
+     Doi cong 8000 neu API_PORT trong .env khac. -->
+<service-group>
+  <name replace-wildcards="yes">Dieu hoa thong minh (%h)</name>
+  <service>
+    <type>_pbl5._tcp</type>
+    <port>8000</port>
+    <txt-record>api=/api/v1</txt-record>
+  </service>
+  <service>
+    <type>_http._tcp</type>
+    <port>8000</port>
+  </service>
+</service-group>

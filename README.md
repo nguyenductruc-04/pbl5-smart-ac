@@ -35,10 +35,11 @@ Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 | 4 | Safety Layer + REST API (FastAPI) | Done (v0.6.0), tested on hardware |
 | 5 | Web dashboard + comfort votes | Done (v0.7.0), tested on hardware |
 | 6 | Comfort model + suggestions (ASHRAE prior, personalised from votes) | Done (v0.8.0); evaluation on real votes pending data |
+| 6+ | Missed-IR recovery, network modes, QR pairing, user accounts with first setup by label and a reset button | v0.10.0 |
 
 ## Dashboard
 
-Served by the Raspberry Pi itself at `http://gateway.local:8000`; works without Internet. Every command goes through the Safety Layer, and refusals are explained in plain language. The "Bạn thấy thế nào?" buttons record comfort votes, the training labels for the comfort model.
+Served by the Raspberry Pi itself at `http://gateway.local:8000`; works without Internet. Every command goes through the Safety Layer, and refusals are explained in plain language. Each person signs in with their own account (admin, member or guest); the first admin claims the Pi with the code on its label, and holding a button on the Pi for 10 s resets the accounts ([ADR 0007](docs/adr/0007-user-accounts.md)). The "Bạn thấy thế nào?" buttons record comfort votes, the training labels for the comfort model.
 
 | Desktop | Phone (dark mode) |
 |---|---|

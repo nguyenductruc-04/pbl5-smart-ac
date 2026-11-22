@@ -7,7 +7,7 @@ Wi-Fi watchdog cho Raspberry Pi (xem docs/adr/0001-node-wifi-provisioning.md).
   Khong cho NetworkManager tu ket noi, vi NM co the da chan tu ket noi (that bai nhieu lan,
   hoac nguoi dung vua "connection down") -> Pi se ket o che do AP mai mai.
 
-Che do (v0.9.0, xem netmode.py): mac dinh la NETWORK_MODE trong gateway/.env; doi duoc tu dashboard,
+Che do (v0.10.0, xem netmode.py): mac dinh la NETWORK_MODE trong gateway/.env; doi duoc tu dashboard,
 netwatch doc lai moi vong nen khong can khoi dong lai.
   auto        (mac dinh) nhu tren
   standalone  bat AP NGAY, khong bao gio quay ve Wi-Fi nha: mang thu nghiem / demo chi co Pi va node

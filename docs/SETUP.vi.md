@@ -419,7 +419,7 @@ sudo systemctl restart pbl5-gateway
 
 Nếu điện thoại không mở được `gateway.local`, dùng địa chỉ IP của Pi (xem bằng `hostname -I` trên Pi).
 
-Lần đầu, trang hỏi khóa: nhập giá trị `API_KEY` (xem bằng `grep "^API_KEY=" ~/pbl5-smart-ac/gateway/.env`). Khóa được lưu trong trình duyệt đó. Trên điện thoại, chọn "Thêm vào màn hình chính" trong menu trình duyệt để mở như một ứng dụng.
+Lần đầu, trang hiện **Thiết lập lần đầu**: tạo tài khoản quản trị bằng mã trên tem (Bước 12.2–12.3). Trước bản 0.10.0 trang hỏi khóa `API_KEY`; khóa vẫn dùng được qua **Dùng khóa API** ở trang đăng nhập. Trên điện thoại, chọn "Thêm vào màn hình chính" trong menu trình duyệt để mở như một ứng dụng.
 
 ### 9.3 Kiểm thử
 
@@ -450,7 +450,7 @@ curl -s -H "X-API-Key: $API_KEY" "http://localhost:8000/api/v1/rooms/room01/comf
 ### 9.5 Giới hạn đã biết
 
 - Trang hỏi lại Pi mỗi 3 giây, nên thay đổi từ remote hoặc thiết bị khác hiện chậm tối đa 3 giây.
-- HTTP thường và khóa tĩnh: chỉ dùng trong mạng nội bộ, mạng dự phòng hoặc qua Tailscale. Nếu mất điện thoại đã lưu khóa, đổi `API_KEY` trong `.env` rồi khởi động lại dịch vụ.
+- HTTP thường và khóa tĩnh: chỉ dùng trong mạng nội bộ, mạng dự phòng hoặc qua Tailscale. Nếu mất điện thoại đã lưu khóa, đổi `API_KEY` trong `.env` rồi khởi động lại dịch vụ. Từ bản 0.10.0: mất điện thoại thì quản trị viên xóa hoặc hạ quyền tài khoản đó, hoặc chính bạn đổi mật khẩu (đăng xuất mọi thiết bị khác).
 
 
 ## Bước 10: Gợi ý nhiệt độ (mô hình tiện nghi)
@@ -521,16 +521,16 @@ sudo systemctl restart pbl5-netwatch
 
 `journalctl -u pbl5-netwatch -n 5` phải có `che do=auto`.
 
-### 11.2 Nạp firmware 0.9.0 cho node
+### 11.2 Nạp firmware 0.10.0 cho node
 
-Mở `firmware/room_node/room_node.ino`, nạp như mọi lần (`config.h` giữ nguyên). Serial Monitor phải in `=== PBL5 Room Node 0.9.0`.
+Mở `firmware/room_node/room_node.ino`, nạp như mọi lần (`config.h` giữ nguyên). Serial Monitor phải in `=== PBL5 Room Node 0.10.0`.
 
 ### 11.3 Kiểm thử
 
 | # | Thao tác | Kết quả đúng |
 |---|---|---|
-| 1 | Trên laptop, bấm **Thêm thiết bị**, dùng camera điện thoại quét mã QR (điện thoại cùng mạng Wi-Fi với Pi) | Điện thoại mở thẳng dashboard, không hỏi khóa |
-| 2 | Quét lại đúng mã đó bằng thiết bị khác (hoặc tab ẩn danh) | Hỏi khóa, kèm "Mã QR đã dùng rồi hoặc đã hết hạn…" |
+| 1 | Trên laptop, bấm **Thêm thiết bị**, dùng camera điện thoại quét mã QR (điện thoại cùng mạng Wi-Fi với Pi) | Điện thoại mở thẳng dashboard, không hỏi đăng nhập (từ bản 0.10.0: đăng nhập thành chính người tạo mã) |
+| 2 | Quét lại đúng mã đó bằng thiết bị khác (hoặc tab ẩn danh) | Hiện trang đăng nhập, kèm "Mã QR đã dùng rồi hoặc đã hết hạn…" |
 | 3 | Mở **Điều hòa không làm theo?** → **Gửi lại lệnh** | "Đã gửi lại: …". Serial node có dòng `[RX] cmd_id=…`. Nhật ký ghi "Gửi lại. Đã phát lệnh" |
 | 4 | Bật → Tắt → Bật lại trong vòng 3 phút | Hiện khung hỏi "Máy nén vừa tắt… Vẫn bật?". Bấm **Vẫn bật**: lệnh được phát, nhật ký ghi "Bạn xác nhận bật lại sớm" |
 | 5 | Khi dashboard đang hiện điều hòa bật, bấm **Thực tế điều hòa đang tắt** | Nút chính đổi thành "Bật điều hòa". Serial node **không** có dòng `[RX]` mới. Nhật ký ghi "Bạn báo điều hòa thực tế đang tắt" |
@@ -543,7 +543,7 @@ Mở `firmware/room_node/room_node.ino`, nạp như mọi lần (`config.h` gi�
 
 1. Ở nhà: trên dashboard chọn **Mạng của Pi → Độc lập → Chuyển**. Lựa chọn được lưu, nên rút điện mang đi Pi vẫn ở chế độ độc lập.
 2. Mang theo Pi, node và một sạc dự phòng hai cổng.
-3. Cắm điện, đợi khoảng 1 phút. Điện thoại vào `SmartAC-Backup`, mở `http://10.42.0.1:8000`. Nếu điện thoại chưa từng đăng nhập, quét QR từ một thiết bị đã đăng nhập, hoặc nhập khóa.
+3. Cắm điện, đợi khoảng 1 phút. Điện thoại vào `SmartAC-Backup`, mở `http://10.42.0.1:8000`. Nếu điện thoại chưa đăng nhập ở địa chỉ này, đăng nhập bằng tài khoản, hoặc quét QR từ một thiết bị đã đăng nhập.
 4. Nếu dashboard báo **đồng hồ Raspberry Pi lệch**, đừng ghi phiếu cảm nhận trong buổi đó (giờ ghi sẽ sai). Pi không có pin đồng hồ, và ở chế độ độc lập không có Internet để chỉnh giờ.
 5. Về nhà: mở `http://10.42.0.1:8000`, chọn **Tự động → Chuyển**. Quên bước này thì Pi sẽ không quay về Wi-Fi nhà.
 
@@ -559,11 +559,151 @@ Ba chế độ:
 
 ### 11.5 Giới hạn đã biết
 
-- Mã QR cho thiết bị mới **toàn quyền** như khóa API. Chỉ cho người tin cậy quét, đừng chụp gửi mã.
+- Mã QR **Thêm thiết bị** đăng nhập thiết bị kia thành chính bạn. Chỉ quét trên thiết bị của mình; người khác nên tự tạo tài khoản (Bước 12).
 - "Vẫn bật" bỏ qua thời gian nghỉ của máy nén do Pi tính; điều hòa vẫn tự có trễ bảo vệ riêng (phần lớn các máy), nhưng đừng bật tắt liên tục.
 - Đồng bộ trạng thái chỉ sửa màn hình; nếu báo sai thì lệnh tiếp theo hoặc lần bấm remote sẽ sửa lại.
 
+## Bước 12: Tài khoản, tem thiết lập và nút reset
+
+Lý do thiết kế: [ADR 0007](adr/0007-user-accounts.md). Từ bản này mỗi người có tài khoản riêng thay cho khóa API dùng chung:
+
+| Quyền | Được làm |
+|---|---|
+| **Quản trị viên** | Mọi thứ: điều khiển, đổi chế độ mạng, duyệt và cấp quyền tài khoản |
+| **Thành viên** | Điều khiển điều hòa, ghi phiếu cảm nhận, thêm thiết bị của mình bằng QR |
+| **Khách** | Chỉ xem |
+
+Giống thiết bị thật: người đầu tiên **nhận chủ** Pi bằng mã in trên tem; người khác tự tạo tài khoản rồi chờ quản trị viên duyệt; quên mật khẩu quản trị thì **giữ nút reset 10 giây**.
+
+### 12.1 Cập nhật Pi
+
+Không thêm thư viện mới:
+
+```bash
+cd ~/pbl5-smart-ac && git pull
+sudo systemctl restart pbl5-gateway
+```
+
+Database cũ được nâng cấp tự động (thêm bảng tài khoản, thêm cột người gửi cho phiếu cảm nhận); dữ liệu cũ giữ nguyên.
+
+### 12.2 In tem thiết lập
+
+Trên Pi, **không dùng sudo** (file mã phải thuộc user `truc0404`):
+
+```bash
+cd ~/pbl5-smart-ac/gateway
+.venv/bin/python setup_label.py
+```
+
+Script hỏi mật khẩu Wi-Fi `SmartAC-Backup` để in lên tem (Enter để bỏ qua, viết tay sau), rồi in mã thiết lập và mã QR ra terminal, và ghi file `setup_label.svg` (70 × 45 mm). Lấy file về laptop để in:
+
+```bash
+# chạy trên laptop
+scp truc0404@gateway.local:~/pbl5-smart-ac/gateway/setup_label.svg .
+```
+
+Mở file bằng trình duyệt, in ở tỉ lệ 100 %, dán vào mặt dưới hoặc bên trong hộp Pi, rồi xóa file ở cả hai máy (`rm setup_label.svg`). Tem có hai mã QR: mã bên trái cho app Android (bản 0.11.0), mã bên phải để camera điện thoại vào thẳng Wi-Fi `SmartAC-Backup`.
+
+**Tem là bí mật**, giống mật khẩu Wi-Fi in sau router: đừng chụp gửi lên mạng hay đưa vào báo cáo (ảnh minh họa thì che mã). Mã thiết lập nằm trong `gateway/setup_code`, không vào git.
+
+### 12.3 Thiết lập lần đầu (nhận chủ)
+
+1. Mở `http://gateway.local:8000`. Dashboard hiện **Thiết lập lần đầu**.
+2. Nhập mã trên tem (không phân biệt hoa thường, có hay không có gạch ngang đều được), tên đăng nhập (vd. `truc`), mật khẩu ít nhất 8 ký tự.
+3. Bấm **Tạo tài khoản quản trị**: vào thẳng dashboard, góc trên hiện tên của bạn.
+
+Từ lúc này trang thiết lập bị khóa: người khác có tem cũng không tạo được quản trị viên nữa.
+
+Các trình duyệt đã lưu khóa API từ trước vẫn dùng được (khóa có quyền quản trị). Muốn chuyển sang tài khoản: bấm tên ở góc trên (hiện **Khóa API**) → **Đăng xuất** → đăng nhập.
+
+### 12.4 Thêm người dùng
+
+1. Người kia mở dashboard trên điện thoại của họ (cùng mạng với Pi) → **Tạo tài khoản** → điền tên, mật khẩu → **Gửi yêu cầu**.
+2. Trên dashboard của bạn hiện "Có 1 tài khoản đang chờ bạn duyệt" → **Xem** → trong mục **Thành viên** bấm **Duyệt thành viên** hoặc **Duyệt khách** (hoặc **Từ chối**).
+3. Người kia đăng nhập bằng tên và mật khẩu vừa tạo.
+
+Đổi quyền hoặc xóa tài khoản bất cứ lúc nào trong mục **Thành viên**; thay đổi có hiệu lực ngay ở lần tải tiếp theo của họ. Luôn phải còn ít nhất một quản trị viên.
+
+Đổi mật khẩu: bấm tên ở góc trên → **Đổi mật khẩu**. Các thiết bị khác của bạn sẽ bị đăng xuất.
+
+### 12.5 Nút reset
+
+Cần: **1 nút nhấn 4 chân 6×6 mm hoặc 12×12 mm** (loại nào cũng được) và **2 dây cái–cái** (hoặc hàn dây vào nút). Không cần điện trở: Pi dùng điện trở kéo lên bên trong.
+
+| Chân nút | Nối vào Pi 5 |
+|---|---|
+| Một chân | **GPIO 17**, chân vật lý số **11** |
+| Chân chéo đối diện | **GND**, chân vật lý số **9** |
+
+Nút 4 chân: hai chân cùng một cạnh dài thường nối sẵn với nhau, nên dùng hai chân **chéo nhau** cho chắc. Chân 1 là chân góc gần khe thẻ nhớ, hàng trong (số lẻ); chân 9 và 11 là chân thứ 5 và thứ 6 của hàng đó tính từ chân 1. Không chắc thì gõ `pinout` trên Pi để xem sơ đồ chân.
+
+Cài dịch vụ:
+
+```bash
+cd ~/pbl5-smart-ac/gateway
+groups truc0404                      # phải có "gpio"; nếu chưa: sudo usermod -aG gpio truc0404
+python3 -c "import gpiozero"         # Raspberry Pi OS có sẵn; nếu lỗi: sudo apt install python3-gpiozero
+sudo cp pbl5-reset.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now pbl5-reset
+journalctl -u pbl5-reset -f
+```
+
+Log phải có `Cho nut reset o GPIO 17`. Nhấn nhanh một lần: log ghi `Nut reset duoc nhan`. Giữ 10 giây: `da xoa N tai khoan`.
+
+Reset **chỉ xóa tài khoản và phiên đăng nhập**, đồng thời bỏ chế độ mạng đã chọn trên dashboard (về `NETWORK_MODE` trong `.env`). Số đo, nhật ký lệnh và phiếu cảm nhận giữ nguyên. Mã thiết lập không đổi nên tem cũ vẫn dùng được.
+
+### 12.6 Cho app Android tự tìm thấy Pi
+
+```bash
+cd ~/pbl5-smart-ac/gateway
+sudo cp pbl5.avahi.service /etc/avahi/services/pbl5.service
+sudo apt install -y avahi-utils      # chỉ để kiểm tra
+avahi-browse -rt _pbl5._tcp
+```
+
+Phải thấy `Dieu hoa thong minh (gateway)` với `port = [8000]`. Avahi tự nạp file, không cần khởi động lại.
+
+### 12.7 Kiểm thử
+
+| # | Thao tác | Kết quả đúng |
+|---|---|---|
+| 1 | Pi chưa có chủ: mở dashboard | Hiện **Thiết lập lần đầu** |
+| 2 | Nhập sai mã trên tem | "Mã thiết lập không đúng…" |
+| 3 | Nhập đúng mã, tạo tài khoản quản trị | Vào dashboard, góc trên hiện tên bạn, có mục **Thành viên** |
+| 4 | Thiết bị thứ hai: **Tạo tài khoản** `lan`, rồi thử đăng nhập | "Tài khoản đang chờ quản trị viên duyệt…" |
+| 5 | Quản trị viên bấm **Duyệt khách** cho `lan`; `lan` đăng nhập | `lan` xem được nhưng nút bật/tắt, nhiệt độ, phiếu cảm nhận đều mờ, có thông báo "tài khoản khách" |
+| 6 | Đổi `lan` thành **Thành viên**; `lan` tải lại trang | `lan` điều khiển được; mục **Mạng của Pi** vẫn không đổi được (chỉ quản trị viên) |
+| 7 | `lan` ghi một phiếu cảm nhận | `curl` phiếu mới nhất (xem dưới) có `"username": "lan"` |
+| 8 | Nhập sai mật khẩu 5 lần cho một tên | Lần thứ 6: "Sai mật khẩu quá nhiều lần… Thử lại sau 5:00" |
+| 9 | Giữ nút reset 10 giây, tải lại dashboard | Hiện **Thiết lập lần đầu**; biểu đồ, nhật ký vẫn còn |
+
+```bash
+# Kiểm thử 7 (trên Pi)
+KEY=$(grep '^API_KEY=' ~/pbl5-smart-ac/gateway/.env | cut -d= -f2)
+curl -s -H "X-API-Key: $KEY" "http://localhost:8000/api/v1/rooms/room01/comfort?limit=1"
+```
+
+### 12.8 Giới hạn đã biết
+
+- Dashboard vẫn chạy `http://`, không mã hóa. Dùng trong mạng nhà và mạng `SmartAC-Backup` (có mật khẩu WPA2); không mở cổng ra Internet.
+- Ai có tem và vào được mạng của Pi thì nhận chủ được **khi Pi chưa có chủ hoặc vừa reset**. Sau khi thiết lập, tem không còn tác dụng cho tới lần reset sau.
+- Ai cầm được Pi thì vẫn có toàn quyền (nút reset, thẻ nhớ), như mọi thiết bị trong nhà.
+
 ## Xử lý lỗi thường gặp
+
+**Dashboard trên điện thoại báo `ERR_SSL_PROTOCOL_ERROR` / "không thể cung cấp kết nối an toàn"**
+- Trình duyệt (thường là Brave) tự đổi `http://` thành `https://`, còn dashboard chạy `http://`. Gõ đầy đủ `http://10.42.0.1:8000`; nếu vẫn lỗi, bấm biểu tượng sư tử và tắt Shields cho trang này, hoặc tắt "Nâng cấp kết nối lên HTTPS" trong cài đặt Brave, hoặc dùng Chrome.
+
+**Vào `SmartAC-Backup` rồi mà trang không tải được**
+- Mạng của Pi không có Internet, Android có thể tự chuyển sang dữ liệu di động. Khi điện thoại hỏi "Mạng này không có Internet. Vẫn kết nối?", chọn **Có** và **Không hỏi lại**, hoặc tắt dữ liệu di động khi thử nghiệm.
+
+**Mở `http://10.42.0.1:8000` thì dashboard bắt đăng nhập lại, dù ở nhà đã đăng nhập**
+- Trình duyệt nhớ phiên đăng nhập **theo từng địa chỉ**: `gateway.local`, IP của Pi trong mạng nhà và `10.42.0.1` là ba "trang" khác nhau. Đăng nhập lại bằng tên và mật khẩu (từ bản 0.10.0 không còn phải tìm khóa API). Khi chuyển sang **Độc lập** trên dashboard, bấm đường dẫn **"Mở dashboard ở mạng mới"** hiện ở đầu trang thì không phải đăng nhập lại. App Android (bản 0.11.0) sẽ không gặp chuyện này.
+
+**Quên mật khẩu**
+- Người khác: quản trị viên xóa tài khoản đó trong mục **Thành viên**, người đó tạo lại.
+- Quản trị viên duy nhất: giữ nút reset trên Pi 10 giây (Bước 12.5), rồi thiết lập lại bằng mã trên tem. Hoặc, nếu còn SSH vào Pi: dùng khóa API trên dashboard (**Dùng khóa API** ở trang đăng nhập, khóa là `API_KEY` trong `gateway/.env`) rồi đặt quyền quản trị cho tài khoản khác.
 
 | Hiện tượng | Nguyên nhân hay gặp |
 |---|---|
@@ -601,4 +741,4 @@ ACL chỉ cho mỗi node ghi và đọc topic của **chính phòng mình**: nod
 3. **Milestone 3 – Cảm biến thật:** SHT3x (I2C, chân 8/9) và HLK-LD2420 (v0.5.0).
 4. **Milestone 4 – Safety Layer + API:** FastAPI, trạng thái dự kiến, chống short-cycling, phân quyền (v0.6.0).
 5. **Milestone 5 – Dashboard và phiếu cảm nhận** (v0.7.0).
-6. **Milestone 6 – Mô hình tiện nghi và gợi ý nhiệt độ** (v0.8.0).
+6. **Milestone 6 – Mô hình tiện nghi và gợi ý nhiệt độ** (v0.8.0). Mở rộng: lệnh bị bỏ lỡ, chế độ mạng, tài khoản người dùng (v0.10.0).

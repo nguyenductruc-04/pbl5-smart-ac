@@ -86,7 +86,7 @@ def test_home_connections_never_returns_ap():
     assert nw.home_connections("SmartAC-Backup:802-11-wireless:yes:99\n") == []
 
 
-# ------------------------------------------------------------------ che do mang (v0.9.0)
+# ------------------------------------------------------------------ che do mang (v0.10.0)
 def test_standalone_starts_ap_immediately_and_stays():
     mem = Memory()
     assert decide(HOME, 0, mem, nw.STANDALONE) == START_AP          # ke ca dang co Wi-Fi nha

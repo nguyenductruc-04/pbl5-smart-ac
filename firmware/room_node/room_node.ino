@@ -34,7 +34,7 @@
 #define SENSOR_SHT4X 4
 #include "config.h"
 
-#define FW_VERSION "0.9.0"
+#define FW_VERSION "0.10.0"
 
 // config.h cu (truoc v0.5.0) chua co cac muc duoi day -> dung mac dinh va bao tren Serial luc khoi dong
 // (Arduino IDE mac dinh tat canh bao bien dich nen #warning khong hien)
@@ -142,7 +142,7 @@ void loadWifiConfig() {
   prefs.end();
 }
 
-// Nho mang vua ket noi thanh cong: lan khoi dong sau thu mang do TRUOC (v0.9.0).
+// Nho mang vua ket noi thanh cong: lan khoi dong sau thu mang do TRUOC (v0.10.0).
 // Mang di thu nghiem chi co Pi phat Wi-Fi -> khoi dong la vao ngay, khong mat ~20 s cho Wi-Fi nha.
 void rememberNetwork(bool backup) {
   onBackup = backup;
@@ -269,7 +269,7 @@ void connectWiFi() {
   startMdnsOnce();
 }
 
-// Dang o mang du phong: co nen thu quay ve Wi-Fi nha khong? (v0.9.0)
+// Dang o mang du phong: co nen thu quay ve Wi-Fi nha khong? (v0.10.0)
 // - Dang noi duoc broker -> O LAI. Pi chi co mot card Wi-Fi: khi Pi phat mang du phong thi Pi (va broker)
 //   khong o tren Wi-Fi nha, ve nha chi lam mat ket noi. Khi Pi ve nha, Pi tat mang du phong -> node mat
 //   Wi-Fi -> connectWiFi() tu tim lai (thu mang cu truoc, roi Wi-Fi nha).
@@ -289,7 +289,7 @@ void maybeReturnHome() {
   if (!tryHome()) tryBackup();   // that bai ca hai thi loop() tu xu ly
 }
 
-// Pi bao truoc "sap sang mang rieng" (nguoi dung doi che do tren dashboard, v0.9.0):
+// Pi bao truoc "sap sang mang rieng" (nguoi dung doi che do tren dashboard, v0.10.0):
 // doi Pi doi mang (~15 s) roi chu dong sang mang du phong, khong cho mat broker 120 s.
 void maybeFollowHint() {
   if (!netHint) return;
@@ -711,7 +711,7 @@ void handleCommand(byte* payload, unsigned int len) {
 
 // ------------------------------------------------------------------
 // Nhan cau hinh Wi-Fi tu Pi: {"cfg_id":"...","wifi":{"ssid":"...","pass":"..."}}
-// hoac loi bao truoc doi mang: {"net":"backup"} / {"net":"home"} (v0.9.0)
+// hoac loi bao truoc doi mang: {"net":"backup"} / {"net":"home"} (v0.10.0)
 void handleConfig(byte* payload, unsigned int len) {
   if (len == 0) return;                       // Pi vua xoa ban tin retained
   JsonDocument doc;
