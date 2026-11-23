@@ -7,7 +7,7 @@ The dashboard at `http://gateway.local:8000/` is a client of this API ([ADR 0003
 
 Design rationale: [ADR 0002](adr/0002-safety-layer-and-control-api.md).
 
-## Authentication (v0.10.0, [ADR 0007](adr/0007-user-accounts.md))
+## Authentication (v0.9.0, [ADR 0007](adr/0007-user-accounts.md))
 
 People sign in with an account; every endpoint except `/health`, `/setup/status`, `/setup`, `/auth/register`, `/auth/login` and `/pairing/claim` needs one of:
 
@@ -30,7 +30,7 @@ Plain HTTP: use on the local network or over Tailscale only.
 
 ```bash
 curl http://gateway.local:8000/api/v1/setup/status
-# {"claimed": false, "device_id": "a1b2c3d4", "version": "0.10.0"}
+# {"claimed": false, "device_id": "a1b2c3d4", "version": "0.9.0"}
 
 curl -X POST http://gateway.local:8000/api/v1/setup -H "Content-Type: application/json" \
   -d '{"code": "XXXX-XXXX-XXXX", "username": "truc", "password": "...", "device": "laptop"}'
@@ -117,13 +117,13 @@ Success (`200`):
 
 `status` is `skipped` (with `cmd_id: null`) when an automatic command equals the current state.
 
-### When the AC missed a command (v0.10.0, [ADR 0005](adr/0005-missed-ir-commands.md))
+### When the AC missed a command (v0.9.0, [ADR 0005](adr/0005-missed-ir-commands.md))
 
 - **Early start.** A manual power-on during the compressor rest period returns `409 COMPRESSOR_MIN_OFF` with `"can_confirm": true`. Sending the same command with `"confirm": true` is accepted (`code: EARLY_START_CONFIRMED`). Automatic commands cannot be confirmed.
 - **Resend.** `POST /rooms/{room}/commands/resend` (no body) sends the expected state again; response as above with `code: RESEND`. `409 NO_STATE` if the state was never known.
 - **Sync.** `PUT /rooms/{room}/ac-state` with any of `power`, `mode`, `temp`, `fan` sets the expected state without sending IR, clears `uncertain`, starts the app auto-hold and leaves the compressor timers alone. Returns the room state; the decision log gets an entry with verdict `sync`.
 
-## Device pairing (v0.10.0, [ADR 0006](adr/0006-field-network-and-device-pairing.md))
+## Device pairing (v0.9.0, [ADR 0006](adr/0006-field-network-and-device-pairing.md))
 
 ```bash
 curl -X POST -H "X-API-Key: $API_KEY" http://gateway.local:8000/api/v1/pairing
@@ -134,7 +134,7 @@ curl -X POST -H "X-API-Key: $API_KEY" http://gateway.local:8000/api/v1/pairing
  "expires_in_s": 300, "qr": "data:image/svg+xml;charset=utf-8,..."}
 ```
 
-## Network mode (v0.10.0)
+## Network mode (v0.9.0)
 
 ```bash
 curl -X PUT -H "X-API-Key: $API_KEY" -H "Content-Type: application/json" \
@@ -202,7 +202,7 @@ curl -X POST http://gateway.local:8000/api/v1/rooms/room01/comfort \
  "user_id": 2, "username": "lan"}
 ```
 
-`user_id` and `username` record who voted (`null` for votes made before v0.10.0 or with the `API_KEY`), so the comfort model can later be personalised per person rather than per room.
+`user_id` and `username` record who voted (`null` for votes made before v0.9.0 or with the `API_KEY`), so the comfort model can later be personalised per person rather than per room.
 
 | HTTP | `code` | Meaning |
 |---|---|---|

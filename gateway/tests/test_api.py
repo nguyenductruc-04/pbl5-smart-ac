@@ -549,7 +549,7 @@ def test_auto_step_respects_safety_layer(client, clock):
     assert advisor.auto_step(adv, svc, db, clock()) == []          # da dat dung -> khong lam gi them
 
 
-# ------------------------------------------------------------------ ghep thiet bi bang QR (v0.10.0)
+# ------------------------------------------------------------------ ghep thiet bi bang QR (v0.9.0)
 PAIR = "/api/v1/pairing"
 
 
@@ -592,7 +592,7 @@ def test_guessing_pairing_codes_is_rate_limited(client):
     assert (r.status_code, code(r)) == (429, "PAIR_TOO_MANY")
 
 
-# ------------------------------------------------------------------ che do mang (v0.10.0)
+# ------------------------------------------------------------------ che do mang (v0.9.0)
 NET = "/api/v1/system/network"
 
 

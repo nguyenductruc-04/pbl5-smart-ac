@@ -6,7 +6,7 @@
 
 ## Context
 
-Until v0.10.0 the API had one shared secret, `API_KEY`. Testing on phones showed the problems of that design:
+Until v0.9.0 the API had one shared secret, `API_KEY`. Testing on phones showed the problems of that design:
 
 - The key had to be read from `gateway/.env` over SSH and typed or paired into every browser, and browsers keep it per address (`gateway.local`, the home IP and `10.42.0.1` are three different pages).
 - Everyone with the key had full rights, including changing the network mode; there was no way to let a roommate watch the room without letting them control it, or to revoke one phone.

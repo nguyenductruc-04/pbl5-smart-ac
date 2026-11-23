@@ -25,7 +25,7 @@ Switching from the dashboard ("Mạng của Pi"): the API (running as the normal
 
 The Pi has no RTC battery, and in `standalone` it has no Internet for NTP, so after a reboot its clock can be wrong. `/health` now returns the gateway time and the dashboard warns when it differs from the phone by more than 2 minutes, because telemetry and comfort votes would be stored with wrong timestamps.
 
-### Node (firmware 0.10.0)
+### Node (firmware 0.9.0)
 
 - Remembers in NVS whether the last successful connection was the backup AP and tries that network **first** on boot.
 - While on the backup AP **and connected to the broker**, it never leaves. The Pi has one Wi-Fi radio, so while it serves the AP the broker is not on the home network; when the Pi goes home it stops the AP, the node loses Wi-Fi and reconnects through the normal path (last network first, then the other).
