@@ -262,6 +262,7 @@ fun MainScreen(vm: AppViewModel) {
             RoomContent(vm, me, r)
         }
         if (me?.role == "admin") {
+            IrCard(vm)
             NetworkCard(vm)
             MembersCard(vm, me)
         }

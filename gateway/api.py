@@ -28,13 +28,14 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 import accounts
 import advisor as advisor_mod
 import control
+import irproto
 import netmode
 import safety
 import settings
 import store
 from gateway import Gateway
 
-__version__ = "0.10.0"
+__version__ = "0.11.0"
 log = logging.getLogger("api")
 
 WEB_DIR = FsPath(__file__).resolve().parent / "web"
@@ -107,6 +108,25 @@ class NetworkIn(BaseModel):
 
 AP_SSID = "SmartAC-Backup"
 AP_ADDRESS = "10.42.0.1"     # dia chi cua Pi tren mang du phong (NetworkManager, ADR 0001)
+
+
+class IrSetIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    protocol: str = Field(min_length=2, max_length=32, description="Ten giao thuc IRremoteESP8266, vd DAIKIN, COOLIX")
+    model: int = Field(default=-1, ge=-1, le=20, description="-1 = mac dinh cua giao thuc")
+
+
+class IrLearnIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    seconds: int = Field(default=60, ge=10, le=300)
+
+
+class IrConfirmIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    works: bool
 
 
 class SetupIn(BaseModel):
@@ -621,6 +641,81 @@ def create_app(gateway: Gateway | None = None, service: control.CommandService |
         if db.execute("SELECT 1 FROM users WHERE id=?", (user_id,)).fetchone() is None:
             raise ApiError(410, "PAIR_INVALID", "Tai khoan tao ma khong con nua")
         return {"token": accounts.new_session(db, user_id, now, "Ghep bang ma QR")}
+
+    # ------------------------------------------------------------ giao thuc IR (v0.11.0, ADR 0009)
+    learning: dict[str, tuple[float, float]] = {}    # phong -> (bat dau, het han) che do nhan dien
+
+    def require_online(db: sqlite3.Connection, room: str) -> None:
+        st = store.node_status(db, room)
+        if not st or st[0] != "online":
+            raise ApiError(409, "NODE_OFFLINE", "Node trong phong dang mat ket noi")
+
+    def ir_info(db: sqlite3.Connection, room: str) -> dict:
+        now = clock()
+        cur = irproto.get(db, room) or {"protocol": settings.IR_PROTOCOL or None, "model": -1,
+                                        "reported_ts": None, "confirmed": False}
+        start, until = learning.get(room, (None, None))
+        found = irproto.detections(db, room, start) if start else []
+        return {**cur, "learn": {"active": bool(until and until > now), "started": start, "until": until},
+                "detections": found, "candidates": irproto.candidates(found), "brands": irproto.BRANDS}
+
+    @app.get("/api/v1/rooms/{room}/ir", tags=["giao thuc IR"])
+    def get_ir(room: KnownRoom, db: Db):
+        """Giao thuc IR node dang dung, ket qua nhan dien remote gan nhat, goi y theo hang."""
+        return ir_info(db, room)
+
+    @app.post("/api/v1/rooms/{room}/ir/learn", tags=["giao thuc IR"])
+    def start_learn(room: KnownRoom, body: IrLearnIn, who: WhoDep, db: Db):
+        """Bat che do nhan dien: trong `seconds` giay node bao moi tin hieu IR nghe duoc."""
+        require_admin(who)
+        require_online(db, room)
+        now = clock()
+        if not app.state.gateway.publish_config(room, {"ir_learn": body.seconds}):
+            raise ApiError(503, "BROKER_DOWN", "Gateway dang mat ket noi broker MQTT")
+        learning[room] = (now, now + body.seconds)
+        return ir_info(db, room)
+
+    @app.delete("/api/v1/rooms/{room}/ir/learn", tags=["giao thuc IR"])
+    def stop_learn(room: KnownRoom, who: WhoDep, db: Db):
+        require_admin(who)
+        start, _ = learning.get(room, (None, None))
+        if start is not None:
+            learning[room] = (start, clock())
+        app.state.gateway.publish_config(room, {"ir_learn": 0})
+        return ir_info(db, room)
+
+    @app.put("/api/v1/rooms/{room}/ir", tags=["giao thuc IR"])
+    def set_ir(room: KnownRoom, body: IrSetIn, who: WhoDep, db: Db):
+        """Doi giao thuc node dung de phat lenh. Node kiem tra va luu vao bo nho trong (NVS)."""
+        require_admin(who)
+        name = body.protocol.strip().upper()
+        if not irproto.valid_name(name):
+            raise ApiError(422, "PROTOCOL_NOT_SUPPORTED", "Ten giao thuc khong hop le")
+        require_online(db, room)
+        gw = app.state.gateway
+        cfg_id = "ir-" + secrets.token_hex(4)
+        waiter = gw.expect_result(cfg_id)
+        if not gw.publish_config(room, {"cfg_id": cfg_id, "ir": {"protocol": name, "model": body.model}}):
+            gw.take_result(cfg_id)
+            raise ApiError(503, "BROKER_DOWN", "Gateway dang mat ket noi broker MQTT")
+        waiter.wait(app.state.service.timeout_s)
+        res = gw.take_result(cfg_id)
+        if res is None:
+            raise ApiError(504, "NODE_TIMEOUT", "Node khong tra loi; firmware node can tu ban 0.11.0")
+        if not res.get("ok"):
+            raise ApiError(422, "PROTOCOL_NOT_SUPPORTED",
+                           f"Node khong ho tro giao thuc {name} (IRremoteESP8266 2.9.0)")
+        log.warning("'%s' doi giao thuc IR phong %s -> %s (model %d)", who.username, room, name, body.model)
+        return ir_info(db, room)
+
+    @app.post("/api/v1/rooms/{room}/ir/confirm", tags=["giao thuc IR"])
+    def confirm_ir(room: KnownRoom, body: IrConfirmIn, who: WhoDep, db: Db):
+        """Nguoi dung bao dieu hoa co phan ung voi lenh thu hay khong."""
+        require_admin(who)
+        if irproto.get(db, room) is None:
+            raise ApiError(409, "NO_PROTOCOL", "Node chua bao giao thuc dang dung")
+        irproto.confirm(db, room, body.works, who.username or "khoa API", clock())
+        return ir_info(db, room)
 
     # ------------------------------------------------------------ thiet lap lan dau, tai khoan
     def user_out(u: dict) -> dict:

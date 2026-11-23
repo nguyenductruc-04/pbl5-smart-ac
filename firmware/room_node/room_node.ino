@@ -34,7 +34,7 @@
 #define SENSOR_SHT4X 4
 #include "config.h"
 
-#define FW_VERSION "0.9.0"
+#define FW_VERSION "0.11.0"
 
 // config.h cu (truoc v0.5.0) chua co cac muc duoi day -> dung mac dinh va bao tren Serial luc khoi dong
 // (Arduino IDE mac dinh tat canh bao bien dich nen #warning khong hien)
@@ -130,6 +130,42 @@ unsigned long brokerLostSince = 0;              // co Wi-Fi nha nhung khong toi 
 bool          cfgPending     = false;
 String        cfgId, cfgSsid, cfgPass;
 String        pendingCfgResult;                 // gui khi MQTT ket noi lai
+// Giao thuc IR cua dieu hoa (v0.11.0): luu trong NVS, doi duoc tu Pi khong can nap lai firmware.
+// Lan dau (NVS trong) lay IR_PROTOCOL / IR_MODEL trong config.h. Xem docs/adr/0009-ir-protocol-detection.md
+unsigned long irLearnUntil   = 0;               // dang o che do nhan dien remote toi luc nay
+const unsigned long IR_LEARN_MAX_S = 300;
+
+// ------------------------------------------------------------------
+// NVS: giao thuc IR. Ten nhu typeToString() tra ve, vd "DAIKIN", "COOLIX", "ELECTRA_AC".
+bool irProtocolUsable(decode_type_t p) {
+  return p != decode_type_t::UNKNOWN && IRac::isProtocolSupported(p);
+}
+
+void loadIrProtocol() {
+  prefs.begin("pbl5", true);
+  String name = prefs.getString("ir_proto", "");
+  int model   = prefs.getInt("ir_model", IR_MODEL);
+  prefs.end();
+  decode_type_t p = name.length() ? strToDecodeType(name.c_str()) : decode_type_t::IR_PROTOCOL;
+  if (!irProtocolUsable(p)) {
+    Serial.printf("[IR] Giao thuc luu trong NVS '%s' khong dung duoc -> dung config.h\n", name.c_str());
+    p = decode_type_t::IR_PROTOCOL;
+    model = IR_MODEL;
+  }
+  acState.protocol = p;
+  acState.model    = model;
+}
+
+void saveIrProtocol() {
+  prefs.begin("pbl5", false);
+  prefs.putString("ir_proto", typeToString(acState.protocol));
+  prefs.putInt("ir_model", acState.model);
+  prefs.end();
+}
+
+bool irLearning() {
+  return irLearnUntil && (long)(irLearnUntil - millis()) > 0;
+}
 
 // ------------------------------------------------------------------
 // NVS: Wi-Fi nha. Lan dau (NVS trong) lay tu config.h
@@ -555,8 +591,10 @@ void publishTelemetry() {
   doc["sim"]      = sim;
   doc["rssi"]     = WiFi.RSSI();
   doc["uptime_s"] = millis() / 1000;
+  doc["ir_protocol"] = typeToString(acState.protocol);   // de Pi biet node dang phat giao thuc nao
+  doc["ir_model"]    = acState.model;
 
-  char buf[256];
+  char buf[320];
   size_t n = serializeJson(doc, buf, sizeof(buf));
   bool ok = mqtt.publish(T_TELEMETRY.c_str(), (const uint8_t*)buf, n, false);
   Serial.printf("[TX] %s %s\n", buf, ok ? "" : "(GUI LOI)");
@@ -626,6 +664,7 @@ void handleIrReceive() {
     return;
   }
 
+  bool learning = irLearning();
   stdAc::state_t rx;
   if (IRAcUtils::decodeToState(&irResults, &rx)) {
     // Remote dieu hoa: nguoi dung vua bam -> uu tien cao nhat, dong bo trang thai du kien
@@ -633,6 +672,10 @@ void handleIrReceive() {
 
     JsonDocument ev;
     ev["protocol"] = typeToString(irResults.decode_type);
+    ev["ac"]       = true;
+    ev["model"]    = rx.model;
+    ev["bits"]     = irResults.bits;
+    if (learning) ev["learn"] = true;
     ev["power"]    = rx.power ? "on" : "off";
     ev["mode"]     = modeToStr(rx.mode);
     ev["temp"]     = (int)rx.degrees;
@@ -640,11 +683,25 @@ void handleIrReceive() {
     ev["source"]   = "remote";
     ev["uptime_s"] = millis() / 1000;
 
-    char buf[200];
+    char buf[256];
     size_t n = serializeJson(ev, buf, sizeof(buf));
     bool sent = mqtt.connected() &&
                 mqtt.publish(T_IR_EVENT.c_str(), (const uint8_t*)buf, n, false);
     Serial.printf("[IR RX] %s %s\n", buf, sent ? "" : "(chua gui duoc)");
+  } else if (learning) {
+    // Dang nhan dien: bao ca tin hieu khong giai ma duoc thanh trang thai dieu hoa,
+    // de nguoi dung biet node CO nghe thay nhung khong nhan ra giao thuc.
+    JsonDocument ev;
+    ev["protocol"] = typeToString(irResults.decode_type);
+    ev["ac"]       = false;
+    ev["bits"]     = irResults.bits;
+    ev["raw_len"]  = irResults.rawlen;
+    ev["learn"]    = true;
+    ev["uptime_s"] = millis() / 1000;
+    char buf[160];
+    size_t n = serializeJson(ev, buf, sizeof(buf));
+    if (mqtt.connected()) mqtt.publish(T_IR_EVENT.c_str(), (const uint8_t*)buf, n, false);
+    Serial.printf("[IR LEARN] %s\n", buf);
   } else {
     // Khong phai remote dieu hoa (TV, quat...) -> bo qua
     Serial.printf("[IR RX] Bo qua: %s\n", typeToString(irResults.decode_type).c_str());
@@ -717,6 +774,39 @@ void handleConfig(byte* payload, unsigned int len) {
   JsonDocument doc;
   if (deserializeJson(doc, (const char*)payload, len)) {
     Serial.println("[CFG] JSON loi -> bo qua");
+    return;
+  }
+  // Nhan dien remote (v0.11.0): {"ir_learn": 60} bat trong 60 s, {"ir_learn": 0} tat
+  if (!doc["ir_learn"].isNull()) {
+    unsigned long s = doc["ir_learn"] | 0UL;
+    if (s > IR_LEARN_MAX_S) s = IR_LEARN_MAX_S;
+    irLearnUntil = s ? millis() + s * 1000UL : 0;
+    Serial.printf("[IR] Nhan dien remote: %s\n", s ? "BAT" : "tat");
+    return;
+  }
+  // Doi giao thuc (v0.11.0): {"cfg_id":"ir-..","ir":{"protocol":"COOLIX","model":-1}}
+  if (!doc["ir"].isNull()) {
+    String id    = doc["cfg_id"] | "";
+    String name  = doc["ir"]["protocol"] | "";
+    int model    = doc["ir"]["model"] | -1;
+    decode_type_t p = strToDecodeType(name.c_str());
+    JsonDocument res;
+    res["cfg_id"] = id;
+    if (!irProtocolUsable(p)) {
+      res["ok"]    = false;
+      res["error"] = "protocol_not_supported";
+    } else {
+      acState.protocol = p;
+      acState.model    = model;
+      saveIrProtocol();
+      res["ok"] = true;
+      res["ir"]["protocol"] = typeToString(p);
+      res["ir"]["model"]    = model;
+    }
+    char buf[160];
+    size_t n = serializeJson(res, buf, sizeof(buf));
+    mqtt.publish(T_CFG_RES.c_str(), (const uint8_t*)buf, n, false);
+    Serial.printf("[IR] Doi giao thuc '%s' model %d -> %s\n", name.c_str(), model, res["ok"].as<bool>() ? "OK" : "KHONG HO TRO");
     return;
   }
   String net = doc["net"] | "";
@@ -815,15 +905,14 @@ void setup() {
 
   // Trang thai du kien ban dau: TAT, cool 26 do, quat auto
   IRac::initState(&acState);
-  acState.protocol = decode_type_t::IR_PROTOCOL;
-  acState.model    = IR_MODEL;
+  loadIrProtocol();
   acState.power    = false;
   acState.mode     = stdAc::opmode_t::kCool;
   acState.degrees  = 26;
   acState.fanspeed = stdAc::fanspeed_t::kAuto;
   irrecv.enableIRIn();
-  Serial.printf("[IR] Giao thuc %s, TX GPIO %d, RX GPIO %d\n",
-                typeToString(acState.protocol).c_str(), IR_TX_PIN, IR_RX_PIN);
+  Serial.printf("[IR] Giao thuc %s (model %d), TX GPIO %d, RX GPIO %d\n",
+                typeToString(acState.protocol).c_str(), acState.model, IR_TX_PIN, IR_RX_PIN);
 
   checkFactoryReset();
   loadWifiConfig();

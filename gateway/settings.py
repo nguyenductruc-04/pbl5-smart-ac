@@ -30,7 +30,8 @@ DB_PATH = os.getenv("DB_PATH", str(BASE_DIR / "pbl5.db"))
 # Mang cua Pi (netwatch.py): auto | standalone | home. Xem docs/adr/0006-field-network-and-device-pairing.md
 NETWORK_MODE = os.getenv("NETWORK_MODE", "auto")
 
-# Giao thuc IR cua dieu hoa (trung IR_PROTOCOL trong firmware). De trong = chap nhan moi remote dieu hoa.
+# Giao thuc IR mac dinh khi node chua bao giao thuc dang dung (firmware < 0.11.0). Tu 0.11.0 node bao qua
+# telemetry va doi duoc tren dashboard / app (irproto.py). De trong = chap nhan moi remote dieu hoa.
 IR_PROTOCOL = os.getenv("IR_PROTOCOL", "")
 
 # --- REST API ---

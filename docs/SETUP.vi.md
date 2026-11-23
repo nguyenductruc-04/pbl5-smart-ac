@@ -763,6 +763,44 @@ curl -s http://localhost:8000/api/v1/setup/status   # có "public_url": "https:/
 - Mất Internet ở nhà thì chỉ dùng được trong mạng nhà hoặc `SmartAC-Backup`, như trước.
 - Tên miền hết hạn thì chỉ mất truy cập từ xa. Đổi tên miền: sửa Public Hostname trên Cloudflare và `PUBLIC_URL` trong `.env`.
 
+## Bước 14: Nhận diện điều hòa (đổi giao thức IR không cần nạp lại firmware)
+
+Lý do thiết kế: [ADR 0009](adr/0009-ir-protocol-detection.md). Từ bản 0.11.0, node nhớ giao thức IR trong bộ nhớ trong; đổi được trên dashboard hoặc app (chỉ quản trị viên).
+
+### 14.1 Nạp firmware 0.11.0 cho node (một lần)
+
+Mở `firmware/room_node/room_node.ino`, nạp như mọi lần (`config.h` giữ nguyên). Serial Monitor phải in `=== PBL5 Room Node 0.11.0` và dòng `[IR] Giao thuc DAIKIN (model -1)` (giao thức lấy từ `config.h` ở lần đầu). Sau khoảng 30 giây, mục **Điều hòa trong phòng** trên dashboard hiện "Đang dùng giao thức DAIKIN".
+
+### 14.2 Nhận diện remote
+
+1. Dashboard (hoặc app) → mục **Điều hòa trong phòng** → **Nhận diện remote**.
+2. Trong 60 giây: cầm remote của điều hòa, chĩa vào node (cách 1–2 m), bấm nút nguồn hoặc đổi nhiệt độ 2–3 lần.
+3. Danh sách hiện các giao thức node nghe được:
+   - Dòng có **"Remote vừa gửi: bật, mát, 25 °C"**: so với màn hình remote. **Khớp** thì bấm **Dùng giao thức này**. **Không khớp** (nhiệt độ vô lý như 37 °C): thư viện đoán sai giao thức, như trường hợp Casper; thử chọn theo hãng ở bước 14.4.
+   - Dòng **UNKNOWN / "không phải giao thức điều hòa đã biết"**: node nghe thấy nhưng thư viện chưa hỗ trợ remote này; thử chọn theo hãng.
+   - Không có dòng nào: đứng gần hơn, chĩa thẳng vào mắt thu (U2) của node.
+
+### 14.3 Thử và xác nhận
+
+Sau khi bấm **Dùng giao thức này**, bấm **Bật thử** (hoặc **Tắt thử**), nghe điều hòa bíp và nhìn đèn dàn lạnh.
+
+- Có phản ứng → **Điều hòa đã phản ứng**. Mục này ghi "… đã xác nhận điều hòa nhận lệnh".
+- Không phản ứng → **Không phản ứng**, rồi thử giao thức khác (dòng tiếp theo trong danh sách, hoặc theo hãng). Kiểm tra cả khoảng cách và hướng LED (Bước kiểm thử IR trong `docs/hardware/ir-circuit.md`).
+
+### 14.4 Chọn theo hãng
+
+**Chọn giao thức theo hãng** → chọn hãng → thử lần lượt từ dòng đầu, mỗi lần **Bật thử** cho tới khi điều hòa phản ứng. Hãng lắp ráp lại (Casper, Nagakawa, Funiki…) không có trong danh sách: dùng nhận diện.
+
+### 14.5 Kiểm thử
+
+| # | Thao tác | Kết quả đúng |
+|---|---|---|
+| 1 | Nhận diện, bấm remote TV | Hiện dòng NEC (hoặc tương tự), "không phải giao thức điều hòa"; trạng thái điều hòa không đổi |
+| 2 | Nhận diện, bấm remote điều hòa | Hiện giao thức điều hòa và trạng thái vừa bấm |
+| 3 | Dùng giao thức, Bật thử | Điều hòa bíp (nếu đúng giao thức) |
+| 4 | Rút điện node, cắm lại | Serial Monitor in đúng giao thức vừa chọn (đã lưu) |
+| 5 | Chọn một giao thức không tồn tại qua API (`PUT …/ir` với `"protocol": "ABC"`) | `422 PROTOCOL_NOT_SUPPORTED` |
+
 ## Xử lý lỗi thường gặp
 
 **Dashboard trên điện thoại báo `ERR_SSL_PROTOCOL_ERROR` / "không thể cung cấp kết nối an toàn"**
@@ -814,4 +852,4 @@ ACL chỉ cho mỗi node ghi và đọc topic của **chính phòng mình**: nod
 3. **Milestone 3 – Cảm biến thật:** SHT3x (I2C, chân 8/9) và HLK-LD2420 (v0.5.0).
 4. **Milestone 4 – Safety Layer + API:** FastAPI, trạng thái dự kiến, chống short-cycling, phân quyền (v0.6.0).
 5. **Milestone 5 – Dashboard và phiếu cảm nhận** (v0.7.0).
-6. **Milestone 6 – Mô hình tiện nghi và gợi ý nhiệt độ** (v0.8.0). Mở rộng: lệnh bị bỏ lỡ, chế độ mạng, tài khoản người dùng (v0.9.0); app Android và truy cập từ xa (v0.10.0).
+6. **Milestone 6 – Mô hình tiện nghi và gợi ý nhiệt độ** (v0.8.0). Mở rộng: lệnh bị bỏ lỡ, chế độ mạng, tài khoản người dùng (v0.9.0); app Android và truy cập từ xa (v0.10.0); nhận diện giao thức IR (v0.11.0).

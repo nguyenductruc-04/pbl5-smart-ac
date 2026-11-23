@@ -184,3 +184,84 @@ internal fun NetworkCard(vm: AppViewModel) {
         )
     }
 }
+
+/** Nhan dien va doi giao thuc IR cua dieu hoa (chi quan tri vien, v0.11.0). */
+@Composable
+internal fun IrCard(vm: AppViewModel) {
+    val ir = vm.ir ?: return
+    var brand by remember { mutableStateOf<String?>(null) }
+    var showBrands by remember { mutableStateOf(false) }
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Điều hòa trong phòng", fontWeight = FontWeight.SemiBold)
+            Text(
+                when {
+                    ir.protocol == null -> "Node chưa báo giao thức (firmware cũ hơn 0.11.0?)."
+                    ir.confirmed -> "Giao thức ${ir.protocol}, ${ir.confirmedBy ?: ""} đã xác nhận điều hòa nhận lệnh."
+                    else -> "Giao thức ${ir.protocol}, chưa xác nhận điều hòa có nhận lệnh."
+                },
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Button(onClick = { vm.toggleLearn() }, enabled = !vm.busy, modifier = Modifier.fillMaxWidth()) {
+                Text(if (ir.learnActive) "Dừng nhận diện" else "Nhận diện remote")
+            }
+            if (ir.learnActive) {
+                Hint("Đang nghe: cầm remote điều hòa, chĩa vào node, bấm nút nguồn hoặc đổi nhiệt độ 2–3 lần.")
+            } else if (ir.learnStarted && ir.candidates.isEmpty()) {
+                Hint("Không nghe thấy tín hiệu nào. Thử lại, đứng gần node hơn.")
+            }
+            ir.candidates.forEach { c ->
+                ProtocolRow(vm, ir, c.protocol, c.note, c.model, usable = c.ac)
+            }
+            if (vm.irTesting) {
+                Hint("Thử lệnh: nghe tiếng bíp và nhìn đèn dàn lạnh.")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { vm.testPower(true) }, enabled = !vm.busy, modifier = Modifier.weight(1f)) {
+                        Text("Bật thử")
+                    }
+                    OutlinedButton(onClick = { vm.testPower(false) }, enabled = !vm.busy, modifier = Modifier.weight(1f)) {
+                        Text("Tắt thử")
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { vm.confirmIr(true) }, enabled = !vm.busy, modifier = Modifier.weight(1f)) {
+                        Text("Đã phản ứng")
+                    }
+                    OutlinedButton(onClick = { vm.confirmIr(false) }, enabled = !vm.busy, modifier = Modifier.weight(1f)) {
+                        Text("Không phản ứng")
+                    }
+                }
+            }
+            TextButton(onClick = { showBrands = !showBrands }, contentPadding = PaddingValues(0.dp)) {
+                Text(if (showBrands) "Ẩn danh sách hãng" else "Chọn giao thức theo hãng")
+            }
+            if (showBrands) {
+                val b = brand
+                if (b == null) {
+                    ir.brands.keys.forEach { name ->
+                        TextButton(onClick = { brand = name }, contentPadding = PaddingValues(horizontal = 0.dp)) { Text(name) }
+                    }
+                } else {
+                    TextButton(onClick = { brand = null }, contentPadding = PaddingValues(0.dp)) { Text("← Hãng khác ($b)") }
+                    ir.brands[b].orEmpty().forEachIndexed { i, p ->
+                        ProtocolRow(vm, ir, p, if (i == 0) "thử cái này trước" else "nếu cái trên không được", -1, true)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProtocolRow(vm: AppViewModel, ir: IrInfo, protocol: String, note: String, model: Int, usable: Boolean) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(protocol, fontWeight = FontWeight.Medium)
+        Hint(note)
+        if (usable) {
+            val current = ir.protocol == protocol
+            OutlinedButton(onClick = { vm.useProtocol(protocol, model) }, enabled = !current && !vm.busy) {
+                Text(if (current) "Đang dùng" else "Dùng giao thức này")
+            }
+        }
+    }
+}

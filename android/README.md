@@ -1,4 +1,4 @@
-# Android app (v0.10.0)
+# Android app (v0.11.0)
 
 Native Kotlin + Jetpack Compose app for the PBL5 gateway. No IP address to type:
 
@@ -9,6 +9,8 @@ Native Kotlin + Jetpack Compose app for the PBL5 gateway. No IP address to type:
 5. Room readings and chart, power, temperature, mode and fan, resend / report the real state, comfort votes and suggestion; guests are read only. Admins approve and manage members and switch the Pi network mode. The session token is kept in `EncryptedSharedPreferences`.
 
 6. Background check every 15 minutes (WorkManager): notifies when a node goes offline, when accounts wait for approval, and when the room is hot.
+
+7. Admins detect and switch the AC's IR protocol ("Điều hòa trong phòng"), test it and confirm it works.
 
 ## Build
 

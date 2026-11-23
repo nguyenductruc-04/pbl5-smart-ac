@@ -46,6 +46,9 @@ const REASON = {
   LAST_ADMIN: "Phải còn ít nhất một quản trị viên. Cấp quyền quản trị cho người khác trước.",
   USER_NOT_FOUND: "Tài khoản này không còn nữa.",
   WRONG_PASSWORD: "Mật khẩu hiện tại không đúng.",
+  PROTOCOL_NOT_SUPPORTED: "Node không hỗ trợ giao thức này.",
+  NODE_TIMEOUT: "Node không trả lời. Nếu node chạy firmware cũ hơn 0.11.0, hãy nạp lại firmware.",
+  NO_PROTOCOL: "Node chưa báo giao thức đang dùng; đợi node gửi số đo.",
   NOT_YOUR_VOTE: "Chỉ người gửi phiếu mới hoàn tác được.",
   HTTP_422: "Thông tin chưa hợp lệ. Tên đăng nhập 3–32 ký tự, mật khẩu 8–128 ký tự.",
   NETWORK: "Không kết nối được tới Raspberry Pi.",
@@ -769,6 +772,7 @@ async function tick() {
     if (S.ticks % (netPending ? 2 : 10) === 0) loadNet();
     if (S.ticks % 100 === 0) checkClock();
     if (isAdmin() && S.ticks % 10 === 0) loadMembers();
+    if (isAdmin() && (S.ticks % 10 === 0 || (S.ir && S.ir.learn.active))) loadIr();
   }
   setTimeout(tick, POLL_MS);
 }
@@ -790,6 +794,7 @@ async function start() {
   }
   showAccount();
   if (isAdmin()) loadMembers();
+  if (isAdmin()) loadIr();
   if (!rooms.length) {
     showEmpty("Chưa có node nào từng kết nối tới Pi. Cấp nguồn cho node của phòng, đợi node báo online rồi tải lại trang.");
     return;
@@ -1200,6 +1205,107 @@ function renderMembers() {
   });
   $("member-list").replaceChildren(...rows);
 }
+
+// ------------------------------------------------------------------ giao thuc IR (v0.11.0, ADR 0009)
+S.ir = null;
+S.irTest = false;
+S.irDeadline = 0;
+
+async function loadIr() {
+  try {
+    S.ir = await api(`/rooms/${S.room}/ir`);
+  } catch { return; }
+  renderIr();
+}
+
+function describe(d) {
+  if (!d || !d.ac) return "";
+  const parts = [d.power === "on" ? "bật" : "tắt"];
+  if (d.mode) parts.push(MODE_NAME[d.mode] || d.mode);
+  if (d.temp != null) parts.push(`${d.temp} °C`);
+  return parts.join(", ");
+}
+
+async function irAction(label, run) {
+  $("ir-status").textContent = "";
+  try {
+    S.ir = await run();
+    $("ir-status").textContent = label;
+  } catch (e) {
+    $("ir-status").textContent = explain(e);
+  }
+  renderIr();
+}
+
+const useProtocol = (protocol, model = -1) => irAction(
+  `Node đã chuyển sang giao thức ${protocol}. Giờ thử xem điều hòa có nhận lệnh không.`,
+  async () => {
+    const r = await api(`/rooms/${S.room}/ir`, { method: "PUT", body: { protocol, model } });
+    S.irTest = true;
+    return r;
+  });
+
+function protocolRow(protocol, note, model = -1) {
+  const current = S.ir && S.ir.protocol === protocol;
+  const btn = el("button", { type: "button", className: current ? "secondary" : "primary",
+    textContent: current ? "Đang dùng" : "Dùng giao thức này", disabled: current });
+  btn.addEventListener("click", () => useProtocol(protocol, model));
+  return el("li", {}, el("div", { className: "member-who" }, el("b", { textContent: protocol }),
+    el("span", { textContent: note })), el("div", { className: "member-actions" }, btn));
+}
+
+function renderIr() {
+  const ir = S.ir;
+  $("ir").hidden = !isAdmin() || !ir;
+  if (!ir || !isAdmin()) return;
+  $("ir-current").textContent = !ir.protocol
+    ? "Node chưa báo giao thức đang dùng (firmware cũ hơn 0.11.0, hoặc chưa gửi số đo)."
+    : ir.confirmed
+      ? `Đang dùng giao thức ${ir.protocol}. ${ir.confirmed_by} đã xác nhận điều hòa nhận lệnh.`
+      : `Đang dùng giao thức ${ir.protocol}, chưa xác nhận điều hòa có nhận lệnh.`;
+  const active = ir.learn.active;
+  $("ir-learn").textContent = active ? "Dừng nhận diện" : "Nhận diện remote";
+  const left = Math.max(0, Math.round((S.irDeadline - Date.now()) / 1000));
+  $("ir-learn-status").textContent = active
+    ? `Đang nghe (${left} s): cầm remote của điều hòa, chĩa vào node, bấm nút nguồn hoặc đổi nhiệt độ 2–3 lần.`
+    : ir.learn.started && !ir.candidates.length ? "Không nghe thấy tín hiệu nào. Thử lại, đứng gần node hơn." : "";
+  $("ir-found").replaceChildren(...ir.candidates.map((c) => c.ac
+    ? protocolRow(c.protocol, `Remote vừa gửi: ${describe(c.last)} (${c.count} lần). Đúng với màn hình remote thì dùng giao thức này.`, c.model ?? -1)
+    : el("li", {}, el("div", { className: "member-who" }, el("b", { textContent: c.protocol }),
+      el("span", { textContent: `${c.last.bits || "?"} bit, ${c.count} lần: node nghe thấy nhưng không phải giao thức điều hòa đã biết. Thử chọn theo hãng bên dưới.` })))));
+  $("ir-test").hidden = !S.irTest;
+  const brands = Object.keys(ir.brands);
+  if ($("ir-brand").options.length !== brands.length + 1) {
+    $("ir-brand").replaceChildren(el("option", { value: "", textContent: "Chọn hãng…" }),
+      ...brands.map((b) => el("option", { value: b, textContent: b })));
+  }
+  const b = $("ir-brand").value;
+  $("ir-brand-list").replaceChildren(...(b ? ir.brands[b] : []).map((p, i) =>
+    protocolRow(p, i === 0 ? "thử cái này trước" : "nếu cái trên không được")));
+}
+
+$("ir-learn").addEventListener("click", () => {
+  const active = S.ir && S.ir.learn.active;
+  if (!active) S.irDeadline = Date.now() + 60000;
+  irAction(active ? "Đã dừng nhận diện." : "", () => api(`/rooms/${S.room}/ir/learn`,
+    active ? { method: "DELETE" } : { method: "POST", body: { seconds: 60 } }));
+});
+$("ir-brand").addEventListener("change", renderIr);
+for (const [id, power] of [["ir-on", "on"], ["ir-off", "off"]]) {
+  $(id).addEventListener("click", async () => {
+    $("ir-status").textContent = "Đang gửi…";
+    try {
+      await api(`/rooms/${S.room}/commands`, { method: "POST", body: { power, confirm: true } });
+      $("ir-status").textContent = `Đã phát lệnh ${power === "on" ? "bật" : "tắt"}. Điều hòa có bíp không?`;
+    } catch (e) {
+      $("ir-status").textContent = explain(e);
+    }
+  });
+}
+$("ir-works").addEventListener("click", () => { S.irTest = false; irAction("Đã lưu: điều hòa nhận lệnh với giao thức này.",
+  () => api(`/rooms/${S.room}/ir/confirm`, { method: "POST", body: { works: true } })); });
+$("ir-fails").addEventListener("click", () => { S.irTest = false; irAction("Thử giao thức khác: nhận diện lại, hoặc chọn theo hãng (thử lần lượt từng dòng).",
+  () => api(`/rooms/${S.room}/ir/confirm`, { method: "POST", body: { works: false } })); });
 
 // ------------------------------------------------------------------ khoa API (nguoi quan ly Pi)
 function askKey(message = "") {

@@ -31,6 +31,18 @@ data class NetInfo(val mode: String, val running: Boolean, val onBackup: Boolean
 
 data class Series(val hours: Int, val ts: List<Double>, val temp: List<Double>, val hum: List<Double>)
 
+data class IrCandidate(val protocol: String, val ac: Boolean, val count: Int, val model: Int, val note: String)
+
+data class IrInfo(
+    val protocol: String?,
+    val confirmed: Boolean,
+    val confirmedBy: String?,
+    val learnActive: Boolean,
+    val learnStarted: Boolean,
+    val candidates: List<IrCandidate>,
+    val brands: Map<String, List<String>>,
+)
+
 data class Member(val username: String, val displayName: String, val role: String)
 
 data class Me(val username: String, val displayName: String, val role: String) {
@@ -111,6 +123,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var series by mutableStateOf<Series?>(null)
         private set
     var net by mutableStateOf<NetInfo?>(null)
+        private set
+    var ir by mutableStateOf<IrInfo?>(null)
+        private set
+    /** Vua doi giao thuc: hien buoc thu "Bat thu / Tat thu / Dieu hoa da phan ung". */
+    var irTesting by mutableStateOf(false)
         private set
 
     /** Lenh bi tu choi vi may nen vua tat, cho nguoi dung xac nhan "Van bat". */
@@ -302,7 +319,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         )
         refresh()
         loadExtras(series = true)
-        if (me?.role == "admin") loadMembers()
+        if (me?.role == "admin") {
+            loadMembers()
+            loadIr()
+        }
         screen = Screen.Main
         startPolling()
     }
@@ -336,6 +356,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     misses = 0
                     ticks++
                     if (me?.role == "admin" && ticks % 5 == 0) loadMembers()
+                    if (me?.role == "admin" && (ticks % 10 == 0 || ir?.learnActive == true)) loadIr()
                     if (ticks % 5 == 0) loadExtras(series = ticks % 20 == 0)
                 } catch (e: ApiException) {
                     if (e.status == 401 || e.code == "ACCOUNT_PENDING") {
@@ -535,6 +556,108 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ------------------------------------------------------------ giao thuc IR (v0.11.0, ADR 0009)
+    private suspend fun loadIr() {
+        val a = api ?: return
+        val id = room?.id ?: return
+        runCatching { ir = toIr(a.call("GET", "/rooms/$id/ir")) }
+    }
+
+    private fun toIr(j: JSONObject): IrInfo {
+        val learn = j.optJSONObject("learn")
+        val cands = j.optJSONArray("candidates")
+        val list = (0 until (cands?.length() ?: 0)).map { i ->
+            val c = cands!!.getJSONObject(i)
+            val last = c.optJSONObject("last")
+            val ac = c.optBoolean("ac", true)
+            val count = c.optInt("count")
+            val note = if (ac && last != null) {
+                val parts = mutableListOf(if (last.optString("power") == "on") "bật" else "tắt")
+                last.optString("mode").takeIf { it.isNotBlank() && it != "null" }?.let { parts.add(MODE_VI[it] ?: it) }
+                if (!last.isNull("temp")) parts.add("${last.optInt("temp")} °C")
+                "Remote vừa gửi: ${parts.joinToString(", ")} ($count lần). Khớp màn hình remote thì dùng giao thức này."
+            } else {
+                "${last?.optInt("bits") ?: "?"} bit, $count lần: node nghe thấy nhưng không phải giao thức điều hòa đã biết."
+            }
+            IrCandidate(c.getString("protocol"), ac, count, if (c.isNull("model")) -1 else c.optInt("model", -1), note)
+        }
+        val b = j.optJSONObject("brands")
+        val brands = linkedMapOf<String, List<String>>()
+        b?.keys()?.forEach { k ->
+            val arr = b.getJSONArray(k)
+            brands[k] = (0 until arr.length()).map { arr.getString(it) }
+        }
+        return IrInfo(
+            protocol = j.optString("protocol").takeIf { !j.isNull("protocol") && it.isNotBlank() },
+            confirmed = j.optBoolean("confirmed"),
+            confirmedBy = j.optString("confirmed_by").takeIf { !j.isNull("confirmed_by") && it.isNotBlank() },
+            learnActive = learn?.optBoolean("active") ?: false,
+            learnStarted = learn != null && !learn.isNull("started"),
+            candidates = list,
+            brands = brands,
+        )
+    }
+
+    private fun irAction(done: String?, run: suspend (Api, String) -> JSONObject) {
+        val a = api ?: return
+        val id = room?.id ?: return
+        viewModelScope.launch {
+            busy = true
+            try {
+                ir = toIr(run(a, id))
+                if (done != null) notice = done
+            } catch (e: ApiException) {
+                notice = when (e.code) {
+                    "PROTOCOL_NOT_SUPPORTED" -> "Node không hỗ trợ giao thức này."
+                    "NODE_TIMEOUT" -> "Node không trả lời. Nạp firmware 0.11.0 cho node rồi thử lại."
+                    else -> explain(e)
+                }
+            } finally {
+                busy = false
+            }
+        }
+    }
+
+    fun toggleLearn() {
+        val active = ir?.learnActive == true
+        irAction(if (active) "Đã dừng nhận diện." else null) { a, id ->
+            if (active) a.call("DELETE", "/rooms/$id/ir/learn")
+            else a.call("POST", "/rooms/$id/ir/learn", JSONObject().put("seconds", 60))
+        }
+    }
+
+    fun useProtocol(protocol: String, model: Int = -1) {
+        irAction("Node đã chuyển sang $protocol. Bấm Bật thử và nghe điều hòa có bíp không.") { a, id ->
+            val r = a.call("PUT", "/rooms/$id/ir", JSONObject().put("protocol", protocol).put("model", model))
+            irTesting = true
+            r
+        }
+    }
+
+    fun testPower(on: Boolean) {
+        val a = api ?: return
+        val id = room?.id ?: return
+        viewModelScope.launch {
+            busy = true
+            notice = try {
+                a.call("POST", "/rooms/$id/commands", JSONObject().put("power", if (on) "on" else "off").put("confirm", true))
+                "Đã phát lệnh ${if (on) "bật" else "tắt"}. Điều hòa có bíp không?"
+            } catch (e: ApiException) {
+                explain(e)
+            } finally {
+                busy = false
+            }
+        }
+    }
+
+    fun confirmIr(works: Boolean) {
+        irTesting = false
+        irAction(if (works) "Đã lưu: điều hòa nhận lệnh với giao thức này."
+                 else "Thử giao thức khác: nhận diện lại, hoặc chọn theo hãng.") { a, id ->
+            a.call("POST", "/rooms/$id/ir/confirm", JSONObject().put("works", works))
+        }
+    }
+
     // ------------------------------------------------------------ thanh vien (quan tri vien)
     private suspend fun loadMembers() {
         val a = api ?: return
@@ -575,6 +698,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     companion object {
+        private val MODE_VI = mapOf("cool" to "mát", "dry" to "khô", "fan" to "quạt", "auto" to "tự động", "heat" to "sưởi")
         const val BACKUP_URL = "http://10.42.0.1:8000"   // Pi o che do mang du phong (SmartAC-Backup)
         private const val POLL_MS = 3000L
 

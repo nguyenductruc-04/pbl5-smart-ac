@@ -37,6 +37,7 @@ Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 | 6 | Comfort model + suggestions (ASHRAE prior, personalised from votes) | Done (v0.8.0); evaluation on real votes pending data |
 | 6+ | Missed-IR recovery, network modes, QR pairing, user accounts with first setup by label and a reset button | v0.9.0 |
 | 7 | Native Android app; remote access over HTTPS through Cloudflare Tunnel | Done (v0.10.0) |
+| 8 | Detect and switch the AC's IR protocol from the dashboard or app, without reflashing | v0.11.0 |
 
 ## Dashboard
 
