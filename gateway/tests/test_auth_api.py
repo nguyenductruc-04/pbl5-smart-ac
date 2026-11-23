@@ -21,7 +21,8 @@ def client(gateway, clock):
     gateway.handle_status("room01", clock(), "online")
     service = control.CommandService(gateway, clock=clock, timeout_s=0.05)
     app = api.create_app(gateway, service, api_key=KEY, automation_key=AUTO_KEY, clock=clock,
-                         setup_code=SETUP_CODE, device_id="d3v1ce00")
+                         setup_code=SETUP_CODE, device_id="d3v1ce00",
+                         public_url="https://ac.example.test")
     with TestClient(app) as c:
         c.gateway = gateway
         yield c
@@ -57,7 +58,8 @@ def telemetry(client, clock):
 # ------------------------------------------------------------------ thiet lap lan dau
 def test_new_pi_reports_unclaimed_without_login(client):
     assert client.get("/api/v1/setup/status").json() == {"claimed": False, "device_id": "d3v1ce00",
-                                                         "version": api.__version__}
+                                                         "version": api.__version__,
+                                                         "public_url": "https://ac.example.test"}
 
 
 def test_setup_needs_the_code_on_the_label(client):
@@ -69,6 +71,18 @@ def test_setup_needs_the_code_on_the_label(client):
     me = client.get("/api/v1/auth/me", headers=bearer(r.json()["token"])).json()
     assert (me["username"], me["role"], me["kind"]) == ("truc", "admin", "user")
     assert client.get("/api/v1/setup/status").json()["claimed"] is True
+
+
+def test_setup_is_refused_over_the_internet(client):
+    r = client.post("/api/v1/setup", json={"code": SETUP_CODE, "username": "truc", "password": PW},
+                    headers={"CF-Connecting-IP": "203.0.113.7"})
+    assert (r.status_code, code(r)) == (403, "SETUP_LOCAL_ONLY")
+    assert client.get("/api/v1/setup/status").json()["claimed"] is False
+    # dang ky va dang nhap qua Internet van duoc
+    claim(client)
+    r = client.post("/api/v1/auth/login", json={"username": "truc", "password": PW},
+                    headers={"CF-Connecting-IP": "203.0.113.7"})
+    assert r.status_code == 200
 
 
 def test_setup_works_only_once(client):

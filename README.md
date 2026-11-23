@@ -36,6 +36,7 @@ Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 | 5 | Web dashboard + comfort votes | Done (v0.7.0), tested on hardware |
 | 6 | Comfort model + suggestions (ASHRAE prior, personalised from votes) | Done (v0.8.0); evaluation on real votes pending data |
 | 6+ | Missed-IR recovery, network modes, QR pairing, user accounts with first setup by label and a reset button | v0.9.0 |
+| 7 | Native Android app; remote access over HTTPS through Cloudflare Tunnel | Done (v0.10.0) |
 
 ## Dashboard
 
@@ -79,6 +80,7 @@ The gateway suggests an AC setting from a personal comfort model: an ordinal log
 firmware/room_node/   ESP32-S3 Arduino sketch (config.example.h -> config.h)
 gateway/              Raspberry Pi services, Mosquitto config, tests
 ml/                   Offline training and evaluation of the comfort model (laptop only)
+android/              Native Android app (Kotlin, Jetpack Compose)
 docs/                 Architecture, Vietnamese setup guide, ADRs, diagrams
 .github/workflows/    CI: ruff + pytest + firmware compile
 ```

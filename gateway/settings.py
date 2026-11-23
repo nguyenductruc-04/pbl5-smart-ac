@@ -40,6 +40,8 @@ API_PORT = int(os.getenv("API_PORT", "8000"))
 # Nguon lenh duoc suy ra tu KHOA, khong tin vao noi dung request -> AI khong the gia lam nguoi dung.
 API_KEY = os.getenv("API_KEY", "")
 API_KEY_AUTOMATION = os.getenv("API_KEY_AUTOMATION", "")
+# Dia chi truy cap tu xa qua Cloudflare Tunnel (vd. https://ac.ductruc.site). De trong = chi dung trong mang nha.
+PUBLIC_URL = os.getenv("PUBLIC_URL", "").strip().rstrip("/")
 COMMAND_TIMEOUT_S = float(os.getenv("COMMAND_TIMEOUT_S", "5"))
 
 # --- Goi y (M6) ---

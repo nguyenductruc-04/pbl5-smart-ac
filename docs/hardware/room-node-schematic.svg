@@ -1,0 +1,313 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1120" viewBox="0 0 1600 1120">
+<rect width="1600" height="1120" fill="#fff"/>
+<rect x="10" y="10" width="1580" height="1100" stroke="#111" stroke-width="2.5" fill="none"/>
+<rect x="30" y="40" width="490" height="520" stroke="#888" stroke-width="1.5" stroke-dasharray="8 5" fill="none" rx="6"/>
+<text x="42" y="62" font-size="15" text-anchor="start" font-weight="bold" fill="#444" font-family="DejaVu Sans, Arial, sans-serif">A. Vi điều khiển</text>
+<rect x="60" y="110" width="230" height="420" stroke="#111" stroke-width="2" fill="none"/>
+<text x="175" y="135" font-size="15" text-anchor="middle" font-weight="bold" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">U1</text>
+<text x="175" y="155" font-size="13" text-anchor="middle" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">ESP32-S3-DevKitC-1</text>
+<text x="175" y="172" font-size="12" text-anchor="middle" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">(N16R8, bản clone)</text>
+<text x="280" y="215" font-size="13" text-anchor="end" font-weight="bold" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">3V3</text>
+<text x="70" y="215" font-size="11" text-anchor="start" font-weight="normal" fill="#555" font-family="DejaVu Sans, Arial, sans-serif">J1-1, J1-2</text>
+<polyline points="290,210 380,210" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polygon points="380,210 388,200 434,200 434,220 388,220" stroke="#0b5394" stroke-width="1.5" fill="#eaf2fb"/>
+<text x="392" y="215" font-size="13" text-anchor="start" font-weight="bold" fill="#0b5394" font-family="DejaVu Sans, Arial, sans-serif">+3V3</text>
+<text x="280" y="255" font-size="13" text-anchor="end" font-weight="bold" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">5V</text>
+<text x="70" y="255" font-size="11" text-anchor="start" font-weight="normal" fill="#555" font-family="DejaVu Sans, Arial, sans-serif">J1-21</text>
+<polyline points="290,250 380,250" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polygon points="380,250 388,240 425,240 425,260 388,260" stroke="#0b5394" stroke-width="1.5" fill="#eaf2fb"/>
+<text x="392" y="255" font-size="13" text-anchor="start" font-weight="bold" fill="#0b5394" font-family="DejaVu Sans, Arial, sans-serif">+5V</text>
+<text x="280" y="305" font-size="13" text-anchor="end" font-weight="bold" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">GPIO4</text>
+<text x="70" y="305" font-size="11" text-anchor="start" font-weight="normal" fill="#555" font-family="DejaVu Sans, Arial, sans-serif">J1-4</text>
+<polyline points="290,300 360,300" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polygon points="360,300 368,290 423,290 423,310 368,310" stroke="#0b5394" stroke-width="1.5" fill="#eaf2fb"/>
+<text x="372" y="305" font-size="13" text-anchor="start" font-weight="bold" fill="#0b5394" font-family="DejaVu Sans, Arial, sans-serif">IR_TX</text>
+<text x="280" y="340" font-size="13" text-anchor="end" font-weight="bold" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">GPIO5</text>
+<text x="70" y="340" font-size="11" text-anchor="start" font-weight="normal" fill="#555" font-family="DejaVu Sans, Arial, sans-serif">J1-5</text>
+<polyline points="290,335 360,335" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polygon points="360,335 368,325 423,325 423,345 368,345" stroke="#0b5394" stroke-width="1.5" fill="#eaf2fb"/>
+<text x="372" y="340" font-size="13" text-anchor="start" font-weight="bold" fill="#0b5394" font-family="DejaVu Sans, Arial, sans-serif">IR_RX</text>
+<text x="280" y="375" font-size="13" text-anchor="end" font-weight="bold" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">GPIO6</text>
+<text x="70" y="375" font-size="11" text-anchor="start" font-weight="normal" fill="#555" font-family="DejaVu Sans, Arial, sans-serif">J1-6</text>
+<polyline points="290,370 360,370" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polygon points="360,370 368,360 450,360 450,380 368,380" stroke="#0b5394" stroke-width="1.5" fill="#eaf2fb"/>
+<text x="372" y="375" font-size="13" text-anchor="start" font-weight="bold" fill="#0b5394" font-family="DejaVu Sans, Arial, sans-serif">RADAR_TX</text>
+<text x="280" y="410" font-size="13" text-anchor="end" font-weight="bold" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">GPIO7</text>
+<text x="70" y="410" font-size="11" text-anchor="start" font-weight="normal" fill="#555" font-family="DejaVu Sans, Arial, sans-serif">J1-7</text>
+<polyline points="290,405 360,405" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polygon points="360,405 368,395 450,395 450,415 368,415" stroke="#0b5394" stroke-width="1.5" fill="#eaf2fb"/>
+<text x="372" y="410" font-size="13" text-anchor="start" font-weight="bold" fill="#0b5394" font-family="DejaVu Sans, Arial, sans-serif">PRESENCE</text>
+<text x="280" y="445" font-size="13" text-anchor="end" font-weight="bold" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">GPIO8</text>
+<text x="70" y="445" font-size="11" text-anchor="start" font-weight="normal" fill="#555" font-family="DejaVu Sans, Arial, sans-serif">J1-12</text>
+<polyline points="290,440 360,440" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polygon points="360,440 368,430 405,430 405,450 368,450" stroke="#0b5394" stroke-width="1.5" fill="#eaf2fb"/>
+<text x="372" y="445" font-size="13" text-anchor="start" font-weight="bold" fill="#0b5394" font-family="DejaVu Sans, Arial, sans-serif">SDA</text>
+<text x="280" y="480" font-size="13" text-anchor="end" font-weight="bold" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">GPIO9</text>
+<text x="70" y="480" font-size="11" text-anchor="start" font-weight="normal" fill="#555" font-family="DejaVu Sans, Arial, sans-serif">J1-15</text>
+<polyline points="290,475 360,475" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polygon points="360,475 368,465 405,465 405,485 368,485" stroke="#0b5394" stroke-width="1.5" fill="#eaf2fb"/>
+<text x="372" y="480" font-size="13" text-anchor="start" font-weight="bold" fill="#0b5394" font-family="DejaVu Sans, Arial, sans-serif">SCL</text>
+<text x="70" y="515" font-size="11" text-anchor="start" font-weight="normal" fill="#555" font-family="DejaVu Sans, Arial, sans-serif">J1-22, J2-1/21/22</text>
+<polyline points="290,510 330,510" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="280" y="515" font-size="13" text-anchor="end" font-weight="bold" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">GND</text>
+<polyline points="330,510 330,520" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="314,520 346,520" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="320,525 340,525" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="326,530 334,530" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="60" y="552" font-size="12" text-anchor="start" font-weight="normal" fill="#333" font-family="DejaVu Sans, Arial, sans-serif">Cắm U1 vào 2 hàng header cái 1×22 (J1, J2), bước 2,54 mm.</text>
+<rect x="540" y="40" width="470" height="520" stroke="#888" stroke-width="1.5" stroke-dasharray="8 5" fill="none" rx="6"/>
+<text x="552" y="62" font-size="15" text-anchor="start" font-weight="bold" fill="#444" font-family="DejaVu Sans, Arial, sans-serif">B. Phát hồng ngoại (rev 2, 5 V)</text>
+<polyline points="800,100 800,88" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="788,88 812,88" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="800" y="80" font-size="14" text-anchor="middle" font-weight="bold" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">+5V</text>
+<polyline points="800,100 800,145" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<circle cx="800" cy="120" r="4" fill="#111"/>
+<polyline points="800,120 895,120 895,215" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<rect x="791" y="155" width="18" height="40" stroke="#111" stroke-width="2" fill="none"/>
+<polyline points="800,145 800,155" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="800,195 800,205" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="816" y="173" font-size="14" text-anchor="start" font-weight="bold" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">R1</text>
+<text x="816" y="191" font-size="13" text-anchor="start" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">33 Ω 0,5 W</text>
+<polyline points="800,205 800,235" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="800,235 800,255" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="800,275 800,295" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polygon points="788,255 812,255 800,275" stroke="#111" stroke-width="2" fill="none"/>
+<polyline points="788,275 812,275" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="814,259 830,247" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polygon points="830,247 822,248 827,254" fill="#111"/>
+<polyline points="814,269 830,257" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polygon points="830,257 822,258 827,264" fill="#111"/>
+<text x="782" y="261" font-size="14" text-anchor="end" font-weight="bold" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">D1</text>
+<text x="782" y="279" font-size="13" text-anchor="end" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">LED IR 940 nm</text>
+<polyline points="800,295 800,320" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<circle cx="788" cy="360" r="24" stroke="#111" stroke-width="2" fill="none"/>
+<polyline points="736,360 778,360" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="778,345 778,375" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="778,353 800,338 800,320" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="778,367 800,382 800,400" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polygon points="800,382 789,379 794,372" fill="#111"/>
+<text x="820" y="356" font-size="14" text-anchor="start" font-weight="bold" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">Q1</text>
+<text x="820" y="374" font-size="13" text-anchor="start" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">2N2222A</text>
+<text x="806" y="330" font-size="11" text-anchor="start" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">C</text>
+<text x="806" y="402" font-size="11" text-anchor="start" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">E</text>
+<text x="742" y="354" font-size="11" text-anchor="start" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">B</text>
+<polyline points="800,400 800,450" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="800,450 800,460" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="784,460 816,460" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="790,465 810,465" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="796,470 804,470" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="895,215 895,235" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="895,245 895,265" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="881,235 909,235" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M881,249 Q895,241 909,249" stroke="#111" stroke-width="2" fill="none"/>
+<text x="871" y="232" font-size="14" text-anchor="start" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">+</text>
+<text x="915" y="238" font-size="14" text-anchor="start" font-weight="bold" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">C1</text>
+<text x="915" y="256" font-size="13" text-anchor="start" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">470 µF 16 V</text>
+<polyline points="895,265 895,285" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="895,285 895,295" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="879,295 911,295" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="885,300 905,300" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="891,305 899,305" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polygon points="600,360 592,350 537,350 537,370 592,370" stroke="#0b5394" stroke-width="1.5" fill="#eaf2fb"/>
+<text x="543" y="365" font-size="13" text-anchor="start" font-weight="bold" fill="#0b5394" font-family="DejaVu Sans, Arial, sans-serif">IR_TX</text>
+<polyline points="600,360 620,360" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<rect x="630" y="351" width="40" height="18" stroke="#111" stroke-width="2" fill="none"/>
+<polyline points="620,360 630,360" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="670,360 680,360" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="650" y="344" font-size="14" text-anchor="middle" font-weight="bold" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">R2</text>
+<text x="650" y="388" font-size="13" text-anchor="middle" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">150 Ω</text>
+<polyline points="680,360 736,360" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<circle cx="710" cy="360" r="4" fill="#111"/>
+<polyline points="710,360 710,400" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<rect x="701" y="410" width="18" height="40" stroke="#111" stroke-width="2" fill="none"/>
+<polyline points="710,400 710,410" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="710,450 710,460" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="726" y="428" font-size="14" text-anchor="start" font-weight="bold" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">R3</text>
+<text x="726" y="446" font-size="13" text-anchor="start" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">10 kΩ</text>
+<polyline points="710,460 710,470" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="710,470 710,480" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="694,480 726,480" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="700,485 720,485" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="706,490 714,490" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="560" y="505" font-size="12" text-anchor="start" font-weight="normal" fill="#333" font-family="DejaVu Sans, Arial, sans-serif">I_LED ≈ (4,7 − 1,5 − 0,2) / 33 ≈ 90 mA (đo được 86 mA).</text>
+<text x="560" y="523" font-size="12" text-anchor="start" font-weight="normal" fill="#333" font-family="DejaVu Sans, Arial, sans-serif">R3 giữ LED tắt khi GPIO4 thả nổi lúc khởi động.</text>
+<text x="560" y="541" font-size="12" text-anchor="start" font-weight="normal" fill="#333" font-family="DejaVu Sans, Arial, sans-serif">C1 đặt sát D1 / Q1.</text>
+<rect x="1030" y="40" width="540" height="520" stroke="#888" stroke-width="1.5" stroke-dasharray="8 5" fill="none" rx="6"/>
+<text x="1042" y="62" font-size="15" text-anchor="start" font-weight="bold" fill="#444" font-family="DejaVu Sans, Arial, sans-serif">C. Thu hồng ngoại</text>
+<polyline points="1080,100 1080,88" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1068,88 1092,88" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="1080" y="80" font-size="14" text-anchor="middle" font-weight="bold" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">+3V3</text>
+<polyline points="1080,100 1080,110 1110,110" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<rect x="1120" y="101" width="40" height="18" stroke="#111" stroke-width="2" fill="none"/>
+<polyline points="1110,110 1120,110" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1160,110 1170,110" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="1140" y="94" font-size="14" text-anchor="middle" font-weight="bold" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">R4</text>
+<text x="1140" y="138" font-size="13" text-anchor="middle" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">100 Ω (hoặc 0 Ω)</text>
+<polyline points="1170,110 1460,110 1460,150" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<circle cx="1240" cy="110" r="4" fill="#111"/>
+<circle cx="1320" cy="110" r="4" fill="#111"/>
+<polyline points="1240,110 1240,145" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1240,145 1240,165" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1240,175 1240,195" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1226,165 1254,165" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M1226,179 Q1240,171 1254,179" stroke="#111" stroke-width="2" fill="none"/>
+<text x="1216" y="162" font-size="14" text-anchor="start" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">+</text>
+<text x="1260" y="168" font-size="14" text-anchor="start" font-weight="bold" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">C3</text>
+<text x="1260" y="186" font-size="13" text-anchor="start" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">4,7 µF</text>
+<polyline points="1240,195 1240,205" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1224,205 1256,205" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1230,210 1250,210" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1236,215 1244,215" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1320,110 1320,145" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1320,145 1320,165" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1320,175 1320,195" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1306,165 1334,165" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1306,175 1334,175" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="1340" y="168" font-size="14" text-anchor="start" font-weight="bold" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">C2</text>
+<text x="1340" y="186" font-size="13" text-anchor="start" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">100 nF</text>
+<polyline points="1320,195 1320,205" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1304,205 1336,205" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1310,210 1330,210" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1316,215 1324,215" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<rect x="1410" y="150" width="120" height="180" stroke="#111" stroke-width="2" fill="none"/>
+<text x="1470" y="225" font-size="15" text-anchor="middle" font-weight="bold" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">U2</text>
+<text x="1470" y="245" font-size="13" text-anchor="middle" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">TSOP38238</text>
+<text x="1466" y="168" font-size="12" text-anchor="middle" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">3 VS</text>
+<text x="1470" y="322" font-size="12" text-anchor="middle" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">2 GND</text>
+<text x="1418" y="280" font-size="12" text-anchor="start" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">1 OUT</text>
+<polyline points="1460,330 1460,360" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1460,360 1460,370" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1444,370 1476,370" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1450,375 1470,375" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1456,380 1464,380" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1410,275 1160,275" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polygon points="1160,275 1152,265 1097,265 1097,285 1152,285" stroke="#0b5394" stroke-width="1.5" fill="#eaf2fb"/>
+<text x="1103" y="280" font-size="13" text-anchor="start" font-weight="bold" fill="#0b5394" font-family="DejaVu Sans, Arial, sans-serif">IR_RX</text>
+<text x="1050" y="430" font-size="12" text-anchor="start" font-weight="normal" fill="#333" font-family="DejaVu Sans, Arial, sans-serif">R4 + C3: lọc nguồn theo khuyến nghị của Vishay (tùy chọn;</text>
+<text x="1050" y="448" font-size="12" text-anchor="start" font-weight="normal" fill="#333" font-family="DejaVu Sans, Arial, sans-serif">không lắp thì nối tắt R4 bằng cầu 0 Ω, bỏ C3). C2 sát chân U2.</text>
+<text x="1050" y="472" font-size="12" text-anchor="start" font-weight="normal" fill="#333" font-family="DejaVu Sans, Arial, sans-serif">U2 quay mắt thu về phía remote / người dùng, không nhìn</text>
+<text x="1050" y="490" font-size="12" text-anchor="start" font-weight="normal" fill="#333" font-family="DejaVu Sans, Arial, sans-serif">thẳng vào D1 (firmware tắt thu khi đang phát).</text>
+<text x="1050" y="514" font-size="12" text-anchor="start" font-weight="normal" fill="#333" font-family="DejaVu Sans, Arial, sans-serif">U2 chạy 2,5–5,5 V: dùng 3V3 để OUT khớp mức logic ESP32.</text>
+<rect x="30" y="580" width="360" height="320" stroke="#888" stroke-width="1.5" stroke-dasharray="8 5" fill="none" rx="6"/>
+<text x="42" y="602" font-size="15" text-anchor="start" font-weight="bold" fill="#444" font-family="DejaVu Sans, Arial, sans-serif">F. Raspberry Pi 5: nút reset</text>
+<rect x="60" y="640" width="130" height="140" stroke="#111" stroke-width="2" fill="none"/>
+<text x="125" y="662" font-size="12" text-anchor="middle" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">Header 40 chân</text>
+<text x="180" y="705" font-size="12" text-anchor="end" font-weight="bold" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">11 GPIO17</text>
+<text x="180" y="765" font-size="12" text-anchor="end" font-weight="bold" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">9 GND</text>
+<polyline points="190,700 300,700 300,712" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="190,760 300,760 300,748" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<circle cx="300" cy="716" r="3" stroke="#111" stroke-width="2" fill="none"/>
+<circle cx="300" cy="744" r="3" stroke="#111" stroke-width="2" fill="none"/>
+<polyline points="292,714 282,746" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="276,730 266,730" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="312" y="734" font-size="14" text-anchor="start" font-weight="bold" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">SW1</text>
+<text x="60" y="815" font-size="12" text-anchor="start" font-weight="normal" fill="#333" font-family="DejaVu Sans, Arial, sans-serif">Nút nhấn 4 chân 12×12 mm (dùng 2 chân chéo).</text>
+<text x="60" y="833" font-size="12" text-anchor="start" font-weight="normal" fill="#333" font-family="DejaVu Sans, Arial, sans-serif">Kéo lên bên trong (gpiozero), không cần điện trở.</text>
+<text x="60" y="851" font-size="12" text-anchor="start" font-weight="normal" fill="#333" font-family="DejaVu Sans, Arial, sans-serif">Giữ 10 s: xóa tài khoản (reset_button.py).</text>
+<text x="60" y="869" font-size="12" text-anchor="start" font-weight="normal" fill="#333" font-family="DejaVu Sans, Arial, sans-serif">Nằm trên hộp Pi, không thuộc bo Room Node.</text>
+<rect x="410" y="580" width="400" height="320" stroke="#888" stroke-width="1.5" stroke-dasharray="8 5" fill="none" rx="6"/>
+<text x="422" y="602" font-size="15" text-anchor="start" font-weight="bold" fill="#444" font-family="DejaVu Sans, Arial, sans-serif">D. Cảm biến nhiệt ẩm</text>
+<rect x="690" y="640" width="60" height="170" stroke="#111" stroke-width="2" fill="none"/>
+<text x="720" y="632" font-size="14" text-anchor="middle" font-weight="bold" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">J3</text>
+<text x="698" y="670" font-size="12" text-anchor="start" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">1</text>
+<text x="745" y="670" font-size="11" text-anchor="end" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">VIN</text>
+<polyline points="690,665 630,665" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polygon points="630,665 622,655 576,655 576,675 622,675" stroke="#0b5394" stroke-width="1.5" fill="#eaf2fb"/>
+<text x="582" y="670" font-size="13" text-anchor="start" font-weight="bold" fill="#0b5394" font-family="DejaVu Sans, Arial, sans-serif">+3V3</text>
+<text x="698" y="710" font-size="12" text-anchor="start" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">2</text>
+<text x="745" y="710" font-size="11" text-anchor="end" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">GND</text>
+<polyline points="690,705 630,705" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polygon points="630,705 622,695 585,695 585,715 622,715" stroke="#0b5394" stroke-width="1.5" fill="#eaf2fb"/>
+<text x="591" y="710" font-size="13" text-anchor="start" font-weight="bold" fill="#0b5394" font-family="DejaVu Sans, Arial, sans-serif">GND</text>
+<text x="698" y="750" font-size="12" text-anchor="start" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">3</text>
+<text x="745" y="750" font-size="11" text-anchor="end" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">SCL</text>
+<polyline points="690,745 630,745" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polygon points="630,745 622,735 585,735 585,755 622,755" stroke="#0b5394" stroke-width="1.5" fill="#eaf2fb"/>
+<text x="591" y="750" font-size="13" text-anchor="start" font-weight="bold" fill="#0b5394" font-family="DejaVu Sans, Arial, sans-serif">SCL</text>
+<text x="698" y="790" font-size="12" text-anchor="start" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">4</text>
+<text x="745" y="790" font-size="11" text-anchor="end" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">SDA</text>
+<polyline points="690,785 630,785" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polygon points="630,785 622,775 585,775 585,795 622,795" stroke="#0b5394" stroke-width="1.5" fill="#eaf2fb"/>
+<text x="591" y="790" font-size="13" text-anchor="start" font-weight="bold" fill="#0b5394" font-family="DejaVu Sans, Arial, sans-serif">SDA</text>
+<text x="430" y="840" font-size="12" text-anchor="start" font-weight="normal" fill="#333" font-family="DejaVu Sans, Arial, sans-serif">J3: header đực 1×4 (hoặc JST-XH 4P), dây tới module</text>
+<text x="430" y="858" font-size="12" text-anchor="start" font-weight="normal" fill="#333" font-family="DejaVu Sans, Arial, sans-serif">GY-SHT3x-D (I²C 0x44, đã có điện trở kéo lên trên module).</text>
+<text x="430" y="876" font-size="12" text-anchor="start" font-weight="normal" fill="#333" font-family="DejaVu Sans, Arial, sans-serif">Đặt cảm biến cách bo ≥ 5–10 cm, tránh gió điều hòa.</text>
+<rect x="830" y="580" width="740" height="320" stroke="#888" stroke-width="1.5" stroke-dasharray="8 5" fill="none" rx="6"/>
+<text x="842" y="602" font-size="15" text-anchor="start" font-weight="bold" fill="#444" font-family="DejaVu Sans, Arial, sans-serif">E. Radar phát hiện người</text>
+<rect x="1110" y="630" width="60" height="210" stroke="#111" stroke-width="2" fill="none"/>
+<text x="1140" y="622" font-size="14" text-anchor="middle" font-weight="bold" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">J4</text>
+<text x="1118" y="655" font-size="12" text-anchor="start" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">1</text>
+<text x="1165" y="655" font-size="11" text-anchor="end" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">3V3</text>
+<polyline points="1110,650 1050,650" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polygon points="1050,650 1042,640 996,640 996,660 1042,660" stroke="#0b5394" stroke-width="1.5" fill="#eaf2fb"/>
+<text x="1002" y="655" font-size="13" text-anchor="start" font-weight="bold" fill="#0b5394" font-family="DejaVu Sans, Arial, sans-serif">+3V3</text>
+<text x="1118" y="700" font-size="12" text-anchor="start" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">2</text>
+<text x="1165" y="700" font-size="11" text-anchor="end" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">GND</text>
+<polyline points="1110,695 1050,695" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polygon points="1050,695 1042,685 1005,685 1005,705 1042,705" stroke="#0b5394" stroke-width="1.5" fill="#eaf2fb"/>
+<text x="1011" y="700" font-size="13" text-anchor="start" font-weight="bold" fill="#0b5394" font-family="DejaVu Sans, Arial, sans-serif">GND</text>
+<text x="1118" y="745" font-size="12" text-anchor="start" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">3</text>
+<text x="1165" y="745" font-size="11" text-anchor="end" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">OT1</text>
+<polyline points="1110,740 1050,740" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polygon points="1050,740 1042,730 960,730 960,750 1042,750" stroke="#0b5394" stroke-width="1.5" fill="#eaf2fb"/>
+<text x="966" y="745" font-size="13" text-anchor="start" font-weight="bold" fill="#0b5394" font-family="DejaVu Sans, Arial, sans-serif">RADAR_TX</text>
+<text x="1118" y="790" font-size="12" text-anchor="start" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">4</text>
+<text x="1165" y="790" font-size="11" text-anchor="end" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">RX</text>
+<polyline points="1110,785 1080,785" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1074,779 1086,791" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1074,791 1086,779" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="1068" y="790" font-size="11" text-anchor="end" font-weight="normal" fill="#555" font-family="DejaVu Sans, Arial, sans-serif">để trống</text>
+<text x="1118" y="835" font-size="12" text-anchor="start" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">5</text>
+<text x="1165" y="835" font-size="11" text-anchor="end" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">OT2</text>
+<polyline points="1110,830 1050,830" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polygon points="1050,830 1042,820 960,820 960,840 1042,840" stroke="#0b5394" stroke-width="1.5" fill="#eaf2fb"/>
+<text x="966" y="835" font-size="13" text-anchor="start" font-weight="bold" fill="#0b5394" font-family="DejaVu Sans, Arial, sans-serif">PRESENCE</text>
+<polyline points="1300,660 1300,648" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1288,648 1312,648" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="1300" y="640" font-size="14" text-anchor="middle" font-weight="bold" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">+3V3</text>
+<polyline points="1300,660 1300,685" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1300,685 1300,705" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1300,715 1300,735" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1286,705 1314,705" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M1286,719 Q1300,711 1314,719" stroke="#111" stroke-width="2" fill="none"/>
+<text x="1276" y="702" font-size="14" text-anchor="start" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">+</text>
+<text x="1320" y="708" font-size="14" text-anchor="start" font-weight="bold" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">C4</text>
+<text x="1320" y="726" font-size="13" text-anchor="start" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">10 µF</text>
+<polyline points="1300,735 1300,745" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1284,745 1316,745" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1290,750 1310,750" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1296,755 1304,755" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1420,660 1420,648" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1408,648 1432,648" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="1420" y="640" font-size="14" text-anchor="middle" font-weight="bold" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">+3V3</text>
+<polyline points="1420,660 1420,685" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1420,685 1420,705" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1420,715 1420,735" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1406,705 1434,705" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1406,715 1434,715" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="1440" y="708" font-size="14" text-anchor="start" font-weight="bold" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">C5</text>
+<text x="1440" y="726" font-size="13" text-anchor="start" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">100 nF</text>
+<polyline points="1420,735 1420,745" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1404,745 1436,745" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1410,750 1430,750" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<polyline points="1416,755 1424,755" stroke="#111" stroke-width="2" fill="none" stroke-linecap="round"/>
+<text x="1250" y="795" font-size="12" text-anchor="start" font-weight="normal" fill="#333" font-family="DejaVu Sans, Arial, sans-serif">C4, C5 đặt sát J4</text>
+<text x="1250" y="813" font-size="12" text-anchor="start" font-weight="normal" fill="#333" font-family="DejaVu Sans, Arial, sans-serif">(LD2420 kéo dòng theo xung, TB ~50 mA).</text>
+<text x="850" y="868" font-size="12" text-anchor="start" font-weight="normal" fill="#333" font-family="DejaVu Sans, Arial, sans-serif">J4: header đực 1×5 hoặc header cái để cắm thẳng HLK-LD2420. Chỉ cấp 3,0–3,6 V.</text>
+<text x="850" y="886" font-size="12" text-anchor="start" font-weight="normal" fill="#333" font-family="DejaVu Sans, Arial, sans-serif">Firmware LD2420 ≥ 1.5.3: OT2 = OUT (có người), OT1 = TX UART (chỉ dùng để biết radar còn sống).</text>
+<text x="30" y="935" font-size="15" text-anchor="start" font-weight="bold" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">Ghi chú</text>
+<text x="30" y="960" font-size="12" text-anchor="start" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">1. Nhãn cùng tên (IR_TX, +3V3, GND...) là cùng một lưới, nối với nhau trên mạch in.</text>
+<text x="30" y="980" font-size="12" text-anchor="start" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">2. LED IR lấy nguồn chân 5V của DevKit (USB, cầu IN-OUT đã hàn). Không cấp nguồn ngoài vào 5V khi đang cắm USB.</text>
+<text x="30" y="1000" font-size="12" text-anchor="start" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">3. Q1 2N2222A (TO-92): thứ tự chân E-B-C khác nhau theo hãng; đo con thật rồi mới chọn footprint.</text>
+<text x="30" y="1020" font-size="12" text-anchor="start" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">4. Đường +5V → R1 → D1 → Q1 → GND chịu ~90 mA dạng xung: vết ≥ 0,5 mm; GND nên đổ đồng.</text>
+<text x="30" y="1040" font-size="12" text-anchor="start" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">5. D1 đặt ở mép bo, hướng ra ngoài vỏ, chĩa vào mắt nhận của điều hòa (góc ±17°). Muốn 2 LED: nối tiếp, R1 = 22 Ω.</text>
+<text x="30" y="1060" font-size="12" text-anchor="start" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">6. Chân J1/J2 không dùng: vẫn hàn header để giữ cơ khí, không nối vết.</text>
+<rect x="1180" y="920" width="390" height="180" stroke="#111" stroke-width="2" fill="none"/>
+<text x="1195" y="948" font-size="18" text-anchor="start" font-weight="bold" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">PBL5: Room Node</text>
+<text x="1195" y="972" font-size="14" text-anchor="start" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">Sơ đồ nguyên lý, IR rev 2 (v0.9.0)</text>
+<text x="1195" y="1000" font-size="13" text-anchor="start" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">Tác giả: Nguyễn Đức Trúc</text>
+<text x="1195" y="1020" font-size="13" text-anchor="start" font-weight="normal" fill="#111" font-family="DejaVu Sans, Arial, sans-serif">Ngày: 2026-11-23   Tờ 1/1</text>
+<text x="1195" y="1040" font-size="12" text-anchor="start" font-weight="normal" fill="#444" font-family="DejaVu Sans, Arial, sans-serif">Firmware: firmware/room_node (chân trong config.h)</text>
+<text x="1195" y="1060" font-size="12" text-anchor="start" font-weight="normal" fill="#444" font-family="DejaVu Sans, Arial, sans-serif">Chi tiết: docs/hardware/ir-circuit.md, sensors.md</text>
+<text x="1195" y="1080" font-size="12" text-anchor="start" font-weight="normal" fill="#444" font-family="DejaVu Sans, Arial, sans-serif">Ký hiệu điện trở theo IEC (hình chữ nhật)</text>
+</svg>

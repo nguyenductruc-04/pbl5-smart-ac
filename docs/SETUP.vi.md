@@ -602,7 +602,7 @@ Script hỏi mật khẩu Wi-Fi `SmartAC-Backup` để in lên tem (Enter để 
 scp truc0404@gateway.local:~/pbl5-smart-ac/gateway/setup_label.svg .
 ```
 
-Mở file bằng trình duyệt, in ở tỉ lệ 100 %, dán vào mặt dưới hoặc bên trong hộp Pi, rồi xóa file ở cả hai máy (`rm setup_label.svg`). Tem có hai mã QR: mã bên trái cho app Android (bản 0.11.0), mã bên phải để camera điện thoại vào thẳng Wi-Fi `SmartAC-Backup`.
+Mở file bằng trình duyệt, in ở tỉ lệ 100 %, dán vào mặt dưới hoặc bên trong hộp Pi, rồi xóa file ở cả hai máy (`rm setup_label.svg`). Tem có hai mã QR: mã bên trái cho app Android (bản 0.10.0), mã bên phải để camera điện thoại vào thẳng Wi-Fi `SmartAC-Backup`.
 
 **Tem là bí mật**, giống mật khẩu Wi-Fi in sau router: đừng chụp gửi lên mạng hay đưa vào báo cáo (ảnh minh họa thì che mã). Mã thiết lập nằm trong `gateway/setup_code`, không vào git.
 
@@ -690,6 +690,79 @@ curl -s -H "X-API-Key: $KEY" "http://localhost:8000/api/v1/rooms/room01/comfort?
 - Ai có tem và vào được mạng của Pi thì nhận chủ được **khi Pi chưa có chủ hoặc vừa reset**. Sau khi thiết lập, tem không còn tác dụng cho tới lần reset sau.
 - Ai cầm được Pi thì vẫn có toàn quyền (nút reset, thẻ nhớ), như mọi thiết bị trong nhà.
 
+## Bước 13: Dùng từ xa qua Internet (Cloudflare Tunnel)
+
+Lý do thiết kế: [ADR 0008](adr/0008-remote-access.md). Pi tự kết nối **ra** Cloudflare, nên không phải mở cổng trên router và vẫn chạy khi nhà mạng dùng CGNAT. Dashboard và app có địa chỉ HTTPS cố định, ví dụ `https://ac.ductruc.site`, dùng được cả khi điện thoại đang dùng 4G.
+
+Cần: tên miền đã ở trạng thái **Active** trong tài khoản Cloudflare, và Pi đang ở Wi-Fi nhà có Internet.
+
+### 13.1 Tạo tunnel trên Cloudflare
+
+Giao diện Cloudflare đổi thường xuyên; tên mục dưới đây theo giao diện tháng 11/2026.
+
+1. Dashboard Cloudflare (trang có danh sách tên miền) → menu trái **Networking → Tunnels** → **Create Tunnel**, đặt tên `pbl5-pi`. (Cách cũ, vẫn dùng được: **Zero Trust → Networks → Connectors → Cloudflare Tunnels**.)
+2. Chọn hệ điều hành **Debian**, kiến trúc **arm64-bit**. Trang hiện lệnh cài `cloudflared` và lệnh `sudo cloudflared service install <token>`.
+3. **Token là bí mật** (ai có nó thì chạy được tunnel của bạn): chỉ dán vào terminal của Pi, đừng gửi cho ai, đừng đưa vào git hay báo cáo. Có thể xem lại lệnh này bất cứ lúc nào trong trang của tunnel.
+
+### 13.2 Cài trên Pi
+
+SSH vào Pi, dán **lần lượt** các khối lệnh vừa copy. Kiểm tra:
+
+```bash
+sudo systemctl status cloudflared --no-pager | head -5   # active (running)
+```
+
+Trên trang Cloudflare, tunnel chuyển sang **Healthy**.
+
+### 13.3 Gắn tên miền vào Pi
+
+Trong trang của tunnel, thêm một **published application** (route):
+
+| Ô | Giá trị |
+|---|---|
+| Subdomain | `ac` |
+| Domain | `ductruc.site` |
+| Path | để trống |
+| Service URL | **`http://localhost:8000`** (phải ghi `http://`) |
+| Additional application settings | để mặc định; **không bật Access** (app Android không qua được trang đăng nhập của Access) |
+
+Bấm **Add route**. Cloudflare tự tạo bản ghi DNS và chứng chỉ HTTPS.
+
+Nên chỉnh thêm trong trang của tên miền `ductruc.site`:
+
+| Ở đâu | Làm gì | Vì sao |
+|---|---|---|
+| Caching → Cache Rules | Hostname bằng `ac.ductruc.site` → **Bypass cache** | Không thì sau khi cập nhật Pi, dashboard có thể vẫn chạy `app.js` cũ vài giờ |
+| Security → Bots | **Bot Fight Mode: Off** | Có thể chặn app Android (lỗi 403 dù mật khẩu đúng) |
+| SSL/TLS → Edge Certificates | **Always Use HTTPS: On** | `http://` tự chuyển sang `https://` |
+| DNS → Settings | **DNSSEC: Enable** | Chống giả mạo tên miền |
+| Security → WAF → Rate limiting (tùy chọn) | `/api/v1/auth/login`, 10 lần/phút mỗi IP → Block 1 phút | Thêm một lớp chống dò mật khẩu |
+
+Báo cho gateway địa chỉ này, để app tự học và dùng khi ra ngoài:
+
+```bash
+cd ~/pbl5-smart-ac/gateway
+echo 'PUBLIC_URL=https://ac.ductruc.site' >> .env
+sudo systemctl restart pbl5-gateway
+curl -s http://localhost:8000/api/v1/setup/status   # có "public_url": "https://ac.ductruc.site"
+```
+
+### 13.4 Kiểm thử
+
+| # | Thao tác | Kết quả đúng |
+|---|---|---|
+| 1 | Điện thoại tắt Wi-Fi, dùng 4G, mở `https://ac.ductruc.site` | Dashboard hiện trang đăng nhập, có ổ khóa HTTPS, không còn lỗi SSL của Brave |
+| 2 | Đăng nhập, bấm Bật/Tắt | Lệnh chạy như ở nhà (chậm hơn khoảng 0,1–0,3 giây) |
+| 3 | App: mở một lần khi ở Wi-Fi nhà (để app học địa chỉ), rồi tắt Wi-Fi, mở lại app | App vào thẳng màn hình điều khiển qua 4G, **không** phải đăng nhập lại |
+| 4 | Đang mở app, bật lại Wi-Fi nhà | Sau vài giây app tự chuyển sang nói chuyện thẳng với Pi trong mạng nhà |
+| 5 | Pi chưa có chủ (vừa reset), thử **Thiết lập lần đầu** qua 4G | "Thiết lập lần đầu chỉ làm được khi điện thoại ở cùng mạng…" |
+
+### 13.5 Giới hạn đã biết
+
+- Trang đăng nhập giờ ai trên Internet cũng mở được. Bảo vệ: mật khẩu băm scrypt, khóa tên 5 phút sau 5 lần sai, tài khoản mới phải chờ duyệt, thiết lập lần đầu chỉ trong mạng nhà. Đặt mật khẩu quản trị dài, không dùng lại mật khẩu ở nơi khác.
+- Mất Internet ở nhà thì chỉ dùng được trong mạng nhà hoặc `SmartAC-Backup`, như trước.
+- Tên miền hết hạn thì chỉ mất truy cập từ xa. Đổi tên miền: sửa Public Hostname trên Cloudflare và `PUBLIC_URL` trong `.env`.
+
 ## Xử lý lỗi thường gặp
 
 **Dashboard trên điện thoại báo `ERR_SSL_PROTOCOL_ERROR` / "không thể cung cấp kết nối an toàn"**
@@ -699,7 +772,7 @@ curl -s -H "X-API-Key: $KEY" "http://localhost:8000/api/v1/rooms/room01/comfort?
 - Mạng của Pi không có Internet, Android có thể tự chuyển sang dữ liệu di động. Khi điện thoại hỏi "Mạng này không có Internet. Vẫn kết nối?", chọn **Có** và **Không hỏi lại**, hoặc tắt dữ liệu di động khi thử nghiệm.
 
 **Mở `http://10.42.0.1:8000` thì dashboard bắt đăng nhập lại, dù ở nhà đã đăng nhập**
-- Trình duyệt nhớ phiên đăng nhập **theo từng địa chỉ**: `gateway.local`, IP của Pi trong mạng nhà và `10.42.0.1` là ba "trang" khác nhau. Đăng nhập lại bằng tên và mật khẩu (từ bản 0.9.0 không còn phải tìm khóa API). Khi chuyển sang **Độc lập** trên dashboard, bấm đường dẫn **"Mở dashboard ở mạng mới"** hiện ở đầu trang thì không phải đăng nhập lại. App Android (bản 0.11.0) sẽ không gặp chuyện này.
+- Trình duyệt nhớ phiên đăng nhập **theo từng địa chỉ**: `gateway.local`, IP của Pi trong mạng nhà và `10.42.0.1` là ba "trang" khác nhau. Đăng nhập lại bằng tên và mật khẩu (từ bản 0.9.0 không còn phải tìm khóa API). Khi chuyển sang **Độc lập** trên dashboard, bấm đường dẫn **"Mở dashboard ở mạng mới"** hiện ở đầu trang thì không phải đăng nhập lại. App Android (bản 0.10.0) sẽ không gặp chuyện này.
 
 **Quên mật khẩu**
 - Người khác: quản trị viên xóa tài khoản đó trong mục **Thành viên**, người đó tạo lại.
@@ -741,4 +814,4 @@ ACL chỉ cho mỗi node ghi và đọc topic của **chính phòng mình**: nod
 3. **Milestone 3 – Cảm biến thật:** SHT3x (I2C, chân 8/9) và HLK-LD2420 (v0.5.0).
 4. **Milestone 4 – Safety Layer + API:** FastAPI, trạng thái dự kiến, chống short-cycling, phân quyền (v0.6.0).
 5. **Milestone 5 – Dashboard và phiếu cảm nhận** (v0.7.0).
-6. **Milestone 6 – Mô hình tiện nghi và gợi ý nhiệt độ** (v0.8.0). Mở rộng: lệnh bị bỏ lỡ, chế độ mạng, tài khoản người dùng (v0.9.0).
+6. **Milestone 6 – Mô hình tiện nghi và gợi ý nhiệt độ** (v0.8.0). Mở rộng: lệnh bị bỏ lỡ, chế độ mạng, tài khoản người dùng (v0.9.0); app Android và truy cập từ xa (v0.10.0).

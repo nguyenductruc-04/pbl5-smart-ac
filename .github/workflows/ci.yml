@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
 
 jobs:
@@ -36,3 +37,31 @@ jobs:
           arduino-cli compile --fqbn esp32:esp32:esp32s3 firmware/tools/ir_loopback
           arduino-cli compile --fqbn esp32:esp32:esp32s3 firmware/tools/sensor_check
           arduino-cli compile --fqbn esp32:esp32:esp32s3 firmware/tools/ir_replay
+
+  android:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # dinh kem APK vao release khi day tag v*
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+      - name: Build APK
+        run: gradle -p android assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pbl5-app
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+      - name: Attach APK to the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk "pbl5-smartac-${GITHUB_REF_NAME}.apk"
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes "Xem CHANGELOG.md" --draft
+          gh release upload "$GITHUB_REF_NAME" "pbl5-smartac-${GITHUB_REF_NAME}.apk" --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}

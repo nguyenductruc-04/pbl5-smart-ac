@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pi trong mang LAN / mang du phong chay http:// (dia chi IP thay doi theo mang nen khong liet ke duoc).
+     Truy cap tu xa (v0.10.0) di qua HTTPS cua Cloudflare. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
