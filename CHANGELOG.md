@@ -4,13 +4,26 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versio
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-23
+### Added
+- Native Android app (`android/`, Kotlin + Jetpack Compose): finds the Pi without typing an address (last address, backup network `10.42.0.1`, mDNS `_pbl5._tcp`, then the Internet address), first setup / sign-in / sign-up, room readings, power and temperature, early-restart confirmation, comfort votes; session kept in `EncryptedSharedPreferences`. CI builds the APK (artifact `pbl5-app`).
+- App: scan the label on the Pi (setup code fills the first-setup form; the Wi-Fi code joins `SmartAC-Backup` from inside the app and keeps the app on that network even without Internet, Android 10+); admins approve, change and remove members.
+- App: mode and fan, "AC did not follow?" (resend, report the real power state), comfort suggestion with Apply, temperature chart (6 h / 24 h / 7 days); admins switch the Pi network mode, and after switching to standalone the app joins `SmartAC-Backup` by itself if the label's Wi-Fi code was scanned.
+- App notifications without Firebase: a background check every 15 minutes reports a node going offline, new accounts waiting for approval (admins) and a hot room where the comfort model suggests turning the AC on (at most every 2 hours).
+- CI attaches the APK to the GitHub release when a `v*` tag is pushed.
+- Room Node schematics for a PCB: overall wiring and per-block sheets, BOM and netlist (`docs/hardware/pcb.md`).
+- Remote access through Cloudflare Tunnel (ADR 0008): `PUBLIC_URL` in `.env` is reported by `/setup/status`; the app learns it on the home network and switches between home, backup network and Internet without signing in again.
+
+### Changed
+- First setup is refused over the Internet (`403 SETUP_LOCAL_ONLY`): claiming the Pi needs a phone on its network.
+
 ## [0.9.0] - 2026-11-22
 ### Added
 - User accounts (ADR 0007) with roles `admin`, `member`, `guest`: the first admin claims the Pi with the setup code printed on its label (`POST /setup`); others register themselves and wait for an admin to grant a role (`/auth/register`, `/users`). Sessions are bearer tokens (only the SHA-256 is stored, 90-day sliding expiry); passwords are hashed with scrypt; login, setup and registration are rate limited. Dashboard: first-setup, sign-in and sign-up screens, account menu (change password, sign out), "Thành viên" section for admins, read-only view for guests.
 - Comfort votes record who voted (`user_id`, `username`); existing databases are upgraded in place.
 - `setup_label.py`: prints the setup label (setup code, QR for the Android app, backup Wi-Fi name and password with a `WIFI:` QR).
 - Reset button on GPIO 17 (`reset_button.py`, `pbl5-reset.service`): hold 10 s to delete all accounts and the dashboard network-mode choice; data is kept.
-- `pbl5.avahi.service`: advertises `_pbl5._tcp` so the Android app (v0.11.0) finds the Pi without an IP address.
+- `pbl5.avahi.service`: advertises `_pbl5._tcp` so the Android app (v0.10.0) finds the Pi without an IP address.
 - Recovering from missed IR commands (ADR 0005): **resend** the expected state (`POST /rooms/{room}/commands/resend`), **sync** the expected state to what the AC is really doing without sending IR (`PUT /rooms/{room}/ac-state`), and a **confirmed early start** for manual power-on during the compressor rest period (`confirm: true`, code `EARLY_START_CONFIRMED`). Dashboard: inline confirmation and a "Điều hòa không làm theo?" section.
 - Network modes for the Pi (ADR 0006), switchable from the dashboard ("Mạng của Pi") without SSH or restarts: `auto` (as before), `standalone` (start the Pi's own Wi-Fi immediately and stay on it: field tests, demos), `home` (never start it). `GET/PUT /system/network`; `NETWORK_MODE` in `.env` is the default.
 - Dashboard warns when the Pi's clock differs from the phone's by more than 2 minutes (no RTC battery, no NTP in standalone mode); `/health` returns `time`.

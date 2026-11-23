@@ -38,6 +38,7 @@ const REASON = {
   BAD_PASSWORD: "Mật khẩu cần 8–128 ký tự và không được trùng tên đăng nhập.",
   SETUP_CODE_INVALID: "Mã thiết lập không đúng. Xem lại tem dán trên Raspberry Pi.",
   SETUP_TOO_MANY: "Nhập sai mã quá nhiều lần.",
+  SETUP_LOCAL_ONLY: "Thiết lập lần đầu chỉ làm được khi điện thoại ở cùng mạng Wi-Fi với Raspberry Pi (hoặc mạng SmartAC-Backup), không qua Internet.",
   ALREADY_CLAIMED: "Raspberry Pi này đã có quản trị viên. Đăng nhập, hoặc giữ nút reset trên Pi 10 giây để thiết lập lại.",
   NOT_CLAIMED: "Raspberry Pi chưa được thiết lập. Tạo tài khoản quản trị bằng mã trên tem trước.",
   REGISTER_TOO_MANY: "Có quá nhiều lượt đăng ký.",

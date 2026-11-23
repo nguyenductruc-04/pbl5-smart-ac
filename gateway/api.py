@@ -34,7 +34,7 @@ import settings
 import store
 from gateway import Gateway
 
-__version__ = "0.9.0"
+__version__ = "0.10.0"
 log = logging.getLogger("api")
 
 WEB_DIR = FsPath(__file__).resolve().parent / "web"
@@ -198,7 +198,7 @@ REJECT_STATUS = {
 def create_app(gateway: Gateway | None = None, service: control.CommandService | None = None,
                *, api_key: str | None = None, automation_key: str | None = None,
                setup_code: str | None = None, device_id: str | None = None,
-               clock=time.time) -> FastAPI:
+               public_url: str | None = None, clock=time.time) -> FastAPI:
     api_key = settings.API_KEY if api_key is None else api_key
     automation_key = settings.API_KEY_AUTOMATION if automation_key is None else automation_key
     if len(api_key) < 16:
@@ -212,6 +212,7 @@ def create_app(gateway: Gateway | None = None, service: control.CommandService |
     # Ma thiet lap (in tren tem) va ma thiet bi: tao lan dau, giu mai (accounts.py)
     setup_code = setup_code or accounts.setup_code()
     device_id = device_id or accounts.device_id()
+    public_url = (settings.PUBLIC_URL if public_url is None else public_url) or None
     login_fails: dict[str, list[float]] = {}   # ten dang nhap -> thoi diem cac lan sai
     setup_fails: list[float] = []
     registrations: list[float] = []
@@ -633,11 +634,20 @@ def create_app(gateway: Gateway | None = None, service: control.CommandService |
     @app.get("/api/v1/setup/status", tags=["tai khoan"])
     def setup_status(db: Db):
         """Khong can dang nhap. `claimed` = da co quan tri vien; `device_id` de app nhan dung Pi."""
-        return {"claimed": accounts.has_admin(db), "device_id": device_id, "version": __version__}
+        return {"claimed": accounts.has_admin(db), "device_id": device_id, "version": __version__,
+                "public_url": public_url}
+
+    def via_internet(request: Request) -> bool:
+        """Yeu cau di qua Cloudflare Tunnel: Cloudflare luon dat header nay (khong gia mao duoc tu Internet)."""
+        return "cf-connecting-ip" in request.headers
 
     @app.post("/api/v1/setup", tags=["tai khoan"], status_code=201)
-    def first_setup(body: SetupIn, db: Db):
-        """Tao tai khoan quan tri dau tien bang ma thiet lap tren tem. Chi dung duoc khi chua co chu."""
+    def first_setup(body: SetupIn, db: Db, request: Request):
+        """Tao tai khoan quan tri dau tien bang ma thiet lap tren tem. Chi dung duoc khi chua co chu,
+        va chi tu mang nha / mang du phong (nguoi phai o canh Pi), khong qua Internet."""
+        if via_internet(request):
+            raise ApiError(403, "SETUP_LOCAL_ONLY",
+                           "Thiet lap lan dau chi lam duoc khi dien thoai o cung mang voi Pi")
         now = clock()
         with auth_lock:
             setup_fails[:] = [t for t in setup_fails if now - t < 60]

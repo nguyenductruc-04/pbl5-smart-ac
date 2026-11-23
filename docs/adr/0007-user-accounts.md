@@ -11,7 +11,7 @@ Until v0.9.0 the API had one shared secret, `API_KEY`. Testing on phones showed 
 - The key had to be read from `gateway/.env` over SSH and typed or paired into every browser, and browsers keep it per address (`gateway.local`, the home IP and `10.42.0.1` are three different pages).
 - Everyone with the key had full rights, including changing the network mode; there was no way to let a roommate watch the room without letting them control it, or to revoke one phone.
 - Comfort votes could not say who voted, although comfort is personal (ADR 0004).
-- A native Android app (planned for v0.11.0) needs a normal sign-in, not a shared secret.
+- A native Android app (planned for v0.10.0) needs a normal sign-in, not a shared secret.
 
 Consumer smart-home devices solve this the same way: the owner claims the device with a code printed on it, other people get access from the owner, and a physical button returns the device to factory state.
 

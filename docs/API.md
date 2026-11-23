@@ -24,13 +24,13 @@ People sign in with an account; every endpoint except `/health`, `/setup/status`
 | `guest` | read only |
 | `pending` | nothing: a self-registered account waiting for an admin |
 
-Plain HTTP: use on the local network or over Tailscale only.
+Plain HTTP on the local network; over the Internet only through Cloudflare Tunnel, which adds HTTPS ([ADR 0008](adr/0008-remote-access.md)).
 
 ### First setup, accounts and sessions
 
 ```bash
 curl http://gateway.local:8000/api/v1/setup/status
-# {"claimed": false, "device_id": "a1b2c3d4", "version": "0.9.0"}
+# {"claimed": false, "device_id": "a1b2c3d4", "version": "0.10.0", "public_url": "https://ac.ductruc.site"}
 
 curl -X POST http://gateway.local:8000/api/v1/setup -H "Content-Type: application/json" \
   -d '{"code": "XXXX-XXXX-XXXX", "username": "truc", "password": "...", "device": "laptop"}'
@@ -43,8 +43,8 @@ Tokens are random 256-bit values; the Pi stores only their SHA-256. A session ex
 
 | Method | Path | Who | Purpose |
 |---|---|---|---|
-| GET | `/setup/status` | anyone | `claimed`, `device_id`, `version` |
-| POST | `/setup` | anyone with the setup code | First admin; `code`, `username`, `password`, optional `display_name`, `device` |
+| GET | `/setup/status` | anyone | `claimed`, `device_id`, `version`, `public_url` (remote address from `PUBLIC_URL`, or `null`) |
+| POST | `/setup` | anyone with the setup code, **on the local network** | First admin; `code`, `username`, `password`, optional `display_name`, `device`. Refused with `403 SETUP_LOCAL_ONLY` when the request came through Cloudflare Tunnel |
 | POST | `/auth/register` | anyone | New account, `pending` until approved |
 | POST | `/auth/login` | anyone | `{"token", "user"}`; `device` names the session |
 | POST | `/auth/logout` | signed in | Ends this session (`204`) |
@@ -172,6 +172,7 @@ When `retry_after_s` is present the response also carries a `Retry-After` header
 | 403 | `SOURCE_NOT_ALLOWED`, `FORBIDDEN`, `CONFIRM_NOT_ALLOWED`, `NOT_YOUR_VOTE` | Role or key not allowed to do this |
 | 403 | `ACCOUNT_PENDING` | Account waiting for an admin |
 | 403 | `SETUP_CODE_INVALID`, `WRONG_PASSWORD` | Wrong setup code / current password |
+| 403 | `SETUP_LOCAL_ONLY` | First setup attempted over the Internet |
 | 409 | `ALREADY_CLAIMED`, `NOT_CLAIMED`, `USERNAME_TAKEN`, `LAST_ADMIN` | Setup already done / not done yet, name in use, would leave no admin |
 | 404 | `USER_NOT_FOUND` | No such account |
 | 422 | `BAD_USERNAME`, `BAD_PASSWORD` | Rules above |
