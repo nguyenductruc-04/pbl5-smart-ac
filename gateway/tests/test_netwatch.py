@@ -1,4 +1,7 @@
 """Unit tests cho logic watchdog Wi-Fi (khong goi nmcli that)."""
+import pytest
+
+import netmode
 import netwatch as nw
 from netwatch import AP, HOME, NONE, OFFLINE, START_AP, STOP_AP, Memory, decide, parse_state
 
@@ -81,3 +84,60 @@ def test_home_connections_name_with_escaped_colon():
 
 def test_home_connections_never_returns_ap():
     assert nw.home_connections("SmartAC-Backup:802-11-wireless:yes:99\n") == []
+
+
+# ------------------------------------------------------------------ che do mang (v0.10.0)
+def test_standalone_starts_ap_immediately_and_stays():
+    mem = Memory()
+    assert decide(HOME, 0, mem, nw.STANDALONE) == START_AP          # ke ca dang co Wi-Fi nha
+    assert decide(OFFLINE, 1, mem, nw.STANDALONE) == START_AP
+    for t in range(0, 5 * nw.RETRY_HOME_EVERY_S, 15):
+        assert decide(AP, t, mem, nw.STANDALONE) == NONE              # khong bao gio thu ve nha
+
+
+def test_home_only_never_starts_ap_and_leaves_it():
+    mem = Memory()
+    for t in range(0, 3 * nw.OFFLINE_BEFORE_AP_S, 15):
+        assert decide(OFFLINE, t, mem, nw.HOME_ONLY) == NONE
+    assert decide(AP, 0, mem, nw.HOME_ONLY) == STOP_AP
+
+
+def test_network_mode_reads_env_and_falls_back_to_auto(monkeypatch, tmp_path):
+    monkeypatch.setattr(netmode, "MODE_FILE", tmp_path / "network_mode")
+    monkeypatch.setenv("NETWORK_MODE", "Standalone")
+    assert nw.network_mode() == nw.STANDALONE
+    monkeypatch.setenv("NETWORK_MODE", "bogus")
+    assert nw.network_mode() == nw.AUTO
+
+
+def test_dashboard_choice_overrides_env_until_removed(monkeypatch, tmp_path):
+    f = tmp_path / "network_mode"
+    monkeypatch.setenv("NETWORK_MODE", "auto")
+    netmode.choose_mode("home", f)
+    assert netmode.effective_mode(f) == nw.HOME_ONLY
+    f.write_text("garbage")                                   # file hong -> ve mac dinh
+    assert netmode.effective_mode(f) == nw.AUTO
+    f.unlink()
+    assert netmode.effective_mode(f) == nw.AUTO
+    with pytest.raises(ValueError):
+        netmode.choose_mode("party", f)
+
+
+def test_status_file_round_trip_and_staleness(tmp_path):
+    f = tmp_path / "status.json"
+    assert netmode.read_status(100.0, f) is None
+    netmode.write_status({"mode": "auto", "state": "home", "ts": 100.0}, f)
+    assert netmode.read_status(130.0, f)["running"] is True
+    assert netmode.read_status(100.0 + netmode.STATUS_STALE_S + 1, f)["running"] is False
+
+
+def test_connection_name():
+    out = "wlan0:connected:Nha Mai\neth0:unavailable:\n"
+    assert nw.connection_name(out) == "Nha Mai"
+    assert nw.connection_name("wlan0:disconnected:\n") == ""
+
+
+def test_switching_back_to_auto_on_ap_retries_home_at_once():
+    mem = nw.fresh_memory(1000.0)
+    assert decide(AP, 1000.0, mem, nw.AUTO) == STOP_AP
+    assert decide(HOME, 1030.0, mem, nw.AUTO) == NONE

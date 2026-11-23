@@ -1,6 +1,6 @@
 # IR transmit / receive circuit (Room Node)
 
-Status: validated on the bench with an IR loopback test. **Not yet tested on a real Daikin unit or remote.**
+Status: revision 2 (section 8, v0.10.0): LED powered from 5 V, about 86 mA, replays a remote command at 3 m. Receiving works with a Casper AC remote; the Casper protocol is not decoded correctly yet. **Not yet tested on a real Daikin unit.** Sections 1–7 describe revision 1 (3V3 supply) and the measurements that led to revision 2.
 
 ## 1. Circuit
 
@@ -98,8 +98,49 @@ Rules adopted:
 ## 7. Open items
 
 - [ ] Test with a real Daikin remote (identify protocol variant; measure receive success rate).
-- [ ] Test with a real Daikin AC (receive success rate vs distance at 3V3/47 Ω; decide whether 5 V/33 Ω is needed).
-- [ ] Self-interference handling in firmware: disable receiver during send + blanking window.
+- [x] Decide whether 5 V/33 Ω is needed: yes, see section 8.
+- [ ] Casper AC: frames decode as `ELECTRA_AC` with implausible temperatures (9, 37, 38 °C); capture labelled frames with `firmware/tools/ir_replay` and map the bit layout.
+- [ ] Real-AC range test with the 5 V circuit (replay and library encoding), and receive success rate from the user's normal position.
+- [x] Self-interference handling in firmware: disable receiver during send + blanking window.
+
+## 8. Revision 2 (v0.10.0): LED on 5 V
+
+### Why
+
+First field session (20-11, Casper AC): the node reported "IR sent" but the AC did not react. Measurements on the board:
+
+| Measurement | Value |
+|---|---|
+| 3V3 pin, idle / LED on | 2.9–3.0 V / about 0.2 V lower (same on a second, new board; meter checked with a fresh AA cell) |
+| Across 47 Ω, LED on | 1.46 V → **31 mA** (42 mA in revision 1) |
+| 5V pin before bridging IN-OUT | 1.5 V (floating: clone boards leave the 5V header disconnected from USB) |
+
+The LED shared the 3V3 regulator with the ESP32, the radar and the sensors, and pulled it down on every frame.
+
+### Change
+
+![Room Node wiring, revision 2](../images/wiring-room-node-ir5v.svg)
+
+| Part | Revision 1 | Revision 2 |
+|---|---|---|
+| LED supply | 3V3 | **5V pin** (IN-OUT solder jumper bridged → 4.7 V from USB) |
+| LED resistor | 47 Ω | **33 Ω, 0.5 W** (or 2 × 68 Ω in parallel); 22 Ω for two LEDs in series |
+| Base resistor | 330 Ω | **150 Ω** (I_B ≈ 16 mA, forced β ≈ 6 at 90 mA) |
+| Bulk capacitor | 100 µF on 3V3 | **470 µF / 16 V on 5 V**, next to the LED |
+
+I_LED ≈ (4.7 − 1.5 − 0.2) / 33 ≈ 90 mA. If GPIO 4 sticks high the LED carries this current continuously: within the TSAL6200's 100 mA rating; the resistor dissipates about 0.27 W, hence 0.5 W.
+
+Rules: never feed the 5V pin from an external supply while USB is connected; nothing on the 5 V branch may touch a GPIO (the ADC probe used to diagnose revision 1 must be removed).
+
+### Results
+
+| Test | Result |
+|---|---|
+| Across 33 Ω, LED held on (`ir_replay`, command `h`) | 2.85 V → **86 mA** |
+| Raw replay of a captured remote frame (speaker remote, NEC), on axis | works at **3 m** (longest distance available) |
+| Same, 30° off axis at 3 m | does not work (TSAL6200 half-angle ±17°); aim the LED at the AC receiver, or use two LEDs angled apart |
+
+`firmware/tools/ir_replay` captures a remote frame, stores it in flash and replays it raw (`p`) or through the library encoder (`s`); the BOOT button replays it, and a long press repeats it every 3 s, so range can be tested without a laptop.
 
 ## References
 

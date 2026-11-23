@@ -35,3 +35,4 @@ jobs:
           arduino-cli compile --fqbn esp32:esp32:esp32s3 firmware/room_node
           arduino-cli compile --fqbn esp32:esp32:esp32s3 firmware/tools/ir_loopback
           arduino-cli compile --fqbn esp32:esp32:esp32s3 firmware/tools/sensor_check
+          arduino-cli compile --fqbn esp32:esp32:esp32s3 firmware/tools/ir_replay

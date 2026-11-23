@@ -4,6 +4,28 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versio
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-22
+### Added
+- User accounts (ADR 0007) with roles `admin`, `member`, `guest`: the first admin claims the Pi with the setup code printed on its label (`POST /setup`); others register themselves and wait for an admin to grant a role (`/auth/register`, `/users`). Sessions are bearer tokens (only the SHA-256 is stored, 90-day sliding expiry); passwords are hashed with scrypt; login, setup and registration are rate limited. Dashboard: first-setup, sign-in and sign-up screens, account menu (change password, sign out), "Thành viên" section for admins, read-only view for guests.
+- Comfort votes record who voted (`user_id`, `username`); existing databases are upgraded in place.
+- `setup_label.py`: prints the setup label (setup code, QR for the Android app, backup Wi-Fi name and password with a `WIFI:` QR).
+- Reset button on GPIO 17 (`reset_button.py`, `pbl5-reset.service`): hold 10 s to delete all accounts and the dashboard network-mode choice; data is kept.
+- `pbl5.avahi.service`: advertises `_pbl5._tcp` so the Android app (v0.11.0) finds the Pi without an IP address.
+- Recovering from missed IR commands (ADR 0005): **resend** the expected state (`POST /rooms/{room}/commands/resend`), **sync** the expected state to what the AC is really doing without sending IR (`PUT /rooms/{room}/ac-state`), and a **confirmed early start** for manual power-on during the compressor rest period (`confirm: true`, code `EARLY_START_CONFIRMED`). Dashboard: inline confirmation and a "Điều hòa không làm theo?" section.
+- Network modes for the Pi (ADR 0006), switchable from the dashboard ("Mạng của Pi") without SSH or restarts: `auto` (as before), `standalone` (start the Pi's own Wi-Fi immediately and stay on it: field tests, demos), `home` (never start it). `GET/PUT /system/network`; `NETWORK_MODE` in `.env` is the default.
+- Dashboard warns when the Pi's clock differs from the phone's by more than 2 minutes (no RTC battery, no NTP in standalone mode); `/health` returns `time`.
+- Device pairing by QR code (ADR 0006): "Thêm thiết bị" shows a one-time, 5-minute code; scanning it signs another phone or computer in without typing the API key. `POST /pairing`, `POST /pairing/claim`.
+
+### Changed
+- Firmware 0.10.0: when the network mode is changed on the dashboard the gateway warns the nodes first (`{"net": ...}` on `home/{room}/config`), so they follow in about 20–40 s instead of about 2.5 minutes. The node also tries the network that worked last time first, and stays on the Pi's Wi-Fi while the broker is reachable there (no more 30 s drop every 5 minutes); with the broker unreachable it retries home Wi-Fi only when that network is visible.
+- Manual `COMPRESSOR_MIN_OFF` is now a question rather than a ban; automatic commands are unchanged.
+- Authorisation is by role instead of by key: guests are read only; only admins change the network mode or manage accounts. `API_KEY` keeps working with admin rights (scripts, `curl`); `API_KEY_AUTOMATION` is unchanged. Pairing codes now sign the other device in as the person who created the code.
+- New gateway dependency: `segno` (QR codes, pure Python).
+- IR transmitter revision 2 (`docs/hardware/ir-circuit.md` section 8): LED on the board's 5 V pin (IN-OUT jumper bridged), 33 Ω / 0.5 W, 150 Ω base resistor, 470 µF. LED current 31 → 86 mA; a captured remote frame replays at 3 m.
+
+### Added (tools)
+- `firmware/tools/ir_replay`: capture a remote frame and replay it raw or through the library, from Serial or the BOOT button; stored in flash for tests away from the laptop.
+
 ## [0.8.0] - 2026-11-21
 ### Added
 - Personal comfort model (`gateway/comfort.py`): ordinal logistic regression with a population prior fitted on the ASHRAE Global Thermal Comfort Database II (tropical and monsoon climates, about 20,000 votes) and per-user personalisation (preferred-temperature shift and sensitivity) learned on the Pi from comfort votes; older votes are down-weighted.

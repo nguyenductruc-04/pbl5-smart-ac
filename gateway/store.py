@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import sqlite3
 
+import accounts
 from safety import AcState, Policy, RoomView
 
 SCHEMA = """
@@ -64,9 +65,19 @@ CREATE INDEX IF NOT EXISTS idx_comfort_room_ts ON comfort_votes(room, ts);
 AUTO_SOURCES_SQL = "('rule','ai')"
 
 
+def _add_column(conn: sqlite3.Connection, table: str, column: str, decl: str) -> None:
+    """Nang cap database cu tai cho (SQLite khong co ADD COLUMN IF NOT EXISTS)."""
+    if column not in {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
+
+
 def init(conn: sqlite3.Connection) -> None:
     conn.executescript(SCHEMA)
+    # v0.10.0: phieu cam nhan gan voi nguoi gui (NULL = phieu cu, hoac gui bang khoa API)
+    _add_column(conn, "comfort_votes", "user_id", "INTEGER")
+    _add_column(conn, "comfort_votes", "username", "TEXT")
     conn.commit()
+    accounts.init(conn)
 
 
 # ------------------------------------------------------------------ ghi
@@ -98,6 +109,26 @@ def apply_state_change(conn: sqlite3.Connection, room: str, ts: float, source: s
         # Lenh cua nguoi dung dong bo lai trang thai; lenh tu dong chi chay khi da chac chan
         (room, state.power, state.mode, state.temp, state.fan, ts, source, 0,
          last_on, last_off, hold_until, hold_source),
+    )
+    conn.commit()
+
+
+def sync_state(conn: sqlite3.Connection, room: str, ts: float, state: AcState, policy: Policy) -> None:
+    """Nguoi dung bao trang thai THAT cua dieu hoa (khong phat IR) -> sua trang thai du kien.
+
+    Khong dung toi dong ho may nen (last_on/last_off): dong bo khong phai la mot lan bat/tat,
+    va ta khong biet may da o trang thai do tu luc nao. Dat manual hold nhu mot lenh cua nguoi dung,
+    de che do tu dong khong lap tuc ghi de len trang thai vua sua.
+    """
+    hold_until = ts + policy.hold_app_s if policy.hold_app_s > 0 else None
+    conn.execute(
+        "INSERT INTO ac_state(room, power, mode, temp, fan, ts, source, uncertain, hold_until, hold_source)"
+        " VALUES (?,?,?,?,?,?,'sync',0,?,?)"
+        " ON CONFLICT(room) DO UPDATE SET power=excluded.power, mode=excluded.mode, temp=excluded.temp,"
+        " fan=excluded.fan, ts=excluded.ts, source='sync', uncertain=0,"
+        " hold_until=excluded.hold_until, hold_source=excluded.hold_source",
+        (room, state.power, state.mode, state.temp, state.fan, ts,
+         hold_until, "app" if hold_until else None),
     )
     conn.commit()
 
@@ -283,22 +314,23 @@ def ir_event_history(conn, room: str, limit: int) -> list[dict]:
 VOTE_CODES = {"cooler": -1, "comfortable": 0, "warmer": 1}
 VOTE_NAMES = {v: k for k, v in VOTE_CODES.items()}
 VOTE_KEYS = ("id", "ts", "vote", "temp", "hum", "presence", "telemetry_age_s",
-             "ac_power", "ac_mode", "ac_temp", "ac_uncertain")
+             "ac_power", "ac_mode", "ac_temp", "ac_uncertain", "user_id", "username")
 
 
-def add_vote(conn: sqlite3.Connection, room: str, ts: float, vote: str) -> dict:
+def add_vote(conn: sqlite3.Connection, room: str, ts: float, vote: str,
+             user_id: int | None = None, username: str | None = None) -> dict:
     """Ghi mot phieu kem so do moi nhat va trang thai dieu hoa du kien. Tra ve phieu vua ghi."""
     tel = latest_telemetry(conn, room) or {}
     ac = ac_row(conn, room) or {}
     presence = tel.get("presence")
     cur = conn.execute(
         "INSERT INTO comfort_votes(ts, room, vote, temp, hum, presence, telemetry_age_s,"
-        " ac_power, ac_mode, ac_temp, ac_uncertain) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+        " ac_power, ac_mode, ac_temp, ac_uncertain, user_id, username) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (ts, room, VOTE_CODES[vote], tel.get("temp"), tel.get("hum"),
          None if presence is None else int(presence),
          None if "ts" not in tel else round(max(0.0, ts - tel["ts"]), 1),
          ac.get("power"), ac.get("mode"), ac.get("temp"),
-         None if not ac else int(ac["uncertain"])))
+         None if not ac else int(ac["uncertain"]), user_id, username))
     conn.commit()
     return get_vote(conn, room, cur.lastrowid)
 

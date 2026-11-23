@@ -289,6 +289,14 @@ class Gateway:
         self.client.publish(f"home/{room}/command", payload, qos=1)
         return True
 
+    def publish_net_hint(self, room: str, net: str) -> bool:
+        """Bao truoc cho node Pi sap doi mang (v0.10.0): net = "backup" (sap phat mang rieng) hoac
+        "home" (sap ve Wi-Fi nha). KHONG retained: chi co y nghia ngay luc nay. ADR 0006."""
+        if not self.client.is_connected():
+            return False
+        self.client.publish(f"home/{room}/config", json.dumps({"net": net}), qos=1)
+        return True
+
     # ---------------------------------------------------------------
     def connect(self):
         log.info("Database: %s", settings.DB_PATH)

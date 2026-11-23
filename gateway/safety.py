@@ -8,6 +8,9 @@ Thiet ke (xem docs/adr/0002-safety-layer-and-control-api.md):
     * thu cong  (remote, app, cli): con nguoi ra lenh. Nguoi cuoi cung ra lenh thang.
     * tu dong   (rule, ai): bi chan khi nguoi dung vua can thiep (manual hold), va chiu luat chat hon.
 - Nguyen tac: con nguoi LUON tat duoc dieu hoa (khong bi gioi han tan suat chan).
+- Bao ve may nen voi lenh THU CONG la "hoi lai", khong phai "cam": nguoi dung xac nhan (`confirmed`)
+  thi van bat duoc. Ly do: IR mot chieu, dong ho bao ve co the dang tinh tu mot lan tat khong co that
+  (dieu hoa bo lo lenh), va phan lon dieu hoa tu co tre khoi dong may nen. Lenh tu dong van bi chan cung.
 - Moi quyet dinh co ma ly do (`code`) de ghi nhat ky va tra ve cho API.
 """
 from __future__ import annotations
@@ -41,6 +44,7 @@ MANUAL_HOLD = "MANUAL_HOLD"                # nguoi dung vua can thiep
 TELEMETRY_STALE = "TELEMETRY_STALE"
 ROOM_EMPTY = "ROOM_EMPTY"
 STEP_TOO_LARGE = "STEP_TOO_LARGE"
+EARLY_START_CONFIRMED = "EARLY_START_CONFIRMED"  # nguoi dung xac nhan bat lai som (chi lenh thu cong)
 
 
 @dataclass(frozen=True)
@@ -157,8 +161,12 @@ def _compressor_rest(turning_on: bool, target: AcState, room: RoomView, now: flo
     return None
 
 
-def evaluate(source: str, target: AcState, room: RoomView, now: float, policy: Policy) -> Decision:
-    """Quyet dinh co cho gui `target` xuong node hay khong."""
+def evaluate(source: str, target: AcState, room: RoomView, now: float, policy: Policy,
+             confirmed: bool = False) -> Decision:
+    """Quyet dinh co cho gui `target` xuong node hay khong.
+
+    `confirmed`: nguoi dung da xac nhan bat lai som du may nen vua tat. Chi co tac dung voi lenh thu cong.
+    """
     if source not in ALL_SOURCES:
         raise ValueError(f"nguon lenh khong hop le: {source}")
     manual = source in MANUAL_SOURCES
@@ -210,7 +218,8 @@ def evaluate(source: str, target: AcState, room: RoomView, now: float, policy: P
                 return _reject(TEMP_OUT_OF_RANGE,
                                f"Nhiet do phai trong khoang {policy.temp_min}-{policy.temp_max} do C")
         # Bao ve may nen truoc gioi han tan suat: tra ve ly do co thoi gian cho dai hon
-        if blocked := _compressor_rest(turning_on, target, room, now, policy):
+        blocked = _compressor_rest(turning_on, target, room, now, policy)
+        if blocked and not confirmed:
             return blocked
         # Con nguoi luon tat duoc: lenh tat khong bi gioi han tan suat
         if target.power != "off":
@@ -218,5 +227,8 @@ def evaluate(source: str, target: AcState, room: RoomView, now: float, policy: P
             if since_cmd is not None and since_cmd < policy.manual_min_interval_s:
                 return _reject(RATE_LIMIT, "Gui lenh qua nhanh",
                                _wait(policy.manual_min_interval_s, since_cmd))
+        if blocked:
+            return Decision(ALLOW, EARLY_START_CONFIRMED,
+                            "Nguoi dung xac nhan bat lai som; dieu hoa tu tre khoi dong may nen neu can")
 
     return Decision(ALLOW, OK, "Lenh duoc chap nhan")
