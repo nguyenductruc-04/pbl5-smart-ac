@@ -35,7 +35,7 @@ Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 | 4 | Safety Layer + REST API (FastAPI) | Done (v0.6.0), tested on hardware |
 | 5 | Web dashboard + comfort votes | Done (v0.7.0), tested on hardware |
 | 6 | Comfort model + suggestions (ASHRAE prior, personalised from votes) | Done (v0.8.0); evaluation on real votes pending data |
-| 6+ | Missed-IR recovery, network modes, QR pairing, user accounts with first setup by label and a reset button | v0.10.0 |
+| 6+ | Missed-IR recovery, network modes, QR pairing, user accounts with first setup by label and a reset button | v0.9.0 |
 
 ## Dashboard
 

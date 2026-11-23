@@ -73,7 +73,7 @@ def _add_column(conn: sqlite3.Connection, table: str, column: str, decl: str) ->
 
 def init(conn: sqlite3.Connection) -> None:
     conn.executescript(SCHEMA)
-    # v0.10.0: phieu cam nhan gan voi nguoi gui (NULL = phieu cu, hoac gui bang khoa API)
+    # v0.9.0: phieu cam nhan gan voi nguoi gui (NULL = phieu cu, hoac gui bang khoa API)
     _add_column(conn, "comfort_votes", "user_id", "INTEGER")
     _add_column(conn, "comfort_votes", "username", "TEXT")
     conn.commit()

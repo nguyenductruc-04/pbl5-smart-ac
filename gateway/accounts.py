@@ -1,5 +1,5 @@
 """
-Tai khoan nguoi dung (v0.10.0). Xem docs/adr/0007-accounts-and-first-setup.md.
+Tai khoan nguoi dung (v0.9.0). Xem docs/adr/0007-user-accounts.md.
 
 - Lan dau: ai co MA THIET LAP (in tren tem dan Pi) thi tao duoc tai khoan QUAN TRI. Sau do ma vo hieu
   cho toi khi giu nut reset tren Pi (reset_button.py) -> chung minh dang dung canh thiet bi.

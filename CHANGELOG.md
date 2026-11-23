@@ -4,7 +4,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versio
 
 ## [Unreleased]
 
-## [0.10.0] - 2026-11-22
+## [0.9.0] - 2026-11-22
 ### Added
 - User accounts (ADR 0007) with roles `admin`, `member`, `guest`: the first admin claims the Pi with the setup code printed on its label (`POST /setup`); others register themselves and wait for an admin to grant a role (`/auth/register`, `/users`). Sessions are bearer tokens (only the SHA-256 is stored, 90-day sliding expiry); passwords are hashed with scrypt; login, setup and registration are rate limited. Dashboard: first-setup, sign-in and sign-up screens, account menu (change password, sign out), "Thành viên" section for admins, read-only view for guests.
 - Comfort votes record who voted (`user_id`, `username`); existing databases are upgraded in place.
@@ -17,7 +17,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versio
 - Device pairing by QR code (ADR 0006): "Thêm thiết bị" shows a one-time, 5-minute code; scanning it signs another phone or computer in without typing the API key. `POST /pairing`, `POST /pairing/claim`.
 
 ### Changed
-- Firmware 0.10.0: when the network mode is changed on the dashboard the gateway warns the nodes first (`{"net": ...}` on `home/{room}/config`), so they follow in about 20–40 s instead of about 2.5 minutes. The node also tries the network that worked last time first, and stays on the Pi's Wi-Fi while the broker is reachable there (no more 30 s drop every 5 minutes); with the broker unreachable it retries home Wi-Fi only when that network is visible.
+- Firmware 0.9.0: when the network mode is changed on the dashboard the gateway warns the nodes first (`{"net": ...}` on `home/{room}/config`), so they follow in about 20–40 s instead of about 2.5 minutes. The node also tries the network that worked last time first, and stays on the Pi's Wi-Fi while the broker is reachable there (no more 30 s drop every 5 minutes); with the broker unreachable it retries home Wi-Fi only when that network is visible.
 - Manual `COMPRESSOR_MIN_OFF` is now a question rather than a ban; automatic commands are unchanged.
 - Authorisation is by role instead of by key: guests are read only; only admins change the network mode or manage accounts. `API_KEY` keeps working with admin rights (scripts, `curl`); `API_KEY_AUTOMATION` is unchanged. Pairing codes now sign the other device in as the person who created the code.
 - New gateway dependency: `segno` (QR codes, pure Python).

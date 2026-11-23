@@ -419,7 +419,7 @@ sudo systemctl restart pbl5-gateway
 
 Nếu điện thoại không mở được `gateway.local`, dùng địa chỉ IP của Pi (xem bằng `hostname -I` trên Pi).
 
-Lần đầu, trang hiện **Thiết lập lần đầu**: tạo tài khoản quản trị bằng mã trên tem (Bước 12.2–12.3). Trước bản 0.10.0 trang hỏi khóa `API_KEY`; khóa vẫn dùng được qua **Dùng khóa API** ở trang đăng nhập. Trên điện thoại, chọn "Thêm vào màn hình chính" trong menu trình duyệt để mở như một ứng dụng.
+Lần đầu, trang hiện **Thiết lập lần đầu**: tạo tài khoản quản trị bằng mã trên tem (Bước 12.2–12.3). Trước bản 0.9.0 trang hỏi khóa `API_KEY`; khóa vẫn dùng được qua **Dùng khóa API** ở trang đăng nhập. Trên điện thoại, chọn "Thêm vào màn hình chính" trong menu trình duyệt để mở như một ứng dụng.
 
 ### 9.3 Kiểm thử
 
@@ -450,7 +450,7 @@ curl -s -H "X-API-Key: $API_KEY" "http://localhost:8000/api/v1/rooms/room01/comf
 ### 9.5 Giới hạn đã biết
 
 - Trang hỏi lại Pi mỗi 3 giây, nên thay đổi từ remote hoặc thiết bị khác hiện chậm tối đa 3 giây.
-- HTTP thường và khóa tĩnh: chỉ dùng trong mạng nội bộ, mạng dự phòng hoặc qua Tailscale. Nếu mất điện thoại đã lưu khóa, đổi `API_KEY` trong `.env` rồi khởi động lại dịch vụ. Từ bản 0.10.0: mất điện thoại thì quản trị viên xóa hoặc hạ quyền tài khoản đó, hoặc chính bạn đổi mật khẩu (đăng xuất mọi thiết bị khác).
+- HTTP thường và khóa tĩnh: chỉ dùng trong mạng nội bộ, mạng dự phòng hoặc qua Tailscale. Nếu mất điện thoại đã lưu khóa, đổi `API_KEY` trong `.env` rồi khởi động lại dịch vụ. Từ bản 0.9.0: mất điện thoại thì quản trị viên xóa hoặc hạ quyền tài khoản đó, hoặc chính bạn đổi mật khẩu (đăng xuất mọi thiết bị khác).
 
 
 ## Bước 10: Gợi ý nhiệt độ (mô hình tiện nghi)
@@ -521,15 +521,15 @@ sudo systemctl restart pbl5-netwatch
 
 `journalctl -u pbl5-netwatch -n 5` phải có `che do=auto`.
 
-### 11.2 Nạp firmware 0.10.0 cho node
+### 11.2 Nạp firmware 0.9.0 cho node
 
-Mở `firmware/room_node/room_node.ino`, nạp như mọi lần (`config.h` giữ nguyên). Serial Monitor phải in `=== PBL5 Room Node 0.10.0`.
+Mở `firmware/room_node/room_node.ino`, nạp như mọi lần (`config.h` giữ nguyên). Serial Monitor phải in `=== PBL5 Room Node 0.9.0`.
 
 ### 11.3 Kiểm thử
 
 | # | Thao tác | Kết quả đúng |
 |---|---|---|
-| 1 | Trên laptop, bấm **Thêm thiết bị**, dùng camera điện thoại quét mã QR (điện thoại cùng mạng Wi-Fi với Pi) | Điện thoại mở thẳng dashboard, không hỏi đăng nhập (từ bản 0.10.0: đăng nhập thành chính người tạo mã) |
+| 1 | Trên laptop, bấm **Thêm thiết bị**, dùng camera điện thoại quét mã QR (điện thoại cùng mạng Wi-Fi với Pi) | Điện thoại mở thẳng dashboard, không hỏi đăng nhập (từ bản 0.9.0: đăng nhập thành chính người tạo mã) |
 | 2 | Quét lại đúng mã đó bằng thiết bị khác (hoặc tab ẩn danh) | Hiện trang đăng nhập, kèm "Mã QR đã dùng rồi hoặc đã hết hạn…" |
 | 3 | Mở **Điều hòa không làm theo?** → **Gửi lại lệnh** | "Đã gửi lại: …". Serial node có dòng `[RX] cmd_id=…`. Nhật ký ghi "Gửi lại. Đã phát lệnh" |
 | 4 | Bật → Tắt → Bật lại trong vòng 3 phút | Hiện khung hỏi "Máy nén vừa tắt… Vẫn bật?". Bấm **Vẫn bật**: lệnh được phát, nhật ký ghi "Bạn xác nhận bật lại sớm" |
@@ -699,7 +699,7 @@ curl -s -H "X-API-Key: $KEY" "http://localhost:8000/api/v1/rooms/room01/comfort?
 - Mạng của Pi không có Internet, Android có thể tự chuyển sang dữ liệu di động. Khi điện thoại hỏi "Mạng này không có Internet. Vẫn kết nối?", chọn **Có** và **Không hỏi lại**, hoặc tắt dữ liệu di động khi thử nghiệm.
 
 **Mở `http://10.42.0.1:8000` thì dashboard bắt đăng nhập lại, dù ở nhà đã đăng nhập**
-- Trình duyệt nhớ phiên đăng nhập **theo từng địa chỉ**: `gateway.local`, IP của Pi trong mạng nhà và `10.42.0.1` là ba "trang" khác nhau. Đăng nhập lại bằng tên và mật khẩu (từ bản 0.10.0 không còn phải tìm khóa API). Khi chuyển sang **Độc lập** trên dashboard, bấm đường dẫn **"Mở dashboard ở mạng mới"** hiện ở đầu trang thì không phải đăng nhập lại. App Android (bản 0.11.0) sẽ không gặp chuyện này.
+- Trình duyệt nhớ phiên đăng nhập **theo từng địa chỉ**: `gateway.local`, IP của Pi trong mạng nhà và `10.42.0.1` là ba "trang" khác nhau. Đăng nhập lại bằng tên và mật khẩu (từ bản 0.9.0 không còn phải tìm khóa API). Khi chuyển sang **Độc lập** trên dashboard, bấm đường dẫn **"Mở dashboard ở mạng mới"** hiện ở đầu trang thì không phải đăng nhập lại. App Android (bản 0.11.0) sẽ không gặp chuyện này.
 
 **Quên mật khẩu**
 - Người khác: quản trị viên xóa tài khoản đó trong mục **Thành viên**, người đó tạo lại.
@@ -741,4 +741,4 @@ ACL chỉ cho mỗi node ghi và đọc topic của **chính phòng mình**: nod
 3. **Milestone 3 – Cảm biến thật:** SHT3x (I2C, chân 8/9) và HLK-LD2420 (v0.5.0).
 4. **Milestone 4 – Safety Layer + API:** FastAPI, trạng thái dự kiến, chống short-cycling, phân quyền (v0.6.0).
 5. **Milestone 5 – Dashboard và phiếu cảm nhận** (v0.7.0).
-6. **Milestone 6 – Mô hình tiện nghi và gợi ý nhiệt độ** (v0.8.0). Mở rộng: lệnh bị bỏ lỡ, chế độ mạng, tài khoản người dùng (v0.10.0).
+6. **Milestone 6 – Mô hình tiện nghi và gợi ý nhiệt độ** (v0.8.0). Mở rộng: lệnh bị bỏ lỡ, chế độ mạng, tài khoản người dùng (v0.9.0).

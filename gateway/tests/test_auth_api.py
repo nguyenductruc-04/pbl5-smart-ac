@@ -1,4 +1,4 @@
-"""Thiet lap lan dau bang ma tren tem, dang ky / duyet, dang nhap, quyen theo vai tro (v0.10.0)."""
+"""Thiet lap lan dau bang ma tren tem, dang ky / duyet, dang nhap, quyen theo vai tro (v0.9.0)."""
 import json
 
 import pytest

@@ -238,7 +238,7 @@ code { font-size: 0.875em; background: var(--bg); padding: 1px 5px; border-radiu
 .advice .primary { margin-top: 12px; }
 .advice .muted { margin-top: 10px; }
 
-/* Khi dieu hoa khong lam theo (v0.10.0) */
+/* Khi dieu hoa khong lam theo (v0.9.0) */
 .secondary { background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 9px 16px; font-weight: 500; min-height: 44px; }
 .secondary:hover:not(:disabled) { border-color: var(--ink-3); }
 .secondary:disabled, .primary:disabled { opacity: 0.5; }
@@ -257,7 +257,7 @@ code { font-size: 0.875em; background: var(--bg); padding: 1px 5px; border-radiu
 .net-desc { margin-top: 10px; }
 .notice-link { display: inline-block; margin-top: 8px; font-weight: 600; color: inherit; text-decoration: underline; }
 
-/* Tai khoan (v0.10.0) */
+/* Tai khoan (v0.9.0) */
 .account-btn { max-width: 11rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .auth-key { margin-top: 14px; text-align: center; }
 .auth-key .quiet, #auth-switch { color: var(--ink-2); }

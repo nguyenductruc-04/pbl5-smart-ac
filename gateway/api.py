@@ -34,7 +34,7 @@ import settings
 import store
 from gateway import Gateway
 
-__version__ = "0.10.0"
+__version__ = "0.9.0"
 log = logging.getLogger("api")
 
 WEB_DIR = FsPath(__file__).resolve().parent / "web"
@@ -550,7 +550,7 @@ def create_app(gateway: Gateway | None = None, service: control.CommandService |
             raise ApiError(500, "NETWORK_MODE_WRITE_FAILED", f"Khong ghi duoc lua chon: {e}") from e
         log.warning("Doi che do mang -> %s", body.mode)
         # Bao truoc cho cac node (Pi con o mang cu thi moi gui toi duoc): node chuyen theo trong
-        # ~20 s thay vi cho mat broker 120 s. Node cu (firmware < 0.10.0) bo qua ban tin nay.
+        # ~20 s thay vi cho mat broker 120 s. Node cu (firmware < 0.9.0) bo qua ban tin nay.
         status = netmode.read_status(clock()) or {}
         hint = ("backup" if body.mode == netmode.STANDALONE and status.get("state") != "ap" else
                 "home" if body.mode != netmode.STANDALONE and status.get("state") == "ap" else None)
