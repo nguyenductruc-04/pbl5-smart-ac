@@ -1,28 +1,61 @@
 # Architecture
 
+![Architecture](images/architecture.svg)
+
 ```mermaid
-flowchart LR
-  subgraph Room["Room Node (ESP32-S3)"]
-    S1[SHT3X temp/humidity] --> E[ESP32-S3]
-    S2[LD2420 mmWave presence] --> E
-    RX[IR receiver<br/>overhears remote] --> E
-    E --> TX[IR LED + driver]
+flowchart TB
+  subgraph Users["Users (admin / member / guest)"]
+    APP[Android app] 
+    WEB[Browser dashboard]
   end
-  TX -. IR .-> AC[(Daikin AC)]
+  APP & WEB -->|"home Wi-Fi: http://Pi:8000 (mDNS)"| API
+  APP & WEB -->|"SmartAC-Backup: http://10.42.0.1:8000"| API
+  APP & WEB -->|"Internet: https://ac.ductruc.site"| CF[Cloudflare edge]
+  CF <-->|tunnel, opened by the Pi| CFD
+  subgraph Pi["Raspberry Pi 5 gateway"]
+    CFD[cloudflared] --> API[FastAPI REST + dashboard]
+    API --> ACC[Accounts and roles]
+    API --> V[Safety Layer]
+    ADV[Comfort model] --> V
+    V --> G[Gateway service]
+    G <--> DB[(SQLite)]
+    G <--> B[Mosquitto broker]
+    NW[netwatch: network modes, backup AP]
+    BTN[Reset button GPIO 17] --> ACC
+  end
+  subgraph Room["Room Node (ESP32-S3)"]
+    S1[SHT3x temp/humidity] --> E[ESP32-S3]
+    S2[LD2420 presence] --> E
+    RX[IR receiver] --> E
+    E --> TX[IR LED, 5 V driver]
+  end
+  B <-->|MQTT over Wi-Fi| E
+  TX -. IR .-> AC[(Air conditioner)]
   Remote[Original remote] -. IR .-> AC
   Remote -. IR .-> RX
-  E <-- "MQTT / Wi-Fi" --> B
-  subgraph Pi["Raspberry Pi 5 Gateway"]
-    B[Mosquitto broker] --> G[Gateway service]
-    G --> DB[(SQLite)]
-    G --> V[Command Validator / Safety Layer]
-    R[Rule engine] --> V
-    AI[AI suggestion service] --> V
-    API[FastAPI REST/WebSocket] --> V
-  end
 ```
 
-The Safety Layer and REST API are implemented (v0.6.0); the rule engine, AI service and dashboard are **planned**.
+Status (v0.10.0): everything above is implemented and tested on the hardware. Not done yet: decoding the Casper remote protocol, a range test on a real air conditioner, and evaluating the comfort model on enough real votes.
+
+## Access paths
+
+The phone reaches the same API three ways and the Android app picks the first that answers, in this order ([ADR 0008](adr/0008-remote-access.md)):
+
+| Path | Address | Needs |
+|---|---|---|
+| Home Wi-Fi | `http://<Pi>:8000`, found by mDNS (`_pbl5._tcp`) | Phone on the home network |
+| Backup network | `http://10.42.0.1:8000` | Pi broadcasting `SmartAC-Backup` (standalone mode, or home Wi-Fi lost); the app joins it from the QR on the label |
+| Internet | `https://ac.ductruc.site` | Home Internet; Cloudflare Tunnel opened by the Pi, no inbound port |
+
+The session token is valid on all three, so switching networks needs no new sign-in. First setup of a new or reset Pi is refused over the Internet.
+
+## Accounts
+
+Roles admin / member / guest; the first admin claims the Pi with the code on its label, others register and wait for approval; holding the reset button 10 s deletes all accounts and keeps the data ([ADR 0007](adr/0007-user-accounts.md)). The `API_KEY` in `.env` keeps admin rights for scripts on the Pi.
+
+## Network modes
+
+`netwatch` (root service) applies the mode chosen on the dashboard or in the app: **auto** (home Wi-Fi, backup AP after 2 min without it), **standalone** (always the backup AP) or **home** (never the AP). Nodes remember the last network that worked and follow a not-retained `{"net": ...}` hint sent before a switch ([ADR 0006](adr/0006-field-network-and-device-pairing.md)).
 
 ## Control priority and Safety Layer
 
@@ -37,6 +70,9 @@ Every command passes one pure function, `safety.evaluate()`, before it is publis
 - Commands are never queued for an offline node.
 
 ## Data flow
+
+**Request:** app or browser → FastAPI (session token or API key → role) → Safety Layer (commands) → gateway → MQTT.
+
 
 **Telemetry:** sensor → ESP32 plausibility filter (range, ≤5 °C jump) → `home/<room>/telemetry` (QoS 0) → gateway re-validates → SQLite (invalid messages go to `rejected`).
 

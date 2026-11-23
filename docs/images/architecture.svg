@@ -1,138 +1,102 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<svg width="1120" height="760" viewBox="0 0 1120 760" xmlns="http://www.w3.org/2000/svg" font-family="Arial, Helvetica, sans-serif" xmlns:c2pa="http://c2pa.org/manifest"><metadata><c2pa:manifest>AAAWgmp1bWIAAAAeanVtZGMycGEAEQAQgAAAqgA4m3EDYzJwYQAAABZcanVtYgAAAEdqdW1kYzJtYQARABCAAACqADibcQN1cm46YzJwYTplMjAyOGFmYS1hMDI4LTQyNDAtOTcxNS01OGMzZWVhMzlhMTQAAAADl2p1bWIAAAApanVtZGMyYXMAEQAQgAAAqgA4m3EDYzJwYS5hc3NlcnRpb25zAAAAALxqdW1iAAAARGp1bWRjYm9yABEAEIAAAKoAOJtxE2MycGEuaW5ncmVkaWVudC52MwAAAAAYYzJzaE9YztPnyLP6q5WtVdRAp/gAAABwY2JvcqNpZGM6Zm9ybWF0bWltYWdlL3N2Zyt4bWxqaW5zdGFuY2VJRHgseG1wOmlpZDphZDFmYzZlMy0yMmEwLTRiZDEtYjVhYS1mYjFiZTIxMGI5ZThscmVsYXRpb25zaGlwaHBhcmVudE9mAAAB4mp1bWIAAABBanVtZGNib3IAEQAQgAAAqgA4m3ETYzJwYS5hY3Rpb25zLnYyAAAAABhjMnNoo6DH+94j/MDr55QBJTv3FAAAAZljYm9yomdhY3Rpb25zgqJmYWN0aW9ua2MycGEub3BlbmVkanBhcmFtZXRlcnOha2luZ3JlZGllbnRzgaJjdXJseC1zZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmluZ3JlZGllbnQudjNkaGFzaFgguDw0Eb7Bjs1kefB3ySqkklyEjCK/Agh3Xu0ssabzO4KkZmFjdGlvbngdY29tLmFudGhyb3BpYy5jbGF1ZGUucHJvdmlkZWRqcGFyYW1ldGVyc6F4H2NvbS5hbnRocm9waWMub3JpZ2luLWNvbmZpZGVuY2VndW5rbm93bmtkZXNjcmlwdGlvbnhmQ2xhdWRlIHByb3ZpZGVkIHRoaXMgZmlsZSBhdCB0aGUgcmVxdWVzdCBvZiBhIHVzZXIgYW5kIG1heSBoYXZlIGNyZWF0ZWQgb3IgbW9kaWZpZWQgdGhlIGZpbGUgY29udGVudHMubXNvZnR3YXJlQWdlbnShZG5hbWVmQ2xhdWRlcmFsbEFjdGlvbnNJbmNsdWRlZPUAAADIanVtYgAAAEBqdW1kY2JvcgARABCAAACqADibcRNjMnBhLmhhc2guZGF0YQAAAAAYYzJzaEZB5rBnzCeBeEBrlIJbw/8AAACAY2JvcqVjYWxnZnNoYTI1NmNwYWRNAAAAAAAAAAAAAAAAAGRoYXNoWCDThKwvdbSAQbi3yN3coTKZBYYTThiGXAKRRozHazig+WRuYW1lbmp1bWJmIG1hbmlmZXN0amV4Y2x1c2lvbnOBomVzdGFydBj6Zmxlbmd0aBkeBAAAAj5qdW1iAAAAJ2p1bWRjMmNsABEAEIAAAKoAOJtxA2MycGEuY2xhaW0udjIAAAACD2Nib3KlY2FsZ2ZzaGEyNTZpc2lnbmF0dXJleE1zZWxmI2p1bWJmPS9jMnBhL3VybjpjMnBhOmUyMDI4YWZhLWEwMjgtNDI0MC05NzE1LTU4YzNlZWEzOWExNC9jMnBhLnNpZ25hdHVyZWppbnN0YW5jZUlEeCx4bXA6aWlkOjMxZmYzMDZjLTBmMzEtNGI5NC04ZDhkLTM3NmUwYTMxZjBhOXJjcmVhdGVkX2Fzc2VydGlvbnODomN1cmx4LXNlbGYjanVtYmY9YzJwYS5hc3NlcnRpb25zL2MycGEuaW5ncmVkaWVudC52M2RoYXNoWCC4PDQRvsGOzWR58HfJKqSSXISMIr8CCHde7SyxpvM7gqJjdXJseCpzZWxmI2p1bWJmPWMycGEuYXNzZXJ0aW9ucy9jMnBhLmFjdGlvbnMudjJkaGFzaFggrGuksDhYTLGMkVDIq/8rZbuY16271mVw77cdzYwdixOiY3VybHgpc2VsZiNqdW1iZj1jMnBhLmFzc2VydGlvbnMvYzJwYS5oYXNoLmRhdGFkaGFzaFggG1zGkaphCSRZIwVdq1FnmSDSswC7A1tvfpqwKi1lfZ50Y2xhaW1fZ2VuZXJhdG9yX2luZm+jZG5hbWVvQW50aHJvcGljIEZpbGVzZ3ZlcnNpb25lMS4wLjBrc3BlY1ZlcnNpb25lMi40LjAAABA4anVtYgAAAChqdW1kYzJjcwARABCAAACqADibcQNjMnBhLnNpZ25hdHVyZQAAABAIY2JvctKEWQISogEmGCFZAgowggIGMIIBjaADAgECAhRA5aAK7sI50L64g/oGQgU9Z1UTADAKBggqhkjOPQQDAzBJMRcwFQYDVQQKEw5BbnRocm9waWMsIFBCQzEuMCwGA1UEAxMlQW50aHJvcGljIENvbnRlbnQgQ3JlZGVudGlhbHMgUm9vdCBDQTAeFw0yNjA4MDcxODQzNTZaFw0yODA4MDYxOTQzNTZaMEQxFzAVBgNVBAoTDkFudGhyb3BpYywgUEJDMSkwJwYDVQQDEyBBbnRocm9waWMgQ2xhdWRlIENvbnRlbnQgU2lnbmluZzBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABJh6CmvLUBgFFNU0vUKlOVtE6djd17L5SuwX0LemFisBM3dkd/3cyjxFA3Qo5S46fX0/ihY0VZ7mfb9KF703t5OjWDBWMA4GA1UdDwEB/wQEAwIHgDAVBgNVHSUEDjAMBgorBgEEAYPoXgIBMAwGA1UdEwEB/wQCMAAwHwYDVR0jBBgwFoAUzlHiBIFOZFsj+OPEz5o+nMHXXMIwCgYIKoZIzj0EAwMDZwAwZAIwMXMdFJ4BetLLVY7ORuE9noqbbAZOZn/aArXyTwFAZfKrPzxF2vPoJNf1+UCdg1XGAjBwX1zd9WGqYkqmL5SFqw1QySjr1zJfpJM9+1rdDwSPLMOPOjKuiXjoU/pUUeG9RwmhY3BhZFkNngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPZYQBA1f77csATerlawODPwZpnGlpNez2fMG+LWHJnMN595JvroCnv8yhsl9taWnAZLJS9m+e0qoj/ulPiLb3jeZlw=</c2pa:manifest></metadata>
-  <defs>
-    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M1 1 L9 5 L1 9" fill="none" stroke="#374151" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-    </marker>
-  </defs>
-
-  <rect x="0" y="0" width="1120" height="760" fill="#FFFFFF"/>
-
-  <!-- ============ USER LAYER ============ -->
-  <rect x="350" y="20" width="300" height="60" rx="10" fill="#EAF2FF" stroke="#378ADD" stroke-width="1.5"/>
-  <text x="500" y="44" text-anchor="middle" font-size="15" font-weight="700" fill="#1E3A5F">Người dùng / Quản trị</text>
-  <text x="500" y="64" text-anchor="middle" font-size="12" fill="#3B5B7A">Mobile App · Web App · Dashboard</text>
-
-  <line x1="500" y1="80" x2="500" y2="123" stroke="#374151" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <text x="515" y="105" font-size="12" fill="#374151">HTTPS / WebSocket</text>
-
-  <!-- ============ GATEWAY CONTAINER ============ -->
-  <rect x="90" y="130" width="820" height="260" rx="12" fill="#F5F5F7" stroke="#6B7280" stroke-width="1.5"/>
-  <text x="500" y="153" text-anchor="middle" font-size="16" font-weight="700" fill="#1F2937">RASPBERRY PI 5 — GATEWAY</text>
-
-  <!-- Row 1 -->
-  <rect x="110" y="170" width="250" height="55" rx="8" fill="#FFFFFF" stroke="#378ADD" stroke-width="1.5"/>
-  <text x="235" y="192" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1F2937">API Server</text>
-  <text x="235" y="209" text-anchor="middle" font-size="11.5" fill="#4B5563">FastAPI</text>
-
-  <rect x="375" y="170" width="250" height="55" rx="8" fill="#FFFFFF" stroke="#0EA5A5" stroke-width="1.5"/>
-  <text x="500" y="192" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1F2937">MQTT Broker</text>
-  <text x="500" y="209" text-anchor="middle" font-size="11.5" fill="#4B5563">Mosquitto</text>
-
-  <rect x="640" y="170" width="250" height="55" rx="8" fill="#FFFFFF" stroke="#8B5CF6" stroke-width="1.5"/>
-  <text x="765" y="192" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1F2937">Auth / RBAC</text>
-  <text x="765" y="209" text-anchor="middle" font-size="11.5" fill="#4B5563">Phân quyền</text>
-
-  <!-- Row 2 -->
-  <rect x="110" y="240" width="250" height="55" rx="8" fill="#FFFFFF" stroke="#F59E0B" stroke-width="1.5"/>
-  <text x="235" y="262" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1F2937">Rule Engine</text>
-  <text x="235" y="279" text-anchor="middle" font-size="11.5" fill="#4B5563">Lịch / ngưỡng</text>
-
-  <rect x="375" y="240" width="250" height="55" rx="8" fill="#FFFFFF" stroke="#6B7280" stroke-width="1.5"/>
-  <text x="500" y="262" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1F2937">Database</text>
-  <text x="500" y="279" text-anchor="middle" font-size="11.5" fill="#4B5563">SQLite / SQL</text>
-
-  <rect x="640" y="240" width="250" height="55" rx="8" fill="#FFFFFF" stroke="#EC4899" stroke-width="1.5"/>
-  <text x="765" y="262" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1F2937">AI Service</text>
-  <text x="765" y="279" text-anchor="middle" font-size="11.5" fill="#4B5563">Dự báo / đề xuất</text>
-
-  <!-- Safety layer -->
-  <rect x="110" y="310" width="780" height="55" rx="8" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.6"/>
-  <text x="500" y="332" text-anchor="middle" font-size="13.5" font-weight="700" fill="#7F1D1D">Command Validator / Safety Layer</text>
-  <text x="500" y="349" text-anchor="middle" font-size="11.5" fill="#991B1B">Giới hạn nhiệt độ · chống lặp lệnh · ưu tiên manual</text>
-
-  <!-- Power meter (optional) -->
-  <line x1="910" y1="230" x2="928" y2="230" stroke="#9CA3AF" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
-  <text x="915" y="220" font-size="10.5" fill="#6B7280">tuỳ chọn</text>
-  <rect x="930" y="185" width="160" height="90" rx="8" fill="#F9FAFB" stroke="#9CA3AF" stroke-width="1.4" stroke-dasharray="6,4"/>
-  <text x="1010" y="220" text-anchor="middle" font-size="13" font-weight="700" fill="#374151">Công tơ điện</text>
-  <text x="1010" y="238" text-anchor="middle" font-size="11" fill="#6B7280">Modbus / Wi-Fi</text>
-  <text x="1010" y="256" text-anchor="middle" font-size="11" fill="#6B7280">→ Raspberry Pi</text>
-
-  <!-- ============ BRANCH: GATEWAY -> ROOM NODES ============ -->
-  <line x1="500" y1="390" x2="500" y2="415" stroke="#374151" stroke-width="1.6"/>
-  <line x1="220" y1="415" x2="780" y2="415" stroke="#374151" stroke-width="1.6"/>
-  <line x1="220" y1="415" x2="220" y2="438" stroke="#374151" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <line x1="500" y1="415" x2="500" y2="438" stroke="#374151" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <line x1="780" y1="415" x2="780" y2="438" stroke="#374151" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <text x="515" y="408" font-size="12" fill="#374151">MQTT qua Wi-Fi</text>
-
-  <!-- ============ ROOM NODES (repeat x3) ============ -->
-  <!-- Node template positions: x = 100, 380, 660 ; center = 220, 500, 780 -->
-
-  <!-- Node 1 -->
-  <rect x="100" y="440" width="240" height="190" rx="10" fill="#ECFDF5" stroke="#059669" stroke-width="1.5"/>
-  <text x="220" y="459" text-anchor="middle" font-size="13.5" font-weight="700" fill="#065F46">ROOM NODE 01</text>
-  <text x="220" y="475" text-anchor="middle" font-size="11" fill="#047857">ESP32-S3</text>
-  <rect x="115" y="490" width="210" height="34" rx="6" fill="#FFFFFF" stroke="#378ADD" stroke-width="1.3"/>
-  <text x="220" y="511" text-anchor="middle" font-size="11.5" fill="#1F2937">Nhiệt độ / Độ ẩm</text>
-  <line x1="220" y1="524" x2="220" y2="536" stroke="#6B7280" stroke-width="1.3"/>
-  <text x="228" y="533" font-size="9.5" fill="#6B7280">I2C</text>
-  <rect x="115" y="536" width="210" height="34" rx="6" fill="#FFFFFF" stroke="#0EA5A5" stroke-width="1.3"/>
-  <text x="220" y="557" text-anchor="middle" font-size="11.5" fill="#1F2937">Cảm biến hiện diện</text>
-  <line x1="220" y1="570" x2="220" y2="582" stroke="#6B7280" stroke-width="1.3"/>
-  <text x="228" y="579" font-size="9.5" fill="#6B7280">GPIO</text>
-  <rect x="115" y="582" width="210" height="34" rx="6" fill="#FFFFFF" stroke="#F97066" stroke-width="1.3"/>
-  <text x="220" y="603" text-anchor="middle" font-size="11.5" fill="#1F2937">IR Driver</text>
-
-  <!-- Node 2 -->
-  <rect x="380" y="440" width="240" height="190" rx="10" fill="#ECFDF5" stroke="#059669" stroke-width="1.5"/>
-  <text x="500" y="459" text-anchor="middle" font-size="13.5" font-weight="700" fill="#065F46">ROOM NODE 02</text>
-  <text x="500" y="475" text-anchor="middle" font-size="11" fill="#047857">ESP32-S3</text>
-  <rect x="395" y="490" width="210" height="34" rx="6" fill="#FFFFFF" stroke="#378ADD" stroke-width="1.3"/>
-  <text x="500" y="511" text-anchor="middle" font-size="11.5" fill="#1F2937">Nhiệt độ / Độ ẩm</text>
-  <line x1="500" y1="524" x2="500" y2="536" stroke="#6B7280" stroke-width="1.3"/>
-  <text x="508" y="533" font-size="9.5" fill="#6B7280">I2C</text>
-  <rect x="395" y="536" width="210" height="34" rx="6" fill="#FFFFFF" stroke="#0EA5A5" stroke-width="1.3"/>
-  <text x="500" y="557" text-anchor="middle" font-size="11.5" fill="#1F2937">Cảm biến hiện diện</text>
-  <line x1="500" y1="570" x2="500" y2="582" stroke="#6B7280" stroke-width="1.3"/>
-  <text x="508" y="579" font-size="9.5" fill="#6B7280">GPIO</text>
-  <rect x="395" y="582" width="210" height="34" rx="6" fill="#FFFFFF" stroke="#F97066" stroke-width="1.3"/>
-  <text x="500" y="603" text-anchor="middle" font-size="11.5" fill="#1F2937">IR Driver</text>
-
-  <!-- Node 3 -->
-  <rect x="660" y="440" width="240" height="190" rx="10" fill="#ECFDF5" stroke="#059669" stroke-width="1.5"/>
-  <text x="780" y="459" text-anchor="middle" font-size="13.5" font-weight="700" fill="#065F46">ROOM NODE N</text>
-  <text x="780" y="475" text-anchor="middle" font-size="11" fill="#047857">ESP32-S3</text>
-  <rect x="675" y="490" width="210" height="34" rx="6" fill="#FFFFFF" stroke="#378ADD" stroke-width="1.3"/>
-  <text x="780" y="511" text-anchor="middle" font-size="11.5" fill="#1F2937">Nhiệt độ / Độ ẩm</text>
-  <line x1="780" y1="524" x2="780" y2="536" stroke="#6B7280" stroke-width="1.3"/>
-  <text x="788" y="533" font-size="9.5" fill="#6B7280">I2C</text>
-  <rect x="675" y="536" width="210" height="34" rx="6" fill="#FFFFFF" stroke="#0EA5A5" stroke-width="1.3"/>
-  <text x="780" y="557" text-anchor="middle" font-size="11.5" fill="#1F2937">Cảm biến hiện diện</text>
-  <line x1="780" y1="570" x2="780" y2="582" stroke="#6B7280" stroke-width="1.3"/>
-  <text x="788" y="579" font-size="9.5" fill="#6B7280">GPIO</text>
-  <rect x="675" y="582" width="210" height="34" rx="6" fill="#FFFFFF" stroke="#F97066" stroke-width="1.3"/>
-  <text x="780" y="603" text-anchor="middle" font-size="11.5" fill="#1F2937">IR Driver</text>
-
-  <!-- ============ ROOM NODE -> AC (IR) ============ -->
-  <line x1="220" y1="630" x2="220" y2="668" stroke="#374151" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <text x="228" y="653" font-size="11" fill="#374151">IR</text>
-  <line x1="500" y1="630" x2="500" y2="668" stroke="#374151" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <text x="508" y="653" font-size="11" fill="#374151">IR</text>
-  <line x1="780" y1="630" x2="780" y2="668" stroke="#374151" stroke-width="1.6" marker-end="url(#arrow)"/>
-  <text x="788" y="653" font-size="11" fill="#374151">IR</text>
-
-  <!-- ============ AIR CONDITIONERS ============ -->
-  <rect x="100" y="670" width="240" height="60" rx="8" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.5"/>
-  <text x="220" y="694" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1F2937">Điều hòa 01</text>
-  <text x="220" y="712" text-anchor="middle" font-size="11" fill="#4B5563">Remote IR</text>
-
-  <rect x="380" y="670" width="240" height="60" rx="8" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.5"/>
-  <text x="500" y="694" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1F2937">Điều hòa 02</text>
-  <text x="500" y="712" text-anchor="middle" font-size="11" fill="#4B5563">Remote IR</text>
-
-  <rect x="660" y="670" width="240" height="60" rx="8" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.5"/>
-  <text x="780" y="694" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1F2937">Điều hòa N</text>
-  <text x="780" y="712" text-anchor="middle" font-size="11" fill="#4B5563">Remote IR</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="960" viewBox="0 0 1200 960">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3e4c59"/></marker></defs>
+<rect width="1200" height="960" fill="#ffffff"/>
+<rect x="330" y="20" width="540" height="70" rx="10" fill="#eef5fd" stroke="#4a90d9" stroke-width="1.8"/>
+<text x="600.0" y="49.5" font-size="14" text-anchor="middle" font-weight="bold" fill="#1f2933" font-family="Arial, Helvetica, sans-serif">Người dùng: quản trị viên, thành viên, khách</text>
+<text x="600.0" y="67.5" font-size="11.5" text-anchor="middle" font-weight="normal" fill="#52606d" font-family="Arial, Helvetica, sans-serif">App Android (Kotlin)  ·  Trình duyệt (dashboard)</text>
+<rect x="60" y="140" width="320" height="72" rx="10" fill="#ffffff" stroke="#7b8794" stroke-width="1.8"/>
+<text x="220.0" y="170.5" font-size="14" text-anchor="middle" font-weight="bold" fill="#1f2933" font-family="Arial, Helvetica, sans-serif">Wi-Fi nhà</text>
+<text x="220.0" y="188.5" font-size="11.5" text-anchor="middle" font-weight="normal" fill="#52606d" font-family="Arial, Helvetica, sans-serif">http://&lt;IP Pi&gt;:8000, app tìm Pi bằng mDNS</text>
+<rect x="440" y="140" width="320" height="72" rx="10" fill="#ffffff" stroke="#7b8794" stroke-width="1.8"/>
+<text x="600.0" y="163.0" font-size="14" text-anchor="middle" font-weight="bold" fill="#1f2933" font-family="Arial, Helvetica, sans-serif">Wi-Fi SmartAC-Backup</text>
+<text x="600.0" y="181.0" font-size="11.5" text-anchor="middle" font-weight="normal" fill="#52606d" font-family="Arial, Helvetica, sans-serif">Pi tự phát (chế độ Độc lập / mất Wi-Fi nhà)</text>
+<text x="600.0" y="196.0" font-size="11.5" text-anchor="middle" font-weight="normal" fill="#52606d" font-family="Arial, Helvetica, sans-serif">http://10.42.0.1:8000, quét QR trên tem</text>
+<rect x="820" y="140" width="320" height="72" rx="10" fill="#fff6ee" stroke="#f38020" stroke-width="1.8"/>
+<text x="980.0" y="163.0" font-size="14" text-anchor="middle" font-weight="bold" fill="#1f2933" font-family="Arial, Helvetica, sans-serif">Internet (4G, mạng khác)</text>
+<text x="980.0" y="181.0" font-size="11.5" text-anchor="middle" font-weight="normal" fill="#52606d" font-family="Arial, Helvetica, sans-serif">https://ac.ductruc.site</text>
+<text x="980.0" y="196.0" font-size="11.5" text-anchor="middle" font-weight="normal" fill="#52606d" font-family="Arial, Helvetica, sans-serif">Cloudflare: HTTPS, chống dò</text>
+<line x1="450" y1="90" x2="220" y2="138" stroke="#3e4c59" stroke-width="1.8" marker-end="url(#a)"/>
+<line x1="600" y1="90" x2="600" y2="138" stroke="#3e4c59" stroke-width="1.8" marker-end="url(#a)"/>
+<line x1="750" y1="90" x2="980" y2="138" stroke="#3e4c59" stroke-width="1.8" marker-end="url(#a)"/>
+<text x="600" y="120" font-size="11.5" text-anchor="middle" font-weight="normal" fill="#52606d" font-family="Arial, Helvetica, sans-serif">app tự chọn đường: nhà → mạng Pi → Internet</text>
+<rect x="40" y="250" width="1120" height="400" rx="14" fill="#f5f7fa" stroke="#616e7c" stroke-width="2"/>
+<text x="600" y="278" font-size="17" text-anchor="middle" font-weight="bold" fill="#1f2933" font-family="Arial, Helvetica, sans-serif">RASPBERRY PI 5: GATEWAY</text>
+<rect x="870" y="295" width="260" height="62" rx="10" fill="#ffffff" stroke="#f38020" stroke-width="1.8"/>
+<text x="1000.0" y="313.0" font-size="14" text-anchor="middle" font-weight="bold" fill="#1f2933" font-family="Arial, Helvetica, sans-serif">cloudflared</text>
+<text x="1000.0" y="331.0" font-size="11.5" text-anchor="middle" font-weight="normal" fill="#52606d" font-family="Arial, Helvetica, sans-serif">tunnel, Pi kết nối RA Cloudflare</text>
+<text x="1000.0" y="346.0" font-size="11.5" text-anchor="middle" font-weight="normal" fill="#52606d" font-family="Arial, Helvetica, sans-serif">(không mở cổng router)</text>
+<rect x="310" y="295" width="520" height="62" rx="10" fill="#ffffff" stroke="#4a90d9" stroke-width="1.8"/>
+<text x="570.0" y="320.5" font-size="14" text-anchor="middle" font-weight="bold" fill="#1f2933" font-family="Arial, Helvetica, sans-serif">FastAPI: REST API + dashboard web</text>
+<text x="570.0" y="338.5" font-size="11.5" text-anchor="middle" font-weight="normal" fill="#52606d" font-family="Arial, Helvetica, sans-serif">cổng 8000 · /docs (Swagger)</text>
+<rect x="70" y="295" width="210" height="62" rx="10" fill="#ffffff" stroke="#9b6bdf" stroke-width="1.8"/>
+<text x="175.0" y="313.0" font-size="14" text-anchor="middle" font-weight="bold" fill="#1f2933" font-family="Arial, Helvetica, sans-serif">Tài khoản</text>
+<text x="175.0" y="331.0" font-size="11.5" text-anchor="middle" font-weight="normal" fill="#52606d" font-family="Arial, Helvetica, sans-serif">admin / thành viên / khách</text>
+<text x="175.0" y="346.0" font-size="11.5" text-anchor="middle" font-weight="normal" fill="#52606d" font-family="Arial, Helvetica, sans-serif">scrypt, phiên 90 ngày</text>
+<polyline points="220,212 220,240 400,240 400,293" fill="none" stroke="#3e4c59" stroke-width="1.8" marker-end="url(#a)"/>
+<line x1="600" y1="212" x2="600" y2="293" stroke="#3e4c59" stroke-width="1.8" marker-end="url(#a)"/>
+<polyline points="980,212 980,293" fill="none" stroke="#f38020" stroke-width="1.8" marker-end="url(#a)"/>
+<line x1="870" y1="326" x2="832" y2="326" stroke="#f38020" stroke-width="1.8" marker-end="url(#a)"/>
+<line x1="310" y1="326" x2="282" y2="326" stroke="#3e4c59" stroke-width="1.8" marker-end="url(#a)"/>
+<rect x="70" y="380" width="1060" height="60" rx="10" fill="#fdeeee" stroke="#d64545" stroke-width="1.8"/>
+<text x="600.0" y="404.5" font-size="14" text-anchor="middle" font-weight="bold" fill="#8a1c1c" font-family="Arial, Helvetica, sans-serif">Safety Layer</text>
+<text x="600.0" y="422.5" font-size="11.5" text-anchor="middle" font-weight="normal" fill="#52606d" font-family="Arial, Helvetica, sans-serif">mọi lệnh đều qua đây: giới hạn nhiệt độ, chống lặp lệnh, bảo vệ máy nén 180 s, ưu tiên người dùng (manual hold)</text>
+<line x1="570" y1="357" x2="570" y2="378" stroke="#3e4c59" stroke-width="1.8" marker-end="url(#a)"/>
+<rect x="70" y="465" width="330" height="66" rx="10" fill="#ffffff" stroke="#2f9e8f" stroke-width="1.8"/>
+<text x="235.0" y="485.0" font-size="14" text-anchor="middle" font-weight="bold" fill="#1f2933" font-family="Arial, Helvetica, sans-serif">Gateway service</text>
+<text x="235.0" y="503.0" font-size="11.5" text-anchor="middle" font-weight="normal" fill="#52606d" font-family="Arial, Helvetica, sans-serif">MQTT ↔ SQLite, lệnh / kết quả</text>
+<text x="235.0" y="518.0" font-size="11.5" text-anchor="middle" font-weight="normal" fill="#52606d" font-family="Arial, Helvetica, sans-serif">theo dõi trạng thái điều hòa dự kiến</text>
+<rect x="435" y="465" width="330" height="66" rx="10" fill="#ffffff" stroke="#d6409f" stroke-width="1.8"/>
+<text x="600.0" y="485.0" font-size="14" text-anchor="middle" font-weight="bold" fill="#1f2933" font-family="Arial, Helvetica, sans-serif">Mô hình tiện nghi</text>
+<text x="600.0" y="503.0" font-size="11.5" text-anchor="middle" font-weight="normal" fill="#52606d" font-family="Arial, Helvetica, sans-serif">hồi quy logistic thứ tự, prior ASHRAE</text>
+<text x="600.0" y="518.0" font-size="11.5" text-anchor="middle" font-weight="normal" fill="#52606d" font-family="Arial, Helvetica, sans-serif">cá nhân hóa từ phiếu cảm nhận</text>
+<rect x="800" y="465" width="330" height="66" rx="10" fill="#ffffff" stroke="#7b8794" stroke-width="1.8"/>
+<text x="965.0" y="485.0" font-size="14" text-anchor="middle" font-weight="bold" fill="#1f2933" font-family="Arial, Helvetica, sans-serif">netwatch</text>
+<text x="965.0" y="503.0" font-size="11.5" text-anchor="middle" font-weight="normal" fill="#52606d" font-family="Arial, Helvetica, sans-serif">Tự động / Độc lập / Chỉ Wi-Fi nhà</text>
+<text x="965.0" y="518.0" font-size="11.5" text-anchor="middle" font-weight="normal" fill="#52606d" font-family="Arial, Helvetica, sans-serif">phát SmartAC-Backup khi cần</text>
+<line x1="235" y1="442" x2="235" y2="463" stroke="#3e4c59" stroke-width="1.8" marker-end="url(#a)"/>
+<line x1="600" y1="463" x2="600" y2="442" stroke="#3e4c59" stroke-width="1.8" marker-end="url(#a)"/>
+<rect x="70" y="560" width="330" height="66" rx="10" fill="#ffffff" stroke="#2f9e8f" stroke-width="1.8"/>
+<text x="235.0" y="587.5" font-size="14" text-anchor="middle" font-weight="bold" fill="#1f2933" font-family="Arial, Helvetica, sans-serif">Mosquitto</text>
+<text x="235.0" y="605.5" font-size="11.5" text-anchor="middle" font-weight="normal" fill="#52606d" font-family="Arial, Helvetica, sans-serif">MQTT broker, mỗi node một tài khoản</text>
+<rect x="435" y="560" width="330" height="66" rx="10" fill="#ffffff" stroke="#616e7c" stroke-width="1.8"/>
+<text x="600.0" y="587.5" font-size="14" text-anchor="middle" font-weight="bold" fill="#1f2933" font-family="Arial, Helvetica, sans-serif">SQLite</text>
+<text x="600.0" y="605.5" font-size="11.5" text-anchor="middle" font-weight="normal" fill="#52606d" font-family="Arial, Helvetica, sans-serif">số đo, lệnh, quyết định, phiếu, tài khoản</text>
+<rect x="800" y="560" width="330" height="66" rx="10" fill="#ffffff" stroke="#9b6bdf" stroke-width="1.8"/>
+<text x="965.0" y="580.0" font-size="14" text-anchor="middle" font-weight="bold" fill="#1f2933" font-family="Arial, Helvetica, sans-serif">Nút reset (GPIO 17)</text>
+<text x="965.0" y="598.0" font-size="11.5" text-anchor="middle" font-weight="normal" fill="#52606d" font-family="Arial, Helvetica, sans-serif">giữ 10 s: xóa tài khoản,</text>
+<text x="965.0" y="613.0" font-size="11.5" text-anchor="middle" font-weight="normal" fill="#52606d" font-family="Arial, Helvetica, sans-serif">giữ nguyên dữ liệu</text>
+<line x1="235" y1="533" x2="235" y2="558" stroke="#3e4c59" stroke-width="1.8" marker-end="url(#a)" marker-start="url(#a)"/>
+<polyline points="400,498 418,498 418,593 433,593" fill="none" stroke="#3e4c59" stroke-width="1.8" marker-end="url(#a)"/>
+<line x1="600" y1="533" x2="600" y2="558" stroke="#3e4c59" stroke-width="1.8" marker-end="url(#a)" marker-start="url(#a)"/>
+<text x="600" y="676" font-size="12.5" text-anchor="middle" font-weight="normal" fill="#3e4c59" font-family="Arial, Helvetica, sans-serif">MQTT qua Wi-Fi (nhà hoặc SmartAC-Backup): telemetry, command, command_result, status, ir_event</text>
+<line x1="235" y1="700" x2="235" y2="630" stroke="#3e4c59" stroke-width="1.8" marker-end="url(#a)"/>
+<line x1="235" y1="700" x2="330" y2="700" stroke="#3e4c59" stroke-width="1.8"/>
+<line x1="330" y1="700" x2="870" y2="700" stroke="#3e4c59" stroke-width="1.8" stroke-dasharray="6 4"/>
+<line x1="330" y1="700" x2="330" y2="718" stroke="#3e4c59" stroke-width="1.8" marker-end="url(#a)"/>
+<line x1="870" y1="700" x2="870" y2="718" stroke="#3e4c59" stroke-width="1.8" marker-end="url(#a)" stroke-dasharray="6 4"/>
+<rect x="120" y="720" width="430" height="140" rx="12" fill="#eefaf4" stroke="#2f9e6b" stroke-width="1.8"/>
+<text x="335" y="744" font-size="14" text-anchor="middle" font-weight="bold" fill="#1d6b47" font-family="Arial, Helvetica, sans-serif">ROOM NODE 01 (ESP32-S3)</text>
+<rect x="140" y="758" width="125" height="44" rx="10" fill="#ffffff" stroke="#4a90d9" stroke-width="1.8"/>
+<text x="202.5" y="774.5" font-size="12" text-anchor="middle" font-weight="bold" fill="#1f2933" font-family="Arial, Helvetica, sans-serif">SHT3x</text>
+<text x="202.5" y="792.5" font-size="11.5" text-anchor="middle" font-weight="normal" fill="#52606d" font-family="Arial, Helvetica, sans-serif">nhiệt độ, độ ẩm</text>
+<rect x="275" y="758" width="125" height="44" rx="10" fill="#ffffff" stroke="#2f9e8f" stroke-width="1.8"/>
+<text x="337.5" y="774.5" font-size="12" text-anchor="middle" font-weight="bold" fill="#1f2933" font-family="Arial, Helvetica, sans-serif">LD2420</text>
+<text x="337.5" y="792.5" font-size="11.5" text-anchor="middle" font-weight="normal" fill="#52606d" font-family="Arial, Helvetica, sans-serif">radar có người</text>
+<rect x="410" y="758" width="125" height="44" rx="10" fill="#ffffff" stroke="#d64545" stroke-width="1.8"/>
+<text x="472.5" y="774.5" font-size="12" text-anchor="middle" font-weight="bold" fill="#1f2933" font-family="Arial, Helvetica, sans-serif">IR phát / thu</text>
+<text x="472.5" y="792.5" font-size="11.5" text-anchor="middle" font-weight="normal" fill="#52606d" font-family="Arial, Helvetica, sans-serif">LED 5 V, TSOP</text>
+<text x="335" y="826" font-size="11.5" text-anchor="middle" font-weight="normal" fill="#52606d" font-family="Arial, Helvetica, sans-serif">tự vào lại mạng của Pi khi Pi đổi chế độ</text>
+<text x="335" y="844" font-size="11.5" text-anchor="middle" font-weight="normal" fill="#52606d" font-family="Arial, Helvetica, sans-serif">lọc số đo bất thường trước khi gửi</text>
+<rect x="660" y="720" width="420" height="140" rx="10" fill="#ffffff" stroke="#2f9e6b" stroke-width="1.8" stroke-dasharray="6 4"/>
+<text x="870.0" y="777.0" font-size="14" text-anchor="middle" font-weight="bold" fill="#1f2933" font-family="Arial, Helvetica, sans-serif">ROOM NODE N</text>
+<text x="870.0" y="795.0" font-size="11.5" text-anchor="middle" font-weight="normal" fill="#52606d" font-family="Arial, Helvetica, sans-serif">thêm phòng: nạp firmware, đặt ROOM_ID,</text>
+<text x="870.0" y="810.0" font-size="11.5" text-anchor="middle" font-weight="normal" fill="#52606d" font-family="Arial, Helvetica, sans-serif">tạo tài khoản MQTT cho node</text>
+<rect x="170" y="900" width="330" height="46" rx="10" fill="#ffffff" stroke="#616e7c" stroke-width="1.8"/>
+<text x="335.0" y="917.5" font-size="13" text-anchor="middle" font-weight="bold" fill="#1f2933" font-family="Arial, Helvetica, sans-serif">Điều hòa</text>
+<text x="335.0" y="935.5" font-size="11.5" text-anchor="middle" font-weight="normal" fill="#52606d" font-family="Arial, Helvetica, sans-serif">nhận lệnh IR như từ remote gốc</text>
+<line x1="472" y1="804" x2="420" y2="898" stroke="#3e4c59" stroke-width="1.8" marker-end="url(#a)"/>
+<rect x="560" y="900" width="220" height="46" rx="10" fill="#ffffff" stroke="#616e7c" stroke-width="1.8"/>
+<text x="670.0" y="917.5" font-size="13" text-anchor="middle" font-weight="bold" fill="#1f2933" font-family="Arial, Helvetica, sans-serif">Remote gốc</text>
+<text x="670.0" y="935.5" font-size="11.5" text-anchor="middle" font-weight="normal" fill="#52606d" font-family="Arial, Helvetica, sans-serif">node nghe lén để đồng bộ</text>
+<line x1="640" y1="900" x2="490" y2="804" stroke="#3e4c59" stroke-width="1.8" marker-end="url(#a)" stroke-dasharray="6 4"/>
 </svg>
