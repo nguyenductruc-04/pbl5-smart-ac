@@ -769,7 +769,9 @@ Lý do thiết kế: [ADR 0009](adr/0009-ir-protocol-detection.md). Từ bản 0
 
 ### 14.1 Nạp firmware 0.11.0 cho node (một lần)
 
-Mở `firmware/room_node/room_node.ino`, nạp như mọi lần (`config.h` giữ nguyên). Serial Monitor phải in `=== PBL5 Room Node 0.11.0` và dòng `[IR] Giao thuc DAIKIN (model -1)` (giao thức lấy từ `config.h` ở lần đầu). Sau khoảng 30 giây, mục **Điều hòa trong phòng** trên dashboard hiện "Đang dùng giao thức DAIKIN".
+Mở `firmware/room_node/room_node.ino`, nạp như mọi lần (`config.h` giữ nguyên). Serial Monitor phải in `=== PBL5 Room Node 0.11.0` và dòng `[IR] Giao thuc … (model …)`, với giao thức là `IR_PROTOCOL` đang đặt trong `config.h` (ví dụ `DAIKIN`, hoặc `ELECTRA_AC` nếu đã sửa khi thử máy Casper). Sau khoảng 30 giây, mục **Điều hòa trong phòng** trên dashboard hiện đúng giao thức đó.
+
+`config.h` chỉ được đọc **ở lần khởi động đầu tiên** của firmware 0.11.0. Từ đó node dùng giao thức lưu trong bộ nhớ trong, nên sửa `IR_PROTOCOL` trong `config.h` rồi nạp lại **không còn tác dụng**: đổi giao thức trên dashboard hoặc app.
 
 ### 14.2 Nhận diện remote
 

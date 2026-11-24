@@ -12,6 +12,19 @@ Native Kotlin + Jetpack Compose app for the PBL5 gateway. No IP address to type:
 
 7. Admins detect and switch the AC's IR protocol ("Điều hòa trong phòng"), test it and confirm it works.
 
+## Screens
+
+Light and dark themes follow the phone setting (`Theme.kt`: two palettes, Be Vietnam Pro font under the SIL Open Font License, see `FONT-LICENSE-OFL.txt`).
+
+| File | Screens |
+|---|---|
+| `Screens.kt` | finding the Pi, Welcome, sign-in / sign-up / first setup |
+| `HomeScreen.kt` | tab Nhà: room card, comfort band, AC switch, suggestion, "Thêm phòng" |
+| `ControlScreen.kt` | room control: temperature dial, power, mode, fan, readings, votes, "Điều hòa không làm theo?" |
+| `HistoryScreen.kt` | tab Lịch sử: temperature chart with the comfort band, activity list |
+| `SettingsScreen.kt` | tab Cài đặt: account, members, IR detection, Pi network, notifications, sign out |
+| `Extras.kt` | shared components and line icons |
+
 ## Build
 
 CI builds `app-debug.apk` on every push (job `android`, artifact `pbl5-app`) and attaches it to the GitHub release when a `v*` tag is pushed. Locally, with Android Studio or the Android SDK and Gradle 8.11:
@@ -27,3 +40,4 @@ adb install -r android/app/build/outputs/apk/debug/app-debug.apk
 
 - Instant notifications would need a push service (Firebase); the current check runs every 15 minutes.
 - Home-screen widget.
+- Several rooms on the Home tab, and two ACs in one room (one node per AC).

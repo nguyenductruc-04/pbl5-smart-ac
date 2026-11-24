@@ -16,7 +16,12 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
-enum class AuthMode { LOGIN, REGISTER, SETUP }
+enum class AuthMode { WELCOME, LOGIN, REGISTER, SETUP }
+
+/** Duong dien thoai dang dung de toi Pi. */
+enum class Link { HOME, BACKUP, INTERNET }
+
+data class Activity(val ts: Double, val title: String, val detail: String, val kind: String)
 
 sealed interface Screen {
     data object Loading : Screen
@@ -25,7 +30,15 @@ sealed interface Screen {
     data object Main : Screen
 }
 
-data class Suggestion(val text: String, val why: String, val target: JSONObject?, val canApply: Boolean)
+data class Suggestion(
+    val text: String,
+    val why: String,
+    val target: JSONObject?,
+    val canApply: Boolean,
+    val band: Pair<Double, Double>?,
+    val roomTemp: Double?,
+    val warm: Boolean,
+)
 
 data class NetInfo(val mode: String, val running: Boolean, val onBackup: Boolean)
 
@@ -134,8 +147,21 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var pendingConfirm by mutableStateOf<JSONObject?>(null)
 
     val serverUrl: String? get() = api?.baseUrl
+    /** Dia chi Internet (Cloudflare Tunnel) Pi bao ve, neu da bat truy cap tu xa. */
+    val publicUrl: String? get() = prefs.publicUrl
+    val link: Link
+        get() = when {
+            api?.baseUrl == BACKUP_URL -> Link.BACKUP
+            api?.baseUrl?.startsWith("https://") == true -> Link.INTERNET
+            else -> Link.HOME
+        }
+    var activity by mutableStateOf<List<Activity>>(emptyList())
+        private set
+    var notifyEnabled by mutableStateOf(true)
+        private set
 
     init {
+        notifyEnabled = prefs.notify
         viewModelScope.launch { connect() }
     }
 
@@ -263,7 +289,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
         val claimed = status.optBoolean("claimed", true)
-        screen = Screen.Auth(if (claimed) AuthMode.LOGIN else AuthMode.SETUP)
+        screen = Screen.Auth(if (claimed) AuthMode.WELCOME else AuthMode.SETUP)
     }
 
     private fun rememberServer(url: String, status: JSONObject) {
@@ -319,6 +345,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         )
         refresh()
         loadExtras(series = true)
+        loadActivity()
         if (me?.role == "admin") {
             loadMembers()
             loadIr()
@@ -340,7 +367,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         prefs.token = null
         me = null
         room = null
-        screen = Screen.Auth(AuthMode.LOGIN, message)
+        screen = Screen.Auth(if (message == null) AuthMode.WELCOME else AuthMode.LOGIN, message)
     }
 
     // ------------------------------------------------------------ phong va dieu khien
@@ -464,30 +491,81 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private fun toSuggestion(s: JSONObject): Suggestion {
         val t = s.optJSONObject("target")
         val tt = t?.optInt("temp")
-        val room = if (s.isNull("room_temp")) "" else "Phòng ${"%.1f".format(s.optDouble("room_temp"))} °C. "
-        val band = s.optJSONArray("comfort_band")
-        val hi = band?.optDouble(1)
+        val roomT = if (s.isNull("room_temp")) null else s.optDouble("room_temp")
+        val arr = s.optJSONArray("comfort_band")
+        val band = if (arr != null && arr.length() == 2) arr.optDouble(0) to arr.optDouble(1) else null
         val reason = s.optString("reason")
         val text = when (reason) {
-            "TOO_WARM" -> "${room}Có vẻ hơi nóng với bạn. Nên bật điều hòa ở $tt °C."
-            "WARMER_SETPOINT" -> "Có thể tăng lên $tt °C mà vẫn dễ chịu, đỡ tốn điện."
-            "COOLER_SETPOINT" -> "${room}Nên giảm nhiệt độ đặt xuống $tt °C."
-            "ROOM_EMPTY_LONG" -> "Phòng đã trống hơn 15 phút. Nên tắt điều hòa."
-            "SLIGHTLY_WARM" -> "${room}Ấm hơn vùng dễ chịu của bạn (trên ${"%.1f".format(hi ?: 0.0)} °C) nhưng chưa nóng hẳn. Nếu thấy nóng, có thể bật ở $tt °C."
-            "COMFORTABLE" -> "${room}Phòng đang dễ chịu với bạn, chưa cần bật điều hòa."
-            "TOO_COOL_AC_OFF" -> "${room}Phòng hơi mát với bạn."
+            "TOO_WARM" -> "Phòng đang nóng với bạn. Bật điều hòa ở $tt°?"
+            "WARMER_SETPOINT" -> "Có thể tăng lên $tt° mà vẫn dễ chịu, đỡ tốn điện."
+            "COOLER_SETPOINT" -> "Phòng đang ấm hơn mức bạn thường thấy dễ chịu. Giảm xuống $tt°?"
+            "ROOM_EMPTY_LONG" -> "Phòng đã trống hơn 15 phút. Tắt điều hòa?"
+            "SLIGHTLY_WARM" -> "Ấm hơn vùng dễ chịu của bạn một chút. Nếu thấy nóng, bật ở $tt°."
+            "COMFORTABLE" -> "Phòng đang dễ chịu với bạn, chưa cần bật điều hòa."
+            "TOO_COOL_AC_OFF" -> "Phòng hơi mát với bạn."
             "SETPOINT_OK" -> "Nhiệt độ đặt hiện tại đang hợp với bạn."
-            "ROOM_EMPTY" -> "Phòng đang trống, chưa có gợi ý."
+            "ROOM_EMPTY" -> "Phòng đang trống."
             "MODE_NOT_SUPPORTED" -> "Gợi ý chỉ áp dụng cho chế độ mát, khô hoặc tự động."
             else -> "Chưa có số đo mới nên chưa có gợi ý."
         }
         val model = s.optJSONObject("model")
         val votes = model?.optInt("votes") ?: 0
-        val why = (if (band != null) "Vùng dễ chịu của bạn: ${"%.1f".format(band.optDouble(0))}–${"%.1f".format(band.optDouble(1))} °C. " else "") +
-            if (model?.optBoolean("personal") == true) "Học từ $votes phiếu của bạn và dữ liệu khảo sát ASHRAE."
-            else "Đang dùng mô hình chung (ASHRAE); sẽ hợp với bạn hơn khi có từ 10 phiếu (hiện có $votes)."
+        val why = if (model?.optBoolean("personal") == true) "Học từ $votes phiếu cảm nhận của bạn và dữ liệu khảo sát ASHRAE."
+        else "Đang dùng mô hình chung (ASHRAE); sẽ hợp với bạn hơn khi có từ 10 phiếu (hiện có $votes)."
         val offered = s.optString("action") != "none" || reason == "SLIGHTLY_WARM"
-        return Suggestion(text, why, t, t != null && offered && !s.optBoolean("auto"))
+        val warm = reason in setOf("TOO_WARM", "COOLER_SETPOINT", "SLIGHTLY_WARM")
+        return Suggestion(text, why, t, t != null && offered && !s.optBoolean("auto"), band, roomT, warm)
+    }
+
+    /** Nhat ky: lenh qua Safety Layer va nhung lan bam remote goc. */
+    fun loadActivity() {
+        val a = api ?: return
+        val id = room?.id ?: return
+        viewModelScope.launch {
+            runCatching {
+                val dec = a.call("GET", "/rooms/$id/decisions?limit=30").getJSONArray("items")
+                val ir = a.call("GET", "/rooms/$id/ir-events?limit=10").getJSONArray("items")
+                val out = mutableListOf<Activity>()
+                for (i in 0 until dec.length()) {
+                    val d = dec.getJSONObject(i)
+                    val who = SOURCE_VI[d.optString("source")] ?: d.optString("source")
+                    val what = describeState(d.optJSONObject("requested"))
+                    val (title, detail, kind) = when (d.optString("verdict")) {
+                        "sync" -> Triple("Báo điều hòa thực tế đang ${if (d.optJSONObject("requested")?.optString("power") == "on") "bật" else "tắt"}", who, "info")
+                        "allow" -> Triple(what, who, "ac")
+                        "skip" -> Triple(what, "$who, điều hòa đã ở trạng thái này", "info")
+                        else -> Triple(what, "$who, bị chặn: ${explain(ApiException(0, d.optString("code"), d.optString("code")))}", "warn")
+                    }
+                    out.add(Activity(d.optDouble("ts"), title, detail, kind))
+                }
+                for (i in 0 until ir.length()) {
+                    val e = ir.getJSONObject(i)
+                    out.add(Activity(e.optDouble("ts"), describeState(e), "Bấm remote, node nghe được", "ac"))
+                }
+                activity = out.sortedByDescending { it.ts }.take(25)
+            }
+        }
+    }
+
+    fun changePassword(old: String, new: String, done: (String?) -> Unit) {
+        val a = api ?: return
+        viewModelScope.launch {
+            busy = true
+            val err = try {
+                a.call("PUT", "/auth/password", JSONObject().put("old_password", old).put("new_password", new))
+                null
+            } catch (e: ApiException) {
+                if (e.code == "WRONG_PASSWORD") "Mật khẩu hiện tại không đúng." else explain(e)
+            } finally {
+                busy = false
+            }
+            done(err)
+        }
+    }
+
+    fun setNotify(on: Boolean) {
+        notifyEnabled = on
+        prefs.notify = on
     }
 
     fun applySuggestion() {
@@ -698,6 +776,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     companion object {
+        private val SOURCE_VI = mapOf("app" to "Từ ứng dụng", "rule" to "Tự động", "ai" to "Gợi ý tự động", "remote" to "Remote")
+
+        fun describeState(j: JSONObject?): String {
+            if (j == null) return "Lệnh"
+            val parts = mutableListOf<String>()
+            when (j.optString("power")) {
+                "on" -> parts.add("Bật")
+                "off" -> return "Tắt điều hòa"
+            }
+            j.optString("mode").takeIf { it.isNotBlank() && it != "null" }?.let { parts.add(MODE_VI[it] ?: it) }
+            if (!j.isNull("temp") && j.has("temp")) parts.add("${j.optInt("temp")}°")
+            return if (parts.isEmpty()) "Đổi cài đặt" else parts.joinToString(", ").replaceFirstChar { it.uppercase() }
+        }
+
         private val MODE_VI = mapOf("cool" to "mát", "dry" to "khô", "fan" to "quạt", "auto" to "tự động", "heat" to "sưởi")
         const val BACKUP_URL = "http://10.42.0.1:8000"   // Pi o che do mang du phong (SmartAC-Backup)
         private const val POLL_MS = 3000L

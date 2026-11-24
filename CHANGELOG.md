@@ -10,10 +10,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versio
 - Learn mode: `{"ir_learn": 60}` makes the node report every IR frame it hears for 60 s, including frames it cannot decode as an AC (`"ac": false`), so the user knows the remote was heard but not recognised.
 - API: `GET /rooms/{room}/ir` (protocol, confirmation, learn results grouped by protocol, brand hints), `POST/DELETE /rooms/{room}/ir/learn`, `PUT /rooms/{room}/ir`, `POST /rooms/{room}/ir/confirm` (admin).
 - Dashboard and app: "Điều hòa trong phòng" for admins: detect the remote, use a detected protocol, test with "Bật thử / Tắt thử", confirm it works; or pick by brand.
+- App: change password, notifications on/off, activity list (AC commands and remote presses) on the History tab, app icon.
 
 ### Changed
 - The remote's protocol that may update the expected AC state is now per room (reported by the node) instead of `IR_PROTOCOL` in `.env`, which is only a fallback for older firmware.
 - After a protocol switch the AC state is marked uncertain.
+- App redesigned as a consumer IoT app instead of a dashboard: light and dark themes following the phone, Be Vietnam Pro font (SIL OFL, `android/FONT-LICENSE-OFL.txt`), short Welcome screen, bottom tabs Nhà / Lịch sử / Cài đặt. Home shows the room card (temperature against the user's comfort band, AC switch) and the suggestion; tapping the room opens the control screen with a temperature dial (comfort band, set point, room temperature), mode, fan and comfort votes. Members, IR detection and Pi network moved to Cài đặt.
 
 ## [0.10.0] - 2026-11-23
 ### Added

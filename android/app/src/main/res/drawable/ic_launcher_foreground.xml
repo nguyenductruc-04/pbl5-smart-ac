@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bieu tuong: cung bac ha (vung de chiu), cung xanh (nhiet do dat), cham cam (phong). Vung an toan 66dp o giua. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <path android:pathData="M32,64 A22,22 0 0 1 76,64"
+        android:strokeColor="#9ED9D0" android:strokeWidth="7" android:strokeLineCap="round" />
+    <path android:pathData="M32,64 A22,22 0 0 1 48.3,42.75"
+        android:strokeColor="#1667C9" android:strokeWidth="3" android:strokeLineCap="round" />
+    <path android:pathData="M69,48 m-5,0 a5,5 0 1 0 10,0 a5,5 0 1 0 -10,0"
+        android:fillColor="#E6F0FB" />
+    <path android:pathData="M69,48 m-3.5,0 a3.5,3.5 0 1 0 7,0 a3.5,3.5 0 1 0 -7,0"
+        android:fillColor="#C2610F" />
+</vector>

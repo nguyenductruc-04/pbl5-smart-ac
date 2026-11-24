@@ -12,7 +12,7 @@ android {
         applicationId = "vn.pbl5.smartac"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1100
+        versionCode = 1101
         versionName = "0.11.0"
     }
 
@@ -40,6 +40,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true   // BuildConfig.VERSION_NAME hien trong Cai dat
     }
 }
 
