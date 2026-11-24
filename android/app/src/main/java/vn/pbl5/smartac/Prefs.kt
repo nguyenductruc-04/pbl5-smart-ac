@@ -36,6 +36,13 @@ class Prefs(context: Context) {
             sp.edit().putString("backup_ssid", value?.first).putString("backup_pass", value?.second).apply()
         }
 
+    /** Thong bao nen (WatchWorker). Mac dinh bat. */
+    var notify: Boolean
+        get() = sp.getBoolean("notify", true)
+        set(value) {
+            sp.edit().putBoolean("notify", value).apply()
+        }
+
     var token: String?
         get() = sp.getString("token", null)
         set(value) {

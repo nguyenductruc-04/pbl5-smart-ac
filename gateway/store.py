@@ -12,6 +12,7 @@ import json
 import sqlite3
 
 import accounts
+import irproto
 from safety import AcState, Policy, RoomView
 
 SCHEMA = """
@@ -78,6 +79,7 @@ def init(conn: sqlite3.Connection) -> None:
     _add_column(conn, "comfort_votes", "username", "TEXT")
     conn.commit()
     accounts.init(conn)
+    irproto.init(conn)
 
 
 # ------------------------------------------------------------------ ghi

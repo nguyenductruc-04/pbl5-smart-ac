@@ -15,6 +15,7 @@ import time
 
 import paho.mqtt.client as mqtt
 
+import irproto
 import safety
 import settings
 import store
@@ -137,6 +138,7 @@ class Gateway:
             ("home/+/status", 1),
             ("home/+/command_result", 1),
             ("home/+/ir_event", 1),
+            ("home/+/config_result", 1),
         ])
 
     def on_disconnect(self, client, userdata, flags, reason_code, properties):
@@ -159,6 +161,8 @@ class Gateway:
                 self.handle_result(room, now, text)
             elif kind == "ir_event":
                 self.handle_ir_event(room, now, text)
+            elif kind == "config_result":
+                self.handle_config_result(room, now, text)
         except Exception:
             log.exception("Loi xu ly ban tin %s", msg.topic)
 
@@ -181,6 +185,10 @@ class Gateway:
              int(bool(data.get("sim"))), data.get("rssi"), data.get("seq"), text),
         )
         self.db.commit()
+        proto = data.get("ir_protocol")
+        if isinstance(proto, str) and irproto.valid_name(proto):
+            model = data.get("ir_model")
+            irproto.report(self.db, room, proto, model if isinstance(model, int) else -1, now)
         presence_txt = {None: "?", 0: "khong", 1: "CO"}[None if presence is None else int(bool(presence))]
         log.info("[%s] temp=%.2f hum=%.1f nguoi=%s%s", room, data["temp"], data["hum"], presence_txt,
                  " (gia lap)" if data.get("sim") else "")
@@ -227,6 +235,14 @@ class Gateway:
             self._reject(room, now, "ir_event json loi", text)
             return
         temp = data.get("temp")
+        if data.get("ac") is False:
+            # Che do nhan dien: tin hieu khong phai remote dieu hoa (hoac giao thuc chua ho tro).
+            # Chi ghi lai de giao dien hien "node co nghe thay", khong dung toi trang thai dieu hoa.
+            self.db.execute("INSERT INTO ir_events(room, ts, protocol, raw) VALUES (?,?,?,?)",
+                            (room, now, data.get("protocol"), text))
+            self.db.commit()
+            log.info("[%s] IR khong phai dieu hoa: %s (%s bit)", room, data.get("protocol"), data.get("bits"))
+            return
         self.db.execute(
             "INSERT INTO ir_events(room, ts, protocol, power, mode, temp, fan, raw)"
             " VALUES (?,?,?,?,?,?,?,?)",
@@ -235,7 +251,7 @@ class Gateway:
         )
         self.db.commit()
         # Nguoi dung bam remote: dong bo trang thai va chan lenh tu dong mot thoi gian
-        expected = settings.IR_PROTOCOL
+        expected = irproto.expected_protocol(self.db, room, settings.IR_PROTOCOL)
         if expected and data.get("protocol") != expected:
             log.info("[%s] remote giao thuc %s khac %s -> khong doi trang thai", room,
                      data.get("protocol"), expected)
@@ -247,6 +263,22 @@ class Gateway:
                 store.mark_uncertain(self.db, room)
         log.info("[%s] REMOTE %s: power=%s mode=%s temp=%s fan=%s", room, data.get("protocol"),
                  data.get("power"), data.get("mode"), temp, data.get("fan"))
+
+    def handle_config_result(self, room, now, text):
+        """Node tra loi ban tin cau hinh (doi giao thuc IR; Wi-Fi do push_wifi.py tu theo doi)."""
+        try:
+            data = json.loads(text)
+        except json.JSONDecodeError:
+            return
+        ir = data.get("ir")
+        if data.get("ok") and isinstance(ir, dict) and irproto.valid_name(ir.get("protocol", "")):
+            model = ir.get("model")
+            if irproto.report(self.db, room, ir["protocol"], model if isinstance(model, int) else -1, now,
+                              from_telemetry=False):
+                store.mark_uncertain(self.db, room)   # giao thuc moi: chua biet dieu hoa dang o trang thai nao
+            log.warning("[%s] doi giao thuc IR -> %s (model %s)", room, ir["protocol"], ir.get("model"))
+        if data.get("cfg_id"):
+            self._notify(data["cfg_id"], data)
 
     def _reject(self, room, now, reason, raw):
         self.db.execute("INSERT INTO rejected(room, ts, reason, raw) VALUES (?,?,?,?)",
@@ -287,6 +319,13 @@ class Gateway:
         if not self.client.is_connected():
             return False
         self.client.publish(f"home/{room}/command", payload, qos=1)
+        return True
+
+    def publish_config(self, room: str, payload: dict) -> bool:
+        """Ban tin cau hinh KHONG retained toi node (doi / nhan dien giao thuc IR)."""
+        if not self.client.is_connected():
+            return False
+        self.client.publish(f"home/{room}/config", json.dumps(payload), qos=1)
         return True
 
     def publish_net_hint(self, room: str, net: str) -> bool:

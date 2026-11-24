@@ -4,6 +4,19 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versio
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-24
+### Added
+- IR protocol detection and switching without reflashing (ADR 0009). Firmware 0.11.0 keeps the protocol and model in NVS (first boot: `IR_PROTOCOL` / `IR_MODEL` from `config.h`), reports them in telemetry, and accepts `{"ir": {"protocol", "model"}}` on `home/<room>/config` (answered on `config_result`, refused with `protocol_not_supported` if IRremoteESP8266 cannot send it).
+- Learn mode: `{"ir_learn": 60}` makes the node report every IR frame it hears for 60 s, including frames it cannot decode as an AC (`"ac": false`), so the user knows the remote was heard but not recognised.
+- API: `GET /rooms/{room}/ir` (protocol, confirmation, learn results grouped by protocol, brand hints), `POST/DELETE /rooms/{room}/ir/learn`, `PUT /rooms/{room}/ir`, `POST /rooms/{room}/ir/confirm` (admin).
+- Dashboard and app: "Điều hòa trong phòng" for admins: detect the remote, use a detected protocol, test with "Bật thử / Tắt thử", confirm it works; or pick by brand.
+- App: change password, notifications on/off, activity list (AC commands and remote presses) on the History tab, app icon.
+
+### Changed
+- The remote's protocol that may update the expected AC state is now per room (reported by the node) instead of `IR_PROTOCOL` in `.env`, which is only a fallback for older firmware.
+- After a protocol switch the AC state is marked uncertain.
+- App redesigned as a consumer IoT app instead of a dashboard: light and dark themes following the phone, Be Vietnam Pro font (SIL OFL, `android/FONT-LICENSE-OFL.txt`), short Welcome screen, bottom tabs Nhà / Lịch sử / Cài đặt. Home shows the room card (temperature against the user's comfort band, AC switch) and the suggestion; tapping the room opens the control screen with a temperature dial (comfort band, set point, room temperature), mode, fan and comfort votes. Members, IR detection and Pi network moved to Cài đặt.
+
 ## [0.10.0] - 2026-11-23
 ### Added
 - Native Android app (`android/`, Kotlin + Jetpack Compose): finds the Pi without typing an address (last address, backup network `10.42.0.1`, mDNS `_pbl5._tcp`, then the Internet address), first setup / sign-in / sign-up, room readings, power and temperature, early-restart confirmation, comfort votes; session kept in `EncryptedSharedPreferences`. CI builds the APK (artifact `pbl5-app`).

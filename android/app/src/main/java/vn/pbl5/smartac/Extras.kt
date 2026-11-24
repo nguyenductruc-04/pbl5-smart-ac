@@ -1,186 +1,232 @@
 package vn.pbl5.smartac
 
-import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.addPathNodes
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
-/** Hang nut chon mot (che do, quat, khoang thoi gian, che do mang). */
-@Composable
-internal fun Choice(
-    options: List<Pair<String, String>>,
-    selected: String?,
-    enabled: Boolean,
-    onPick: (String) -> Unit,
-) {
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-        options.forEach { (value, label) ->
-            val pad = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
-            val content: @Composable () -> Unit = {
-                Text(label, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-            if (value == selected) {
-                Button(onClick = {}, enabled = enabled, contentPadding = pad, modifier = Modifier.weight(1f)) { content() }
-            } else {
-                OutlinedButton(onClick = { onPick(value) }, enabled = enabled, contentPadding = pad, modifier = Modifier.weight(1f)) {
-                    content()
-                }
-            }
-        }
-    }
-}
-
-/** "Dieu hoa khong lam theo?" (ADR 0005): gui lai, hoac bao trang thai that ma khong phat IR. */
-@Composable
-internal fun FixRow(vm: AppViewModel, r: RoomView) {
-    var open by remember { mutableStateOf(false) }
-    TextButton(onClick = { open = !open }, contentPadding = PaddingValues(0.dp)) {
-        Text(if (open) "Điều hòa không làm theo? (thu gọn)" else "Điều hòa không làm theo?")
-    }
-    if (!open) return
-    Hint("Gửi lại: phát lại đúng lệnh hiện tại. Dùng khi tín hiệu bị chắn hoặc điều hòa bỏ lỡ.")
-    OutlinedButton(onClick = { vm.resend() }, enabled = !vm.busy && r.online, modifier = Modifier.fillMaxWidth()) {
-        Text("Gửi lại lệnh")
-    }
-    Hint("Nếu ai đó vừa bật/tắt bằng remote mà app chưa biết, báo trạng thái thật (không phát tín hiệu):")
-    val actualOn = r.power != "on"
-    OutlinedButton(onClick = { vm.syncPower(if (actualOn) "on" else "off") }, enabled = !vm.busy, modifier = Modifier.fillMaxWidth()) {
-        Text(if (actualOn) "Thực tế điều hòa đang bật" else "Thực tế điều hòa đang tắt")
-    }
-}
-
-@Composable
-internal fun SuggestionCard(vm: AppViewModel, s: Suggestion, canControl: Boolean) {
-    Card(
-        Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-    ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Gợi ý cho bạn", fontWeight = FontWeight.SemiBold)
-            Text(s.text, style = MaterialTheme.typography.bodyLarge)
-            if (s.canApply && canControl) {
-                Button(onClick = { vm.applySuggestion() }) { Text("Áp dụng") }
-            }
-            Hint(s.why)
-        }
-    }
-}
-
-@Composable
-internal fun ChartCard(vm: AppViewModel) {
-    val s = vm.series
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Diễn biến nhiệt độ", fontWeight = FontWeight.SemiBold)
-            Choice(listOf("6" to "6 giờ", "24" to "24 giờ", "168" to "7 ngày"), (s?.hours ?: 24).toString(), true) {
-                vm.loadSeries(it.toInt())
-            }
-            if (s == null || s.temp.size < 2) Hint("Chưa đủ số đo để vẽ.") else TempChart(s)
-        }
-    }
-}
-
-@Composable
-private fun TempChart(s: Series) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        run {
-            val lo = s.temp.min()
-            val hi = s.temp.max()
-            val line = MaterialTheme.colorScheme.primary
-            val grid = MaterialTheme.colorScheme.outlineVariant
-            Row {
-                Text("%.1f °C".format(hi), style = MaterialTheme.typography.labelSmall)
-            }
-            Canvas(Modifier.fillMaxWidth().height(140.dp)) {
-                val span = (hi - lo).takeIf { it > 0.2 } ?: 0.2
-                val t0 = s.ts.first()
-                val tSpan = (s.ts.last() - t0).takeIf { it > 0 } ?: 1.0
-                drawLine(grid, Offset(0f, 0f), Offset(size.width, 0f))
-                drawLine(grid, Offset(0f, size.height), Offset(size.width, size.height))
-                val path = Path()
-                s.ts.indices.forEach { i ->
-                    val x = ((s.ts[i] - t0) / tSpan * size.width).toFloat()
-                    val y = ((1 - (s.temp[i] - lo) / span) * size.height).toFloat()
-                    if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
-                }
-                drawPath(path, line, style = Stroke(width = 2.dp.toPx()))
-            }
-            Text("%.1f °C".format(lo), style = MaterialTheme.typography.labelSmall)
-            val fmt = SimpleDateFormat(if (s.hours > 24) "dd/MM HH:mm" else "HH:mm", Locale.getDefault())
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(fmt.format(Date((s.ts.first() * 1000).toLong())), style = MaterialTheme.typography.labelSmall)
-                Text(fmt.format(Date((s.ts.last() * 1000).toLong())), style = MaterialTheme.typography.labelSmall)
-            }
-            Hint("Độ ẩm gần nhất: %.0f %%".format(s.hum.last()))
-        }
-    }
-}
-
-/** Che do mang cua Pi (chi quan tri vien). */
-@Composable
-internal fun NetworkCard(vm: AppViewModel) {
-    val n = vm.net ?: return
-    var ask by remember { mutableStateOf<String?>(null) }
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Mạng của Pi", fontWeight = FontWeight.SemiBold)
-            Hint(
-                when {
-                    !n.running -> "Dịch vụ pbl5-netwatch không chạy nên đổi chế độ chưa có tác dụng."
-                    n.onBackup -> "Pi đang phát Wi-Fi SmartAC-Backup."
-                    else -> "Pi đang dùng Wi-Fi nhà."
-                },
-                error = !n.running,
-            )
-            Choice(
-                listOf("auto" to "Tự động", "standalone" to "Độc lập", "home" to "Wi-Fi nhà"),
-                n.mode, n.running && !vm.busy,
-            ) { ask = it }
-        }
-    }
-    ask?.let { mode ->
-        AlertDialog(
-            onDismissRequest = { ask = null },
-            title = { Text("Đổi chế độ mạng?") },
-            text = {
-                Text(
-                    when (mode) {
-                        "standalone" -> "Pi rời Wi-Fi nhà và phát SmartAC-Backup (không có Internet). Nếu app đã quét mã Wi-Fi trên tem, app sẽ tự vào mạng đó sau khoảng 20 giây; nếu chưa, vào Wi-Fi SmartAC-Backup bằng tay."
-                        "home" -> "Pi chỉ dùng Wi-Fi nhà, không bao giờ phát mạng riêng. Nếu Wi-Fi nhà đổi mật khẩu, phải giữ nút reset để vào lại."
-                        else -> "Pi dùng Wi-Fi nhà; mất Wi-Fi nhà quá 2 phút thì tự phát SmartAC-Backup."
-                    }
-                )
-            },
-            confirmButton = { TextButton(onClick = { vm.setNetwork(mode); ask = null }) { Text("Chuyển") } },
-            dismissButton = { TextButton(onClick = { ask = null }) { Text("Thôi") } },
+// ------------------------------------------------------------------ bieu tuong (net ve 24x24, giong thiet ke)
+private fun strokeIcon(name: String, vararg paths: String, width: Float = 2f): ImageVector {
+    val b = ImageVector.Builder(name, 24.dp, 24.dp, 24f, 24f)
+    paths.forEach { d ->
+        b.addPath(
+            pathData = addPathNodes(d),
+            fill = null,
+            stroke = SolidColor(Color.Black),
+            strokeLineWidth = width,
+            strokeLineCap = StrokeCap.Round,
+            strokeLineJoin = StrokeJoin.Round,
         )
     }
+    return b.build()
 }
+
+object Icons {
+    val Home = strokeIcon("home", "M4 11l8-6 8 6v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z")
+    val History = strokeIcon("history", "M4 19h16", "M5 15l4-5 4 3 6-7")
+    val Settings = strokeIcon("settings", "M4 7h10M18 7h2M4 17h4M12 17h8",
+        "M16 5a2 2 0 1 1 0 4a2 2 0 1 1 0-4", "M10 15a2 2 0 1 1 0 4a2 2 0 1 1 0-4")
+    val Back = strokeIcon("back", "M15 5l-7 7 7 7")
+    val Chevron = strokeIcon("chevron", "M9 5l7 7-7 7")
+    val Plus = strokeIcon("plus", "M5 12h14M12 5v14", width = 2.2f)
+    val Minus = strokeIcon("minus", "M5 12h14", width = 2.2f)
+    val Power = strokeIcon("power", "M12 3v8", "M6.3 6.8a8 8 0 1 0 11.4 0", width = 2.2f)
+    val Wifi = strokeIcon("wifi", "M5 12.5a10 10 0 0 1 14 0", "M8.5 16a5 5 0 0 1 7 0", "M12 19.5h.01")
+    val Globe = strokeIcon("globe", "M12 3a9 9 0 1 1 0 18a9 9 0 1 1 0-18", "M3 12h18",
+        "M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3")
+    val Cool = strokeIcon("cool", "M12 3v18M4.5 7.5l15 9M19.5 7.5l-15 9", width = 1.8f)
+    val Dry = strokeIcon("dry", "M12 3.5c3.5 4.6 6 7.8 6 10.7a6 6 0 0 1-12 0c0-2.9 2.5-6.1 6-10.7z", width = 1.8f)
+    val Fan = strokeIcon("fan", "M12 12c0-4 1-7 4-7s3 4 0 5.5M12 12c4 0 7 1 7 4s-4 3-5.5 0" +
+        "M12 12c0 4-1 7-4 7s-3-4 0-5.5M12 12c-4 0-7-1-7-4s4-3 5.5 0", width = 1.8f)
+    val Auto = strokeIcon("auto", "M6 19l6-14 6 14M8.5 13.5h7", width = 1.8f)
+    val People = strokeIcon("people", "M16 19v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1",
+        "M9.5 4a3 3 0 1 1 0 6a3 3 0 1 1 0-6", "M21 19v-1a4 4 0 0 0-3-3.9M15.5 4.1a3 3 0 0 1 0 5.8", width = 1.9f)
+    val Ac = strokeIcon("ac", "M3 7h18v6H3z", "M6 13v1M10 13v3M14 13v3M18 13v1M6 10h4", width = 1.9f)
+    val Remote = strokeIcon("remote", "M10 6h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z",
+        "M10.5 10h3M10.5 13h3M10.5 16h3", "M9 3.2a5 5 0 0 1 6 0", width = 1.6f)
+    val Face = strokeIcon("face", "M12 3a9 9 0 1 1 0 18a9 9 0 1 1 0-18", "M9 10h.01M15 10h.01", width = 1.7f)
+}
+
+// ------------------------------------------------------------------ khoi dung chung
+/** Khung trang: nen, le, cuon doc. */
+@Composable
+fun Hint(text: String, color: Color = LocalPalette.current.ink2, center: Boolean = false) {
+    Text(text, style = MaterialTheme.typography.bodySmall, color = color,
+        textAlign = if (center) TextAlign.Center else null)
+}
+
+@Composable
+fun SectionTitle(text: String) {
+    Text(text, style = MaterialTheme.typography.titleSmall, color = LocalPalette.current.ink)
+}
+
+/** The phang: nen trang (toi: xam xanh), vien manh, khong do bong. */
+@Composable
+fun Panel(
+    modifier: Modifier = Modifier,
+    radius: Dp = 24.dp,
+    color: Color = LocalPalette.current.surface,
+    border: Color? = LocalPalette.current.line,
+    padding: PaddingValues = PaddingValues(18.dp),
+    onClick: (() -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val shape = RoundedCornerShape(radius)
+    var m = modifier.fillMaxWidth().clip(shape).background(color)
+    if (border != null) m = m.border(1.dp, border, shape)
+    if (onClick != null) m = m.clickable(role = Role.Button, onClick = onClick)
+    Column(m.padding(padding), verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
+}
+
+@Composable
+fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true,
+                  container: Color = LocalPalette.current.blue, content: Color = Color.White, height: Dp = 52.dp) {
+    Button(
+        onClick = onClick, enabled = enabled, modifier = modifier.heightIn(min = height),
+        shape = RoundedCornerShape(50),
+        colors = ButtonDefaults.buttonColors(containerColor = container, contentColor = content),
+    ) { Text(text, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold) }
+}
+
+@Composable
+fun SecondaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true,
+                    height: Dp = 52.dp) {
+    val p = LocalPalette.current
+    OutlinedButton(
+        onClick = onClick, enabled = enabled, modifier = modifier.heightIn(min = height),
+        shape = RoundedCornerShape(50), border = BorderStroke(1.dp, p.line),
+        colors = ButtonDefaults.outlinedButtonColors(containerColor = p.surface, contentColor = p.ink),
+    ) { Text(text, style = MaterialTheme.typography.labelLarge) }
+}
+
+@Composable
+fun QuietButton(text: String, onClick: () -> Unit, color: Color = LocalPalette.current.blueStroke) {
+    TextButton(onClick = onClick, modifier = Modifier.heightIn(min = 44.dp)) {
+        Text(text, style = MaterialTheme.typography.labelLarge, color = color)
+    }
+}
+
+/** Nut tron vien manh chua bieu tuong (quay lai, +, -). */
+@Composable
+fun RoundIconButton(icon: ImageVector, label: String, onClick: () -> Unit, size: Dp = 44.dp,
+                    enabled: Boolean = true) {
+    val p = LocalPalette.current
+    IconButton(
+        onClick = onClick, enabled = enabled,
+        modifier = Modifier.size(size).clip(CircleShape).background(p.surface).border(1.dp, p.line, CircleShape),
+    ) { Icon(icon, contentDescription = label, tint = if (enabled) p.ink else p.muted, modifier = Modifier.size(22.dp)) }
+}
+
+@Composable
+fun TopBar(title: String, subtitle: String? = null, onBack: (() -> Unit)? = null) {
+    Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (onBack != null) RoundIconButton(Icons.Back, "Quay lại", onBack) else Box(Modifier.size(44.dp))
+        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (subtitle != null) Hint(subtitle)
+        }
+        Box(Modifier.size(44.dp))
+    }
+}
+
+/** Hang nut chon mot kieu "segmented": nen xam, muc dang chon noi len. */
+@Composable
+fun Segmented(options: List<Pair<String, String>>, selected: String?, enabled: Boolean = true,
+              onPick: (String) -> Unit) {
+    val p = LocalPalette.current
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.track).padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        options.forEach { (value, label) ->
+            val sel = value == selected
+            Box(
+                Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(12.dp))
+                    .background(if (sel) p.segSelected else Color.Transparent)
+                    .clickable(enabled = enabled && !sel, role = Role.RadioButton) { onPick(value) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(label, style = MaterialTheme.typography.labelLarge,
+                    fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Medium,
+                    color = if (!enabled) p.muted else if (sel) p.ink else p.ink2, maxLines = 1)
+            }
+        }
+    }
+}
+
+/** Dong trong danh sach cai dat: bieu tuong, tieu de, gia tri, mui ten. */
+@Composable
+fun SettingRow(icon: ImageVector, tint: Color, iconColor: Color, title: String, value: String,
+               badge: String? = null, onClick: (() -> Unit)?) {
+    val p = LocalPalette.current
+    var m = Modifier.fillMaxWidth().heightIn(min = 68.dp)
+    if (onClick != null) m = m.clickable(role = Role.Button, onClick = onClick)
+    Row(m.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(tint), contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(20.dp))
+        }
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+            Hint(value)
+        }
+        if (badge != null) {
+            Box(Modifier.heightIn(min = 22.dp).clip(RoundedCornerShape(11.dp)).background(p.orange)
+                .padding(horizontal = 7.dp, vertical = 2.dp), contentAlignment = Alignment.Center) {
+                Text(badge, style = MaterialTheme.typography.labelSmall, color = if (p.isDark) p.bg else Color.White)
+            }
+        }
+        if (onClick != null) Icon(Icons.Chevron, contentDescription = null, tint = p.muted, modifier = Modifier.size(16.dp))
+    }
+}
+
+@Composable
+fun Divider() {
+    Box(Modifier.fillMaxWidth().height(1.dp).background(LocalPalette.current.line2))
+}
+
+/** Cham tron nho bao trang thai. */
+@Composable
+fun Dot(color: Color, size: Dp = 8.dp) {
+    Box(Modifier.size(size).clip(CircleShape).background(color))
+}
+
+fun vnNumber(v: Double?, digits: Int = 1): String =
+    if (v == null) "–" else "%.${digits}f".format(v).replace('.', ',')

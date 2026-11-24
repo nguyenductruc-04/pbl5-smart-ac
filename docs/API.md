@@ -134,6 +134,28 @@ curl -X POST -H "X-API-Key: $API_KEY" http://gateway.local:8000/api/v1/pairing
  "expires_in_s": 300, "qr": "data:image/svg+xml;charset=utf-8,..."}
 ```
 
+## AC IR protocol (v0.11.0, [ADR 0009](adr/0009-ir-protocol-detection.md))
+
+| Method | Path | Who | Purpose |
+|---|---|---|---|
+| GET | `/rooms/{room}/ir` | signed in | `protocol`, `model`, `confirmed`, `confirmed_by`, `learn` (`active`, `started`, `until`), `detections`, `candidates`, `brands` |
+| POST | `/rooms/{room}/ir/learn` | admin | `{"seconds": 10–300}` (default 60): the node reports every IR frame it hears |
+| DELETE | `/rooms/{room}/ir/learn` | admin | Stop learning |
+| PUT | `/rooms/{room}/ir` | admin | `{"protocol": "COOLIX", "model": -1}`: the node checks and stores it, the API waits for its answer |
+| POST | `/rooms/{room}/ir/confirm` | admin | `{"works": true}` after "Bật thử" made the AC react |
+
+`candidates` groups what the node heard since learning started, AC protocols first:
+
+```json
+[{"protocol": "COOLIX", "ac": true, "count": 2, "model": -1,
+  "last": {"power": "on", "mode": "cool", "temp": 25, "fan": "auto"}},
+ {"protocol": "UNKNOWN", "ac": false, "count": 1, "last": {"bits": 211}}]
+```
+
+Errors: `409 NODE_OFFLINE`, `422 PROTOCOL_NOT_SUPPORTED` (name invalid, or the node cannot send it), `504 NODE_TIMEOUT` (no answer: firmware older than 0.11.0), `409 NO_PROTOCOL` (confirm before the node reported a protocol).
+
+MQTT (`home/<room>/config`, not retained): `{"ir_learn": 60}`, `{"ir_learn": 0}`, `{"cfg_id": "ir-…", "ir": {"protocol": "COOLIX", "model": -1}}`. The node answers the last one on `config_result` with `{"cfg_id", "ok", "ir"}` or `{"cfg_id", "ok": false, "error": "protocol_not_supported"}`. Telemetry carries `ir_protocol` and `ir_model`; learn-mode frames on `ir_event` carry `"learn": true` and `"ac": false` when they are not an AC state.
+
 ## Network mode (v0.9.0)
 
 ```bash

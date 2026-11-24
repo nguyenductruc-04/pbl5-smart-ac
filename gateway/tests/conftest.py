@@ -15,6 +15,7 @@ class FakeMqttClient:
         self.published = []          # [(topic, payload_dict)]
         self.config = []             # [(topic, payload_dict, retain)] gui toi home/<room>/config
         self.node = "ok"             # "ok" | "silent" | "error"
+        self.ir_supported = True     # node gia chap nhan doi giao thuc IR?
         self.gateway = None
         self.clock = None
 
@@ -26,8 +27,15 @@ class FakeMqttClient:
 
     def publish(self, topic, payload, qos=0, retain=False):
         cmd = json.loads(payload)
-        if topic.endswith("/config"):                 # ban tin cau hinh / bao doi mang: khong tra loi
+        if topic.endswith("/config"):                 # ban tin cau hinh / bao doi mang
             self.config.append((topic, cmd, retain))
+            if "ir" in cmd and self.node != "silent":  # doi giao thuc IR: node tra loi config_result
+                res = {"cfg_id": cmd["cfg_id"], "ok": self.ir_supported}
+                if self.ir_supported:
+                    res["ir"] = cmd["ir"]
+                else:
+                    res["error"] = "protocol_not_supported"
+                self.gateway.handle_config_result(topic.split("/")[1], self.clock(), json.dumps(res))
             return
         self.published.append((topic, cmd))
         room = topic.split("/")[1]

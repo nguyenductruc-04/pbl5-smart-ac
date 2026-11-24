@@ -151,6 +151,33 @@
           </div>
         </section>
 
+        <section class="members irsec" aria-labelledby="ir-title" id="ir" hidden>
+          <h2 id="ir-title">Điều hòa trong phòng</h2>
+          <p id="ir-current"></p>
+          <p class="muted">Mỗi hãng điều hòa dùng một "giao thức" hồng ngoại riêng. Node cần đúng giao thức thì điều hòa mới nhận lệnh.</p>
+          <div class="row-actions"><button type="button" id="ir-learn" class="primary">Nhận diện remote</button></div>
+          <p id="ir-learn-status" class="small" role="status"></p>
+          <ul id="ir-found" class="member-list"></ul>
+          <div id="ir-test" class="confirm" hidden>
+            <p>Thử xem điều hòa có nhận lệnh không: bấm <b>Bật thử</b> hoặc <b>Tắt thử</b>, nghe tiếng bíp và nhìn đèn trên dàn lạnh.</p>
+            <div class="row-actions">
+              <button type="button" id="ir-on" class="secondary">Bật thử</button>
+              <button type="button" id="ir-off" class="secondary">Tắt thử</button>
+            </div>
+            <div class="row-actions">
+              <button type="button" id="ir-works" class="primary">Điều hòa đã phản ứng</button>
+              <button type="button" id="ir-fails" class="secondary">Không phản ứng</button>
+            </div>
+          </div>
+          <details id="ir-manual" class="fix">
+            <summary>Chọn giao thức theo hãng</summary>
+            <label for="ir-brand" class="small">Hãng điều hòa</label>
+            <select id="ir-brand"></select>
+            <ul id="ir-brand-list" class="member-list"></ul>
+          </details>
+          <p id="ir-status" class="small muted" role="status"></p>
+        </section>
+
         <section class="members" aria-labelledby="members-title" id="members" hidden>
           <h2 id="members-title">Thành viên</h2>
           <p class="muted">Người khác tự tạo tài khoản trên trang đăng nhập, rồi bạn cấp quyền ở đây. Thành viên điều khiển được điều hòa; khách chỉ xem.</p>

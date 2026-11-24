@@ -35,6 +35,7 @@ class WatchWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
         val ctx = applicationContext
         val prefs = Prefs(ctx)
         val token = prefs.token ?: return Result.success()
+        if (!prefs.notify) return Result.success()
         var api: Api? = null
         for (url in listOfNotNull(prefs.baseUrl, prefs.publicUrl).distinct()) {
             if (runCatching { Api(url, quick = true) { null }.call("GET", "/setup/status") }.isSuccess) {
